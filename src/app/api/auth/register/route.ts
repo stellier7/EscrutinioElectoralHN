@@ -9,7 +9,7 @@ const registerSchema = z.object({
   email: z.string().email('Email inválido'),
   password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
   name: z.string().min(2, 'El nombre debe tener al menos 2 caracteres'),
-  role: z.enum(['VOLUNTEER', 'ORGANIZATION_MEMBER'], {
+  role: z.enum(['VOLUNTEER', 'ORGANIZATION_MEMBER', 'ADMIN'], {
     errorMap: () => ({ message: 'Rol inválido' }),
   }),
   deviceId: z.string().min(1, 'ID de dispositivo requerido'),
@@ -55,6 +55,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       } as ApiResponse, { status: 409 });
     }
 
+    // Check if this is the first user (will be admin)
+    const userCount = await prisma.user.count();
+    const isFirstUser = userCount === 0;
+    const finalRole = isFirstUser ? 'ADMIN' : role;
+
     // Hash password
     const hashedPassword = await AuthUtils.hashPassword(password);
 
@@ -64,7 +69,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         email,
         password: hashedPassword,
         name,
-        role: role as UserRole,
+        role: finalRole as UserRole,
         deviceId,
         isActive: true,
       },
@@ -93,8 +98,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       newUser.id,
       {
         registrationType: 'new_user',
-        role: role,
+        role: finalRole,
         deviceId: deviceId,
+        isFirstUser: isFirstUser,
       },
       request
     );
@@ -105,10 +111,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       expiresAt: expiresAt.toISOString(),
     };
 
+    const message = isFirstUser 
+      ? '¡Usuario registrado exitosamente como Administrador del Sistema!'
+      : 'Usuario registrado exitosamente';
+
     return NextResponse.json({
       success: true,
       data: response,
-      message: 'Usuario registrado exitosamente',
+      message: message,
+      isFirstUser: isFirstUser,
     } as ApiResponse<AuthResponse>, { status: 201 });
 
   } catch (error) {

@@ -163,6 +163,24 @@ export default function HomePage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {!isLogin && (
+              <div className="bg-blue-50 border border-blue-200 rounded-md p-4 mb-4">
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    <Shield className="h-5 w-5 text-blue-400" />
+                  </div>
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-blue-800">
+                      Primer Usuario del Sistema
+                    </h3>
+                    <div className="mt-2 text-sm text-blue-700">
+                      <p>El primer usuario que se registre será automáticamente designado como <strong>Administrador del Sistema</strong> con acceso completo a todas las funcionalidades.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
             {errors.general && (
               <div className="error-container">
                 <p className="error-message">{errors.general}</p>
