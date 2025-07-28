@@ -10,7 +10,8 @@
     "lint": "next lint",
     "db:migrate": "npx prisma migrate deploy",
     "db:generate": "npx prisma generate",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "vercel-build": "npx prisma generate && npx prisma migrate deploy && npm run build"
   },
   "dependencies": {
     "next": "14.1.0",
