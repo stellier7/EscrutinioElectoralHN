@@ -240,7 +240,7 @@ export class AuditLogger {
       prisma.auditLog.count({ where }),
     ]);
 
-    const formattedLogs: AuditLogEntry[] = logs.map(log => ({
+    const formattedLogs: AuditLogEntry[] = logs.map((log: any) => ({
       id: log.id,
       userId: log.userId || undefined,
       userName: log.user?.name || undefined,
