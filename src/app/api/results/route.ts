@@ -36,21 +36,21 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       PRESIDENTIAL: {
         level: 'Presidencial',
         totalMesas: 5,
-        completedMesas: escrutinios.filter(e => e.electionLevel === 'PRESIDENTIAL').length,
+        completedMesas: escrutinios.filter((e: any) => e.electionLevel === 'PRESIDENTIAL').length,
         totalVotes: 0,
         candidates: [],
       },
       LEGISLATIVE: {
         level: 'Legislativo',
         totalMesas: 5,
-        completedMesas: escrutinios.filter(e => e.electionLevel === 'LEGISLATIVE').length,
+        completedMesas: escrutinios.filter((e: any) => e.electionLevel === 'LEGISLATIVE').length,
         totalVotes: 0,
         candidates: [],
       },
       MUNICIPAL: {
         level: 'Municipal',
         totalMesas: 5,
-        completedMesas: escrutinios.filter(e => e.electionLevel === 'MUNICIPAL').length,
+        completedMesas: escrutinios.filter((e: any) => e.electionLevel === 'MUNICIPAL').length,
         totalVotes: 0,
         candidates: [],
       },
@@ -58,11 +58,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     // Process votes for each level
     Object.keys(results).forEach(level => {
-      const levelEscrutinios = escrutinios.filter(e => e.electionLevel === level);
+      const levelEscrutinios = escrutinios.filter((e: any) => e.electionLevel === level);
       const candidateVotes: Record<string, { name: string; party: string; votes: number }> = {};
 
-      levelEscrutinios.forEach(escrutinio => {
-        escrutinio.votes.forEach(vote => {
+      levelEscrutinios.forEach((escrutinio: any) => {
+        escrutinio.votes.forEach((vote: any) => {
           const candidateId = vote.candidate.id;
           if (!candidateVotes[candidateId]) {
             candidateVotes[candidateId] = {
