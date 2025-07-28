@@ -1,0 +1,200 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    font-feature-settings: 'rlig' 1, 'calt' 1;
+  }
+  
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 4px;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+}
+
+@layer components {
+  /* Card component */
+  .card {
+    @apply bg-white rounded-lg shadow-sm border border-gray-200 p-6;
+  }
+  
+  .card-header {
+    @apply pb-4 border-b border-gray-200 mb-4;
+  }
+  
+  .card-title {
+    @apply text-lg font-semibold text-gray-900 mb-1;
+  }
+  
+  .card-description {
+    @apply text-sm text-gray-600;
+  }
+  
+  /* Form components */
+  .form-group {
+    @apply space-y-2;
+  }
+  
+  .form-grid {
+    @apply grid grid-cols-1 md:grid-cols-2 gap-4;
+  }
+  
+  .form-actions {
+    @apply flex flex-col sm:flex-row gap-3 justify-end pt-6 border-t border-gray-200;
+  }
+  
+  /* Status badges */
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+  
+  .badge-success {
+    @apply bg-success-100 text-success-800;
+  }
+  
+  .badge-warning {
+    @apply bg-warning-100 text-warning-800;
+  }
+  
+  .badge-danger {
+    @apply bg-danger-100 text-danger-800;
+  }
+  
+  .badge-primary {
+    @apply bg-primary-100 text-primary-800;
+  }
+  
+  /* Loading states */
+  .skeleton {
+    @apply bg-gray-200 animate-pulse rounded;
+  }
+  
+  /* Mobile-first responsive navigation */
+  .nav-link {
+    @apply block px-3 py-2 text-base font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors;
+  }
+  
+  .nav-link-active {
+    @apply bg-primary-100 text-primary-700;
+  }
+  
+  /* Error states */
+  .error-container {
+    @apply bg-danger-50 border border-danger-200 rounded-md p-4;
+  }
+  
+  .error-title {
+    @apply text-danger-800 font-medium mb-1;
+  }
+  
+  .error-message {
+    @apply text-danger-700 text-sm;
+  }
+  
+  /* Success states */
+  .success-container {
+    @apply bg-success-50 border border-success-200 rounded-md p-4;
+  }
+  
+  .success-title {
+    @apply text-success-800 font-medium mb-1;
+  }
+  
+  .success-message {
+    @apply text-success-700 text-sm;
+  }
+}
+
+@layer utilities {
+  /* Animation utilities */
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+  }
+  
+  .animate-slide-up {
+    animation: slideUp 0.3s ease-out;
+  }
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  
+  @keyframes slideUp {
+    from {
+      transform: translateY(10px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+  
+  /* Safe area utilities for mobile */
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  .safe-left {
+    padding-left: env(safe-area-inset-left);
+  }
+  
+  .safe-right {
+    padding-right: env(safe-area-inset-right);
+  }
+  
+  /* Touch target sizing */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+  
+  /* Focus-visible utilities */
+  .focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2;
+  }
+}
+
+/* Print styles */
+@media print {
+  .print-hidden {
+    display: none !important;
+  }
+  
+  .print-visible {
+    display: block !important;
+  }
+  
+  body {
+    background: white !important;
+    color: black !important;
+  }
+} 

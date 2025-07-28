@@ -1,0 +1,214 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  VOLUNTEER
+  ORGANIZATION_MEMBER
+  ADMIN
+}
+
+enum ElectionLevel {
+  PRESIDENTIAL
+  LEGISLATIVE
+  MUNICIPAL
+}
+
+enum TransmissionStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+}
+
+enum AuditLogAction {
+  LOGIN
+  LOGOUT
+  START_ESCRUTINIO
+  SUBMIT_RESULTS
+  UPLOAD_EVIDENCE
+  CORRECTION
+  TRANSMISSION
+  VIEW_RESULTS
+}
+
+model User {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  password        String
+  name            String
+  role            UserRole  @default(VOLUNTEER)
+  deviceId        String?   @unique // Un dispositivo por usuario
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relaciones
+  escrutinios     Escrutinio[]
+  auditLogs       AuditLog[]
+  
+  @@map("users")
+}
+
+model Election {
+  id              String         @id @default(cuid())
+  name            String
+  description     String?
+  startDate       DateTime
+  endDate         DateTime
+  isActive        Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  
+  // Relaciones
+  candidates      Candidate[]
+  escrutinios     Escrutinio[]
+  
+  @@map("elections")
+}
+
+model Candidate {
+  id              String    @id @default(cuid())
+  name            String
+  party           String
+  number          Int
+  electionId      String
+  electionLevel   ElectionLevel
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relaciones
+  election        Election  @relation(fields: [electionId], references: [id])
+  votes           Vote[]
+  
+  @@unique([electionId, number, electionLevel])
+  @@map("candidates")
+}
+
+model Mesa {
+  id              String    @id @default(cuid())
+  number          String    @unique // JRV number
+  location        String
+  address         String?
+  latitude        Float?
+  longitude       Float?
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relaciones
+  escrutinios     Escrutinio[]
+  
+  @@map("mesas")
+}
+
+model Escrutinio {
+  id              String              @id @default(cuid())
+  userId          String
+  electionId      String
+  mesaId          String
+  electionLevel   ElectionLevel
+  
+  // Geolocalización
+  latitude        Float
+  longitude       Float
+  locationAccuracy Float?
+  
+  // Estados
+  status          TransmissionStatus  @default(PENDING)
+  isCompleted     Boolean            @default(false)
+  
+  // Metadatos
+  startedAt       DateTime           @default(now())
+  completedAt     DateTime?
+  transmittedAt   DateTime?
+  
+  // Evidencia
+  actaImageUrl    String?
+  actaImageHash   String?
+  
+  // Validación
+  validationHash  String?
+  encryptedData   String?
+  
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  
+  // Relaciones
+  user            User               @relation(fields: [userId], references: [id])
+  election        Election           @relation(fields: [electionId], references: [id])
+  mesa            Mesa               @relation(fields: [mesaId], references: [id])
+  votes           Vote[]
+  corrections     Correction[]
+  
+  @@unique([userId, electionId, mesaId, electionLevel])
+  @@map("escrutinios")
+}
+
+model Vote {
+  id              String    @id @default(cuid())
+  escrutinioId    String
+  candidateId     String
+  votes           Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relaciones
+  escrutinio      Escrutinio @relation(fields: [escrutinioId], references: [id], onDelete: Cascade)
+  candidate       Candidate  @relation(fields: [candidateId], references: [id])
+  
+  @@unique([escrutinioId, candidateId])
+  @@map("votes")
+}
+
+model Correction {
+  id              String    @id @default(cuid())
+  escrutinioId    String
+  candidateId     String
+  oldValue        Int
+  newValue        Int
+  reason          String?
+  timestamp       DateTime  @default(now())
+  
+  // Relaciones
+  escrutinio      Escrutinio @relation(fields: [escrutinioId], references: [id])
+  
+  @@map("corrections")
+}
+
+model AuditLog {
+  id              String         @id @default(cuid())
+  userId          String?
+  action          AuditLogAction
+  description     String
+  metadata        Json?
+  ipAddress       String?
+  userAgent       String?
+  timestamp       DateTime       @default(now())
+  
+  // Relaciones
+  user            User?          @relation(fields: [userId], references: [id])
+  
+  @@map("audit_logs")
+}
+
+model SystemConfig {
+  id              String    @id @default(cuid())
+  key             String    @unique
+  value           String
+  description     String?
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@map("system_config")
+} 
