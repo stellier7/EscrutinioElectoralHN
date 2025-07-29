@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { prisma } from '@/lib/prisma';
-import { extractTokenFromRequest } from '@/middleware/auth';
+import { PrismaClient } from '@prisma/client';
 import { AuditLogger } from '@/lib/audit';
 import type { LoginRequest, AuthResponse, ApiResponse } from '@/types';
 import bcrypt from 'bcryptjs';
@@ -9,6 +8,15 @@ import jwt from 'jsonwebtoken';
 
 // Force dynamic rendering to avoid SSG issues
 export const dynamic = 'force-dynamic';
+
+// Create Prisma client
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined
+}
+
+const prisma = globalForPrisma.prisma ?? new PrismaClient()
+
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
 
 const loginSchema = z.object({
   email: z.string().email('Email inválido'),
