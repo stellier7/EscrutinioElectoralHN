@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AuthUtils } from '@/lib/auth';
+import { AuthUtils } from '../../../lib/auth';
 
 // Force dynamic rendering to avoid SSG issues
 export const dynamic = 'force-dynamic';

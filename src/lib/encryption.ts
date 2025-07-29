@@ -1,5 +1,5 @@
 import CryptoJS from 'crypto-js';
-import { env } from '@/config/env';
+import { env } from '../config/env';
 import type { EncryptedData, ValidationHash } from '@/types';
 
 export class EncryptionUtils {

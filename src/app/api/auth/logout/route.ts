@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
-import { AuditLogger } from '@/lib/audit';
+import { AuditLogger } from '../../../../lib/audit';
 import type { ApiResponse } from '@/types';
 import jwt from 'jsonwebtoken';
 

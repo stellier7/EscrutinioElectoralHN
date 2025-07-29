@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { PrismaClient } from '@prisma/client';
-import { AuditLogger } from '@/lib/audit';
+import { AuditLogger } from '../../../../lib/audit';
 import type { RegisterRequest, AuthResponse, ApiResponse, UserRole } from '@/types';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';

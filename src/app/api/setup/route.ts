@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
-import { AuthUtils } from '@/lib/auth';
+import { AuthUtils } from '../../../lib/auth';
 import type { ApiResponse } from '@/types';
 
 // Force dynamic rendering to avoid SSG issues
