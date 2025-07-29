@@ -6,8 +6,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     console.log('🔄 Running database migrations...');
     
-    // Run Prisma migrations
-    execSync('npx prisma migrate deploy', { 
+    // Use prisma db push instead of migrate deploy
+    execSync('npx prisma db push', { 
       stdio: 'inherit',
       env: { ...process.env }
     });
