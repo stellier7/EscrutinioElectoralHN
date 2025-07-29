@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useAuth } from '@/components/AuthProvider';
-import Button from '@/components/ui/Button';
-import Input from '@/components/ui/Input';
+import { useAuth } from '../../components/AuthProvider';
+import Button from '../../components/ui/Button';
+import Input from '../../components/ui/Input';
 import { 
   Vote, 
   MapPin, 

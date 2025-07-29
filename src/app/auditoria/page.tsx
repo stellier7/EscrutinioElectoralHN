@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/components/AuthProvider';
+import { useAuth } from '../../components/AuthProvider';
 import { 
   Shield, 
   User, 
@@ -12,8 +12,8 @@ import {
   Eye,
   Clock
 } from 'lucide-react';
-import Button from '@/components/ui/Button';
-import Input from '@/components/ui/Input';
+import Button from '../../components/ui/Button';
+import Input from '../../components/ui/Input';
 
 interface AuditLog {
   id: string;

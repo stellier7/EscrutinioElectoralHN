@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/components/AuthProvider';
-import Button from '@/components/ui/Button';
+import { useAuth } from '../../components/AuthProvider';
+import Button from '../../components/ui/Button';
 import { 
   Vote, 
   Shield, 
