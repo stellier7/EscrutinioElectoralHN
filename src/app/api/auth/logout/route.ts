@@ -5,6 +5,9 @@ import type { ApiResponse } from '@/types';
 
 import { prisma } from '@/lib/prisma';
 
+// Force dynamic rendering to avoid SSG issues
+export const dynamic = 'force-dynamic';
+
 export const POST = requireAuth(async (request) => {
   try {
     const user = request.user!;

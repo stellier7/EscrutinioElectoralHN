@@ -33,5 +33,12 @@
     "env": {
       "NODE_ENV": "production"
     }
-  }
+  },
+  "regions": ["iad1"],
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    }
+  ]
 } 

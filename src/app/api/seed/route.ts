@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 // Import the seed function directly
 const { seedProduction } = require('../../../../scripts/seed-production');
 
+// Force dynamic rendering to avoid SSG issues
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     // Check if it's a production environment

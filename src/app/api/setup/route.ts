@@ -3,6 +3,9 @@ import { prisma } from '@/lib/prisma';
 import { AuthUtils } from '@/lib/auth';
 import type { ApiResponse } from '@/types';
 
+// Force dynamic rendering to avoid SSG issues
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     console.log('🔄 Setting up database and seeding data...');

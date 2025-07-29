@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import type { ApiResponse } from '@/types';
 
+// Force dynamic rendering to avoid SSG issues
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     // Get all escrutinios with their votes

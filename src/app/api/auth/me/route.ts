@@ -3,6 +3,9 @@ import { requireAuth } from '@/middleware/auth';
 import { prisma } from '@/lib/prisma';
 import type { ApiResponse, User } from '@/types';
 
+// Force dynamic rendering to avoid SSG issues
+export const dynamic = 'force-dynamic';
+
 export const GET = requireAuth(async (request) => {
   try {
     const userId = request.user!.id;

@@ -5,6 +5,9 @@ import { AuthUtils } from '@/lib/auth';
 import { AuditLogger } from '@/lib/audit';
 import type { RegisterRequest, AuthResponse, ApiResponse, UserRole } from '@/types';
 
+// Force dynamic rendering to avoid SSG issues
+export const dynamic = 'force-dynamic';
+
 const registerSchema = z.object({
   email: z.string().email('Email inválido'),
   password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),

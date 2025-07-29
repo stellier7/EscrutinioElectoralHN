@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { requireAuth } from '@/middleware/auth';
+import { AuditLogger } from '@/lib/audit';
 import type { ApiResponse } from '@/types';
+
+import { prisma } from '@/lib/prisma';
+
+// Force dynamic rendering to avoid SSG issues
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {

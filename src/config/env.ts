@@ -26,9 +26,12 @@ const envSchema = z.object({
   // Optional services
   GOOGLE_MAPS_API_KEY: z.string().optional(),
   SENTRY_DSN: z.string().optional(),
+  
+  // Seed secret for production
+  SEED_SECRET: z.string().optional(),
 });
 
-// Parse environment variables
+// Parse environment variables with better error handling
 let env: z.infer<typeof envSchema>;
 
 try {
@@ -41,9 +44,9 @@ try {
     console.warn('⚠️ Using development fallback environment variables');
     env = {
       DATABASE_URL: process.env.DATABASE_URL || 'postgresql://dummy:pass@localhost:5432/dummy',
-      NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET || 'dev-secret-only',
+      NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET || 'dev-secret-only-for-development',
       NEXTAUTH_URL: process.env.NEXTAUTH_URL || 'http://localhost:3000',
-      JWT_SECRET: process.env.JWT_SECRET || 'dev-jwt-secret-only',
+      JWT_SECRET: process.env.JWT_SECRET || 'dev-jwt-secret-only-for-development',
       AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
       AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
       AWS_REGION: process.env.AWS_REGION || 'us-east-1',
@@ -54,10 +57,18 @@ try {
       ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS,
       GOOGLE_MAPS_API_KEY: process.env.GOOGLE_MAPS_API_KEY,
       SENTRY_DSN: process.env.SENTRY_DSN,
+      SEED_SECRET: process.env.SEED_SECRET || 'dev-seed-secret',
     } as any;
   } else {
-    // In production, fail fast if environment variables are missing
-    throw new Error(`Invalid environment variables: ${error}`);
+    // In production, provide more specific error information
+    const missingVars = [];
+    if (!process.env.DATABASE_URL) missingVars.push('DATABASE_URL');
+    if (!process.env.JWT_SECRET) missingVars.push('JWT_SECRET');
+    if (!process.env.ENCRYPTION_KEY) missingVars.push('ENCRYPTION_KEY');
+    if (!process.env.NEXTAUTH_SECRET) missingVars.push('NEXTAUTH_SECRET');
+    
+    console.error('❌ Missing required environment variables:', missingVars.join(', '));
+    throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
   }
 }
 
