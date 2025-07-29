@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { PrismaClient } from '@prisma/client';
 import { AuthUtils } from '@/lib/auth';
 import type { ApiResponse } from '@/types';
 
 // Force dynamic rendering to avoid SSG issues
 export const dynamic = 'force-dynamic';
+
+// Create Prisma client
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined
+}
+
+const prisma = globalForPrisma.prisma ?? new PrismaClient()
+
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {

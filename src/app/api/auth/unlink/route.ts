@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
-import { AuditLogger } from '@/lib/audit';
 import type { ApiResponse } from '@/types';
 import jwt from 'jsonwebtoken';
 
@@ -25,6 +24,23 @@ function verifyToken(request: NextRequest) {
   }
 
   return jwt.verify(token, process.env.JWT_SECRET!)
+}
+
+// Simple audit logging function
+async function logLogout(userId: string, email: string, request: NextRequest) {
+  try {
+    await prisma.auditLog.create({
+      data: {
+        userId,
+        action: 'LOGOUT',
+        description: `User ${email} logged out`,
+        ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+        userAgent: request.headers.get('user-agent') || 'unknown',
+      },
+    });
+  } catch (error) {
+    console.error('Audit logging error:', error);
+  }
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
@@ -53,7 +69,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     });
 
     // Log unlink
-    await AuditLogger.logLogout(user.id, user.email, request);
+    await logLogout(user.id, user.email, request);
 
     return NextResponse.json({
       success: true,
