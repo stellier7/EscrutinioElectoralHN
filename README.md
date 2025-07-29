@@ -1,328 +1,153 @@
-# 🗳️ Escrutinio Transparente
+# Escrutinio Transparente
 
-Sistema MVP de **registro, verificación y transmisión de resultados electorales** construido con Next.js, PostgreSQL y tecnologías modernas. Diseñado para elecciones ciudadanas con máxima transparencia y seguridad.
+Sistema de registro, verificación y transmisión de resultados electorales para Honduras.
 
-## 🎯 Características Principales
+## Características
 
-### ✅ **Sistema Completo**
-- 🔐 **Autenticación segura** con roles (Voluntario/Miembro de Organización)
-- 📱 **Vinculación de dispositivos** (un dispositivo por usuario)
-- 🗺️ **Geolocalización automática** al iniciar escrutinio
-- 📊 **Ingreso de resultados** por candidato/partido
-- 📸 **Carga de evidencia** (imágenes del acta firmada)
-- 🔒 **Transmisión cifrada** de datos
-- 📋 **Dashboard público** de resultados en tiempo real
-- 🔍 **Sistema de auditoría** completo con logs detallados
+- 🔐 Autenticación segura con JWT
+- 📱 Captura de ubicación GPS
+- 📊 Dashboard en tiempo real
+- 🔍 Auditoría completa
+- 📈 Resultados públicos
+- 🗳️ Escrutinio transparente
 
-### 🛡️ **Seguridad y Trazabilidad**
-- Encriptación AES-256 para datos sensibles
-- Hash de validación para integridad de datos
-- Logs de auditoría para todas las acciones
-- Control de dispositivos autorizados
-- JWT para autenticación con expiración
+## Tecnologías
 
----
+- **Frontend:** Next.js 14, React 18, TypeScript, Tailwind CSS
+- **Backend:** Next.js API Routes, Prisma ORM
+- **Base de datos:** PostgreSQL (Supabase)
+- **Autenticación:** JWT, bcryptjs
+- **Deployment:** Vercel
 
-## 🚀 Instalación y Configuración
+## Configuración Rápida
 
-### **Prerrequisitos**
-
-- Node.js 18.17.0 o superior
-- PostgreSQL 13+ (local o remoto)
-- Cuenta de AWS S3 (opcional, para imágenes)
-
-### **1. Clonar el Repositorio**
-
+### 1. Clonar el repositorio
 ```bash
-git clone https://github.com/tu-usuario/escrutinio-transparente.git
-cd escrutinio-transparente
+git clone https://github.com/stellier7/EscrutinioElectoralHN.git
+cd EscrutinioElectoralHN
 ```
 
-### **2. Instalar Dependencias**
-
+### 2. Instalar dependencias
 ```bash
 npm install
 ```
 
-### **3. Configurar Variables de Entorno**
-
+### 3. Configurar variables de entorno
 Crea un archivo `.env` en la raíz del proyecto:
-
 ```env
-# Database
-DATABASE_URL="postgresql://username:password@localhost:5432/escrutinio_transparente"
-
-# Authentication
-NEXTAUTH_SECRET="tu-secreto-nextauth-super-seguro-cambia-esto"
-NEXTAUTH_URL="http://localhost:3000"
-JWT_SECRET="tu-jwt-secret-super-seguro-cambia-esto"
-
-# Encryption
-ENCRYPTION_KEY="tu-clave-de-32-caracteres-exactos123"
-
-# AWS S3 (Opcional - para almacenamiento de imágenes)
-AWS_ACCESS_KEY_ID="tu-aws-access-key"
-AWS_SECRET_ACCESS_KEY="tu-aws-secret-key"
-AWS_REGION="us-east-1"
-AWS_S3_BUCKET="escrutinio-images"
-
-# App Configuration
-APP_ENV="production"
-NODE_ENV="production"
+DATABASE_URL="postgresql://postgres.jjkpeossvumgqcvdnzpl:Infinita2025%25@aws-0-us-east-1.pooler.supabase.com:6543/postgres"
+NEXTAUTH_SECRET="tu-secret-aqui"
+JWT_SECRET="tu-jwt-secret-aqui"
+ENCRYPTION_KEY="tu-encryption-key-aqui"
 ```
 
-### **4. Configurar Base de Datos**
-
+### 4. Configurar la base de datos
 ```bash
-# Generar cliente Prisma
-npm run db:generate
-
-# Ejecutar migraciones
-npm run db:migrate
-
-# Poblar datos iniciales
-npm run db:seed
+npx prisma generate
+npx prisma migrate deploy
+npx prisma db seed
 ```
 
-### **5. Ejecutar la Aplicación**
-
+### 5. Ejecutar en desarrollo
 ```bash
-# Desarrollo
 npm run dev
-
-# Producción
-npm run build
-npm run start
 ```
 
-La aplicación estará disponible en `http://localhost:3000`
+## Usuarios de Prueba
 
----
+### Administrador
+- **Email:** admin@escrutinio.com
+- **Password:** admin123
 
-## 👤 Usuario por Defecto
+### Auditor
+- **Email:** auditor@escrutinio.com
+- **Password:** auditor123
 
-Después del seed, puedes usar estas credenciales:
+## Guía de Deployment
+
+### Vercel
+
+1. **Conectar repositorio** en Vercel
+2. **Configurar variables de entorno:**
+   - `DATABASE_URL`: URL de Supabase con Transaction Pooler
+   - `NEXTAUTH_SECRET`: Secret para NextAuth
+   - `JWT_SECRET`: Secret para JWT
+   - `ENCRYPTION_KEY`: Clave de encriptación
+
+3. **Configurar base de datos:**
+   - Usar **Transaction Pooler** en Supabase (IPv4 compatible)
+   - URL: `postgresql://postgres.jjkpeossvumgqcvdnzpl:[PASSWORD]@aws-0-us-east-1.pooler.supabase.com:6543/postgres`
+
+4. **Después del deployment:**
+   ```bash
+   curl -X POST https://tu-dominio.vercel.app/api/setup
+   ```
+
+## Estructura del Proyecto
 
 ```
-Email: admin@escrutinio.com
-Contraseña: admin123
-Rol: Administrador
+src/
+├── app/                    # Next.js App Router
+│   ├── api/               # API Routes
+│   │   ├── auth/          # Autenticación
+│   │   ├── results/       # Resultados públicos
+│   │   └── setup/         # Configuración inicial
+│   ├── dashboard/         # Dashboard principal
+│   ├── escrutinio/        # Escrutinio de votos
+│   ├── resultados/        # Resultados públicos
+│   └── auditoria/         # Auditoría del sistema
+├── components/            # Componentes React
+├── lib/                   # Utilidades
+├── hooks/                 # Custom hooks
+├── types/                 # Tipos TypeScript
+└── middleware/            # Middleware de autenticación
 ```
 
----
+## Funcionalidades
 
-## 🏗️ Arquitectura del Sistema
+### 🔐 Autenticación
+- Registro de usuarios
+- Login con JWT
+- Roles: Admin, Auditor, Voluntario, Miembro de Organización
+- Captura de ubicación GPS
 
-### **Frontend**
-- **Next.js 14** con App Router
-- **React 18** con hooks personalizados
-- **Tailwind CSS** para estilos responsivos
-- **TypeScript** para tipado fuerte
+### 📊 Dashboard
+- Vista general del sistema
+- Navegación a funcionalidades
+- Estado de autenticación
 
-### **Backend**
-- **Next.js API Routes** para endpoints REST
-- **Prisma ORM** para acceso a base de datos
-- **JWT** para autenticación
-- **Middleware** personalizado para autorización
+### 🗳️ Escrutinio
+- Captura de votos por candidato
+- Validación de datos
+- Transmisión de resultados
+- Captura de fotos de actas
 
-### **Base de Datos**
-- **PostgreSQL** como base de datos principal
-- **Esquema optimizado** para relaciones electorales
-- **Índices** para consultas rápidas
+### 📈 Resultados
+- Visualización pública de resultados
+- Gráficos en tiempo real
+- Filtros por nivel electoral
 
-### **Seguridad**
-- **Encriptación AES-256** para datos sensibles
-- **Validación de esquemas** con Zod
-- **Sanitización** de entrada de datos
-- **CORS** configurado correctamente
-
----
-
-## 📊 Funcionalidades Detalladas
-
-### **1. Registro e Inicio de Sesión**
-- Formulario de registro con validación
-- Login con email y contraseña
-- Vinculación automática de dispositivo
-- Roles: Voluntario o Miembro de Organización
-
-### **2. Proceso de Escrutinio**
-- Selección de mesa (JRV) y nivel electoral
-- Captura automática de GPS con precisión
-- Validación de ubicación dentro de rangos permitidos
-
-### **3. Ingreso de Resultados**
-- Lista dinámica de candidatos por nivel electoral
-- Validación de datos numéricos
-- Sistema de correcciones con registro de auditoría
-- Cálculo automático de totales
-
-### **4. Carga de Evidencia**
-- Captura/upload de imagen del acta
-- Generación automática de hash para integridad
-- Almacenamiento seguro (local o S3)
-- Vinculación con datos del escrutinio
-
-### **5. Transmisión y Backend**
-- Envío cifrado de datos completos
-- Validación de integridad en servidor
-- Estado de transmisión en tiempo real
-- Logs detallados de todo el proceso
-
-### **6. Dashboard Público**
-- Resultados en tiempo real por nivel electoral
-- Porcentajes y gráficos automáticos
-- Filtros por mesa y candidato
-- Estado de transmisión por mesa
-
-### **7. Sistema de Auditoría**
-- Log de todas las acciones del sistema
-- Metadatos completos (IP, User-Agent, etc.)
+### 🔍 Auditoría
+- Log de todas las acciones
 - Filtros por usuario, acción y fecha
-- Exportación de reportes de auditoría
+- Exportación de datos
+
+## Contribución
+
+1. Fork el proyecto
+2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
+3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
+4. Push a la rama (`git push origin feature/AmazingFeature`)
+5. Abre un Pull Request
+
+## Licencia
+
+Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más detalles.
+
+## Soporte
+
+Para soporte técnico, contacta al equipo de desarrollo.
 
 ---
 
-## 🔧 Configuración Avanzada
-
-### **Personalización de Seguridad**
-
-```typescript
-// src/config/security.ts
-export const SECURITY_CONFIG = {
-  MAX_LOGIN_ATTEMPTS: 5,
-  SESSION_TIMEOUT: 3600, // 1 hora
-  GEOLOCATION_ACCURACY: 100, // metros
-  MAX_FILE_SIZE: 10 * 1024 * 1024, // 10MB
-  ALLOWED_IMAGE_TYPES: ['image/jpeg', 'image/png'],
-};
-```
-
-### **Configuración de Base de Datos**
-
-Para usar con servicios cloud:
-
-```env
-# Railway
-DATABASE_URL="postgresql://user:pass@containers-us-west-xxx.railway.app:5432/railway"
-
-# Render
-DATABASE_URL="postgresql://user:pass@dpg-xxx-a.oregon-postgres.render.com/dbname"
-
-# Neon
-DATABASE_URL="postgresql://user:pass@ep-xxx.us-east-1.aws.neon.tech/neondb"
-```
-
----
-
-## 📱 Uso del Sistema
-
-### **Para Voluntarios/Miembros de Mesa:**
-
-1. **Registro**: Crear cuenta con email y rol
-2. **Inicio de Escrutinio**: Seleccionar mesa y nivel electoral
-3. **Autorización de Ubicación**: Permitir acceso al GPS
-4. **Ingreso de Votos**: Completar conteo por candidato
-5. **Carga de Evidencia**: Fotografiar/subir acta firmada
-6. **Transmisión**: Enviar datos cifrados al servidor
-
-### **Para el Público:**
-
-1. **Dashboard**: Acceso libre a resultados en tiempo real
-2. **Filtros**: Ver resultados por nivel electoral
-3. **Transparencia**: Estado de transmisión por mesa
-4. **Gráficos**: Visualización automática de porcentajes
-
----
-
-## 🚀 Deployment en Producción
-
-### **Opción 1: Vercel + Railway**
-
-```bash
-# Vercel (Frontend)
-npm i -g vercel
-vercel --prod
-
-# Railway (Database)
-# Crear proyecto en railway.app y conectar PostgreSQL
-```
-
-### **Opción 2: VPS Completo**
-
-```bash
-# En tu servidor
-git clone [repo]
-cd escrutinio-transparente
-npm install
-npm run build
-
-# Configurar PM2
-npm i -g pm2
-pm2 start npm --name "escrutinio" -- start
-pm2 startup
-pm2 save
-```
-
-### **Opción 3: Docker**
-
-```dockerfile
-FROM node:18-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --only=production
-COPY . .
-RUN npm run build
-EXPOSE 3000
-CMD ["npm", "start"]
-```
-
----
-
-## 🔒 Consideraciones de Seguridad
-
-### **En Producción:**
-- ✅ Cambiar todas las claves por defecto
-- ✅ Usar HTTPS con certificados SSL
-- ✅ Configurar CORS restrictivo
-- ✅ Implementar rate limiting
-- ✅ Habilitar logs de seguridad
-- ✅ Backup automático de base de datos
-
-### **Monitoreo:**
-- Logs de auditoría en tiempo real
-- Alertas por intentos de acceso sospechosos
-- Métricas de performance y disponibilidad
-- Backup incremental de datos críticos
-
----
-
-## 🤝 Contribuciones
-
-Este es un sistema MVP. Las mejoras sugeridas incluyen:
-
-- **WebSockets** para actualizaciones en tiempo real
-- **Notificaciones push** para móviles
-- **API REST completa** para integraciones
-- **Tests automatizados** unitarios e integración
-- **Docker Compose** para desarrollo local
-
----
-
-## 📄 Licencia
-
-**MIT License** - Uso libre para elecciones democráticas y transparentes.
-
----
-
-## 📞 Soporte
-
-Para problemas técnicos o consultas:
-
-- **Email**: soporte@escrutinio-transparente.org
-- **Issues**: GitHub Issues de este repositorio
-- **Documentación**: Ver `/docs` para detalles técnicos
-
----
-
-**¡Construyamos elecciones más transparentes y confiables juntos! 🗳️✊** 
+**Sistema optimizado para elecciones reales en Honduras** 🗳️✨ 
