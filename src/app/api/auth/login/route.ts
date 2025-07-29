@@ -59,14 +59,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       } as ApiResponse, { status: 401 });
     }
 
-    // Check device association
-    if (user.deviceId && user.deviceId !== deviceId) {
-      await AuditLogger.logLogin('', email, false, request);
-      return NextResponse.json({
-        success: false,
-        error: 'Este usuario ya está asociado a otro dispositivo',
-      } as ApiResponse, { status: 403 });
-    }
+    // Check device association (DISABLED FOR FLEXIBILITY)
+    // if (user.deviceId && user.deviceId !== deviceId) {
+    //   await AuditLogger.logLogin('', email, false, request);
+    //   return NextResponse.json({
+    //     success: false,
+    //     error: 'Este usuario ya está asociado a otro dispositivo',
+    //   } as ApiResponse, { status: 403 });
+    // }
 
     // Associate device if not already associated
     if (!user.deviceId) {
