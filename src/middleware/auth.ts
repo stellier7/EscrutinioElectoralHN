@@ -12,25 +12,25 @@ export interface AuthenticatedRequest extends NextRequest {
 }
 
 export async function authMiddleware(request: NextRequest): Promise<NextResponse | null> {
-  const authHeader = request.headers.get('authorization');
-  const token = AuthUtils.extractTokenFromHeader(authHeader || undefined);
-
-  if (!token) {
-    return NextResponse.json(
-      { success: false, error: 'Token de acceso requerido' },
-      { status: 401 }
-    );
-  }
-
-  const payload = AuthUtils.verifyToken(token);
-  if (!payload) {
-    return NextResponse.json(
-      { success: false, error: 'Token inválido o expirado' },
-      { status: 401 }
-    );
-  }
-
   try {
+    const authHeader = request.headers.get('authorization');
+    const token = AuthUtils.extractTokenFromHeader(authHeader || undefined);
+
+    if (!token) {
+      return NextResponse.json(
+        { success: false, error: 'Token de acceso requerido' },
+        { status: 401 }
+      );
+    }
+
+    const payload = AuthUtils.verifyToken(token);
+    if (!payload) {
+      return NextResponse.json(
+        { success: false, error: 'Token inválido o expirado' },
+        { status: 401 }
+      );
+    }
+
     // Verify user exists and is active
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
@@ -61,6 +61,12 @@ export async function authMiddleware(request: NextRequest): Promise<NextResponse
     return null; // Continue to the API handler
   } catch (error) {
     console.error('Auth middleware error:', error);
+    
+    // Log additional context for debugging
+    console.error('Request URL:', request.url);
+    console.error('Request method:', request.method);
+    console.error('Request headers:', Object.fromEntries(request.headers.entries()));
+    
     return NextResponse.json(
       { success: false, error: 'Error de autenticación' },
       { status: 500 }

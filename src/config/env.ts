@@ -28,51 +28,36 @@ const envSchema = z.object({
   SENTRY_DSN: z.string().optional(),
 });
 
-// Default environment variables for production
-const defaultEnv = {
-  DATABASE_URL: process.env.DATABASE_URL || 'postgresql://dummy:pass@localhost:5432/dummy',
-  NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET || 'dummy-secret-for-build-only',
-  NEXTAUTH_URL: process.env.NEXTAUTH_URL || 'http://localhost:3000',
-  JWT_SECRET: process.env.JWT_SECRET || 'dummy-jwt-secret-for-build-only',
-  AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
-  AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
-  AWS_REGION: process.env.AWS_REGION || 'us-east-1',
-  AWS_S3_BUCKET: process.env.AWS_S3_BUCKET,
-  ENCRYPTION_KEY: process.env.ENCRYPTION_KEY || 'dummy-32-char-encryption-key-123',
-  NODE_ENV: process.env.NODE_ENV,
-  APP_ENV: process.env.APP_ENV || 'production',
-  ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS,
-  GOOGLE_MAPS_API_KEY: process.env.GOOGLE_MAPS_API_KEY,
-  SENTRY_DSN: process.env.SENTRY_DSN,
-};
-
+// Parse environment variables
 let env: z.infer<typeof envSchema>;
 
 try {
-  env = envSchema.parse(defaultEnv);
+  env = envSchema.parse(process.env);
 } catch (error) {
   console.error('❌ Invalid environment variables:', error);
-  // In production, we'll use a more lenient approach
-  if (process.env.NODE_ENV === 'production') {
-    console.warn('⚠️ Using fallback environment variables for build');
+  
+  // In development, we can be more lenient
+  if (process.env.NODE_ENV === 'development') {
+    console.warn('⚠️ Using development fallback environment variables');
     env = {
-      DATABASE_URL: 'postgresql://dummy:pass@localhost:5432/dummy',
-      NEXTAUTH_SECRET: 'dummy-secret-for-build-only',
-      NEXTAUTH_URL: 'http://localhost:3000',
-      JWT_SECRET: 'dummy-jwt-secret-for-build-only',
-      AWS_ACCESS_KEY_ID: undefined,
-      AWS_SECRET_ACCESS_KEY: undefined,
-      AWS_REGION: 'us-east-1',
-      AWS_S3_BUCKET: undefined,
-      ENCRYPTION_KEY: 'dummy-32-char-encryption-key-123',
-      NODE_ENV: 'production',
-      APP_ENV: 'production',
-      ALLOWED_ORIGINS: undefined,
-      GOOGLE_MAPS_API_KEY: undefined,
-      SENTRY_DSN: undefined,
+      DATABASE_URL: process.env.DATABASE_URL || 'postgresql://dummy:pass@localhost:5432/dummy',
+      NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET || 'dev-secret-only',
+      NEXTAUTH_URL: process.env.NEXTAUTH_URL || 'http://localhost:3000',
+      JWT_SECRET: process.env.JWT_SECRET || 'dev-jwt-secret-only',
+      AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
+      AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
+      AWS_REGION: process.env.AWS_REGION || 'us-east-1',
+      AWS_S3_BUCKET: process.env.AWS_S3_BUCKET,
+      ENCRYPTION_KEY: process.env.ENCRYPTION_KEY || 'dev-32-char-encryption-key-123',
+      NODE_ENV: 'development',
+      APP_ENV: 'development',
+      ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS,
+      GOOGLE_MAPS_API_KEY: process.env.GOOGLE_MAPS_API_KEY,
+      SENTRY_DSN: process.env.SENTRY_DSN,
     } as any;
   } else {
-    throw new Error('Invalid environment variables');
+    // In production, fail fast if environment variables are missing
+    throw new Error(`Invalid environment variables: ${error}`);
   }
 }
 

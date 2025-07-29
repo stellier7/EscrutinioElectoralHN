@@ -7,12 +7,36 @@ const globalForPrisma = globalThis as unknown as {
 // Create a more robust Prisma client that handles connection errors
 const createPrismaClient = () => {
   try {
-    return new PrismaClient({
+    const client = new PrismaClient({
       log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+      datasources: {
+        db: {
+          url: process.env.DATABASE_URL,
+        },
+      },
     });
+
+    // Test the connection
+    client.$connect()
+      .then(() => {
+        console.log('✅ Database connected successfully');
+      })
+      .catch((error) => {
+        console.error('❌ Database connection failed:', error);
+        throw error;
+      });
+
+    return client;
   } catch (error) {
     console.error('Failed to create Prisma client:', error);
-    // Return a mock client for build purposes
+    
+    // In production, we should fail fast if we can't connect to the database
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error(`Database connection failed: ${error}`);
+    }
+    
+    // Only use mock client in development
+    console.warn('⚠️ Using mock Prisma client for development');
     return {
       user: { findMany: () => [], findUnique: () => null, create: () => ({}), update: () => ({}) },
       election: { findMany: () => [], findUnique: () => null, create: () => ({}), update: () => ({}) },
