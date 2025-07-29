@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
-import { AuthUtils } from '@/lib/auth';
+import { extractTokenFromRequest } from '@/middleware/auth';
 import { AuditLogger } from '@/lib/audit';
 import type { LoginRequest, AuthResponse, ApiResponse } from '@/types';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 
 // Force dynamic rendering to avoid SSG issues
 export const dynamic = 'force-dynamic';
@@ -66,7 +68,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // Verify password
-    const isPasswordValid = await AuthUtils.verifyPassword(password, user.password);
+    const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       try {
         await AuditLogger.logLogin('', email, false, request);
@@ -93,12 +95,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // Generate JWT token
-    const token = AuthUtils.generateToken({
-      id: user.id,
+    const token = jwt.sign({
+      userId: user.id,
       email: user.email,
       role: user.role,
       deviceId: deviceId,
-    } as any);
+    }, process.env.JWT_SECRET!, {
+      expiresIn: '24h',
+      issuer: 'escrutinio-transparente',
+      audience: 'escrutinio-users',
+    });
 
     // Calculate expiration time
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours

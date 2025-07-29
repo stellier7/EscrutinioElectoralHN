@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/middleware/auth';
+import { verifyToken } from '@/middleware/auth';
 import { prisma } from '@/lib/prisma';
 import type { ApiResponse, User } from '@/types';
 
 // Force dynamic rendering to avoid SSG issues
 export const dynamic = 'force-dynamic';
 
-export const GET = requireAuth(async (request) => {
+export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
-    const userId = request.user!.id;
+    // Verify token
+    const payload = verifyToken(request);
+    const userId = (payload as any).userId;
 
     // Get complete user profile
     const user = await prisma.user.findUnique({
@@ -45,4 +47,4 @@ export const GET = requireAuth(async (request) => {
       error: 'Error interno del servidor',
     } as ApiResponse, { status: 500 });
   }
-}); 
+} 

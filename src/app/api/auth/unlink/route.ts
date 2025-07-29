@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/middleware/auth';
+import { verifyToken } from '@/middleware/auth';
 import { AuditLogger } from '@/lib/audit';
 import type { ApiResponse } from '@/types';
 
@@ -10,19 +10,14 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
-    const body = await request.json();
-    const { email } = body;
+    // Verify token
+    const payload = verifyToken(request);
+    const userId = (payload as any).userId;
 
-    if (!email) {
-      return NextResponse.json({
-        success: false,
-        error: 'Email requerido',
-      } as ApiResponse, { status: 400 });
-    }
-
-    // Find user and unlink device
+    // Get user
     const user = await prisma.user.findUnique({
-      where: { email },
+      where: { id: userId },
+      select: { id: true, email: true, deviceId: true }
     });
 
     if (!user) {
@@ -32,15 +27,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       } as ApiResponse, { status: 404 });
     }
 
-    // Unlink device
+    // Remove device association
     await prisma.user.update({
-      where: { email },
+      where: { id: user.id },
       data: { deviceId: null },
     });
 
+    // Log unlink
+    await AuditLogger.logLogout(user.id, user.email, request);
+
     return NextResponse.json({
       success: true,
-      message: `Dispositivo desvinculado para ${email}. Ahora puedes iniciar sesión.`,
+      message: 'Dispositivo desvinculado exitosamente',
     } as ApiResponse);
 
   } catch (error) {

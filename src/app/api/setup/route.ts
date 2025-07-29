@@ -171,7 +171,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         email: 'auditor@escrutinio.com',
         password: auditorPassword,
         name: 'Auditor del Sistema',
-        role: 'AUDITOR',
+        role: 'ORGANIZATION_MEMBER',
         deviceId: null,
         isActive: true,
       },
@@ -184,17 +184,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       create: {
         id: 'election-2024',
         name: 'Elecciones Generales 2024',
-        level: 'PRESIDENTE',
-        date: new Date('2024-11-24'),
+        description: 'Elecciones presidenciales y legislativas 2024',
+        startDate: new Date('2024-11-24T06:00:00Z'),
+        endDate: new Date('2024-11-24T18:00:00Z'),
         isActive: true,
       },
     });
     
     // Create sample candidates
     const candidates = [
-      { id: 'candidate-1', name: 'Xiomara Castro', party: 'LIBRE' },
-      { id: 'candidate-2', name: 'Nasry Asfura', party: 'PNH' },
-      { id: 'candidate-3', name: 'Yani Rosenthal', party: 'PLH' },
+      { id: 'candidate-1', name: 'Xiomara Castro', party: 'LIBRE', number: 1 },
+      { id: 'candidate-2', name: 'Nasry Asfura', party: 'PNH', number: 2 },
+      { id: 'candidate-3', name: 'Yani Rosenthal', party: 'PLH', number: 3 },
     ];
     
     for (const candidate of candidates) {
@@ -205,7 +206,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           id: candidate.id,
           name: candidate.name,
           party: candidate.party,
+          number: candidate.number,
           electionId: 'election-2024',
+          electionLevel: 'PRESIDENTIAL',
+          isActive: true,
         },
       });
     }

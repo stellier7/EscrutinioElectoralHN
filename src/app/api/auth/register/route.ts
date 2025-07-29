@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
-import { AuthUtils } from '@/lib/auth';
 import { AuditLogger } from '@/lib/audit';
 import type { RegisterRequest, AuthResponse, ApiResponse, UserRole } from '@/types';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 
 // Force dynamic rendering to avoid SSG issues
 export const dynamic = 'force-dynamic';
@@ -12,9 +13,7 @@ const registerSchema = z.object({
   email: z.string().email('Email inválido'),
   password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
   name: z.string().min(2, 'El nombre debe tener al menos 2 caracteres'),
-  role: z.enum(['VOLUNTEER', 'ORGANIZATION_MEMBER', 'ADMIN'], {
-    errorMap: () => ({ message: 'Rol inválido' }),
-  }),
+  role: z.enum(['VOLUNTEER', 'ORGANIZATION_MEMBER', 'ADMIN'] as const),
   deviceId: z.string().min(1, 'ID de dispositivo requerido'),
 });
 
@@ -42,7 +41,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     if (existingUser) {
       return NextResponse.json({
         success: false,
-        error: 'Ya existe un usuario con este email',
+        error: 'El usuario ya existe',
       } as ApiResponse, { status: 409 });
     }
 
@@ -58,13 +57,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       } as ApiResponse, { status: 409 });
     }
 
-    // Check if this is the first user (will be admin)
-    const userCount = await prisma.user.count();
-    const isFirstUser = userCount === 0;
-    const finalRole = isFirstUser ? 'ADMIN' : role;
-
     // Hash password
-    const hashedPassword = await AuthUtils.hashPassword(password);
+    const hashedPassword = await bcrypt.hash(password, 12);
 
     // Create user
     const newUser = await prisma.user.create({
@@ -72,7 +66,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         email,
         password: hashedPassword,
         name,
-        role: finalRole as UserRole,
+        role,
         deviceId,
         isActive: true,
       },
@@ -89,24 +83,22 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     });
 
     // Generate JWT token
-    const token = AuthUtils.generateToken(newUser as any);
+    const token = jwt.sign({
+      userId: newUser.id,
+      email: newUser.email,
+      role: newUser.role,
+      deviceId: newUser.deviceId,
+    }, process.env.JWT_SECRET!, {
+      expiresIn: '24h',
+      issuer: 'escrutinio-transparente',
+      audience: 'escrutinio-users',
+    });
 
     // Calculate expiration time
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
-    // Log successful registration
-    await AuditLogger.log(
-      'LOGIN', // Using LOGIN action for successful registration/login
-      `New user registered: ${email}`,
-      newUser.id,
-      {
-        registrationType: 'new_user',
-        role: finalRole,
-        deviceId: deviceId,
-        isFirstUser: isFirstUser,
-      },
-      request
-    );
+    // Log registration
+    await AuditLogger.logLogin(newUser.id, email, true, request);
 
     const response: AuthResponse = {
       user: newUser as any,
@@ -114,16 +106,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       expiresAt: expiresAt.toISOString(),
     };
 
-    const message = isFirstUser 
-      ? '¡Usuario registrado exitosamente como Administrador del Sistema!'
-      : 'Usuario registrado exitosamente';
-
     return NextResponse.json({
       success: true,
       data: response,
-      message: message,
-      isFirstUser: isFirstUser,
-    } as ApiResponse<AuthResponse>, { status: 201 });
+      message: 'Usuario registrado exitosamente',
+    } as ApiResponse<AuthResponse>);
 
   } catch (error) {
     console.error('Registration error:', error);
