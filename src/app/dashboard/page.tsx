@@ -15,13 +15,16 @@ import {
   User,
   Calendar,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Menu,
+  X
 } from 'lucide-react';
 
 export default function DashboardPage() {
   const { user, logout, isLoading } = useAuth();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('overview');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -59,61 +62,62 @@ export default function DashboardPage() {
   ];
 
   const renderOverview = () => (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
+    <div className="space-y-4">
+      {/* iPhone-sized cards */}
+      <div className="grid grid-cols-1 gap-4">
+        <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
           <div className="flex items-center">
             <div className="p-2 bg-green-100 rounded-lg">
-              <CheckCircle className="h-6 w-6 text-green-600" />
+              <CheckCircle className="h-5 w-5 text-green-600" />
             </div>
-            <div className="ml-4">
+            <div className="ml-3">
               <p className="text-sm font-medium text-gray-600">Escrutinios Completados</p>
-              <p className="text-2xl font-bold text-gray-900">0</p>
+              <p className="text-xl font-bold text-gray-900">0</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
+        <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
           <div className="flex items-center">
             <div className="p-2 bg-blue-100 rounded-lg">
-              <AlertCircle className="h-6 w-6 text-blue-600" />
+              <AlertCircle className="h-5 w-5 text-blue-600" />
             </div>
-            <div className="ml-4">
+            <div className="ml-3">
               <p className="text-sm font-medium text-gray-600">Pendientes</p>
-              <p className="text-2xl font-bold text-gray-900">0</p>
+              <p className="text-xl font-bold text-gray-900">0</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
+        <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
           <div className="flex items-center">
             <div className="p-2 bg-purple-100 rounded-lg">
-              <MapPin className="h-6 w-6 text-purple-600" />
+              <MapPin className="h-5 w-5 text-purple-600" />
             </div>
-            <div className="ml-4">
+            <div className="ml-3">
               <p className="text-sm font-medium text-gray-600">Mesas Asignadas</p>
-              <p className="text-2xl font-bold text-gray-900">0</p>
+              <p className="text-xl font-bold text-gray-900">0</p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="bg-white p-6 rounded-lg shadow-sm border">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Actividad Reciente</h3>
-        <div className="text-center py-8 text-gray-500">
-          <Vote className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-          <p>No hay actividad reciente</p>
-          <p className="text-sm">Comienza un nuevo escrutinio para ver tu actividad aquí</p>
+      <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
+        <h3 className="text-lg font-semibold text-gray-900 mb-3">Actividad Reciente</h3>
+        <div className="text-center py-6 text-gray-500">
+          <Vote className="h-10 w-10 mx-auto mb-3 text-gray-300" />
+          <p className="text-sm">No hay actividad reciente</p>
+          <p className="text-xs text-gray-400">Comienza un nuevo escrutinio para ver tu actividad aquí</p>
         </div>
       </div>
     </div>
   );
 
   const renderNewEscrutinio = () => (
-    <div className="space-y-6">
-      <div className="bg-white p-6 rounded-lg shadow-sm border">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Iniciar Nuevo Escrutinio</h3>
-        <p className="text-gray-600 mb-6">
+    <div className="space-y-4">
+      <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
+        <h3 className="text-lg font-semibold text-gray-900 mb-3">Iniciar Nuevo Escrutinio</h3>
+        <p className="text-gray-600 mb-4 text-sm">
           Selecciona una mesa y nivel electoral para comenzar el proceso de escrutinio.
         </p>
         
@@ -122,7 +126,7 @@ export default function DashboardPage() {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Mesa Electoral (JRV)
             </label>
-            <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500">
+            <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm">
               <option value="">Seleccionar mesa...</option>
               <option value="JRV-001">JRV-001 - Escuela Central</option>
               <option value="JRV-002">JRV-002 - Colegio San José</option>
@@ -136,7 +140,7 @@ export default function DashboardPage() {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Nivel Electoral
             </label>
-            <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500">
+            <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm">
               <option value="">Seleccionar nivel...</option>
               <option value="PRESIDENTIAL">Presidencial</option>
               <option value="LEGISLATIVE">Legislativo</option>
@@ -164,9 +168,9 @@ export default function DashboardPage() {
         return renderNewEscrutinio();
       case 'results':
         return (
-          <div className="bg-white p-6 rounded-lg shadow-sm border">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Resultados Electorales</h3>
-            <p className="text-gray-600 mb-6">
+          <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">Resultados Electorales</h3>
+            <p className="text-gray-600 mb-4 text-sm">
               Visualiza los resultados en tiempo real de todas las mesas electorales.
             </p>
             <Button 
@@ -180,9 +184,9 @@ export default function DashboardPage() {
         );
       case 'audit':
         return (
-          <div className="bg-white p-6 rounded-lg shadow-sm border">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Auditoría del Sistema</h3>
-            <p className="text-gray-600 mb-6">
+          <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">Auditoría del Sistema</h3>
+            <p className="text-gray-600 mb-4 text-sm">
               Revisa todos los logs de actividad y auditoría del sistema electoral.
             </p>
             <Button 
@@ -196,11 +200,11 @@ export default function DashboardPage() {
         );
       default:
         return (
-          <div className="bg-white p-6 rounded-lg shadow-sm border">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">
               {menuItems.find(item => item.id === activeTab)?.label}
             </h3>
-            <p className="text-gray-600">Esta funcionalidad estará disponible próximamente.</p>
+            <p className="text-gray-600 text-sm">Esta funcionalidad estará disponible próximamente.</p>
           </div>
         );
     }
@@ -208,8 +212,39 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
+      {/* Mobile Header */}
+      <header className="bg-white shadow-sm border-b lg:hidden">
+        <div className="px-4 py-3">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center">
+              <Vote className="h-6 w-6 text-primary-600" />
+              <h1 className="ml-2 text-lg font-semibold text-gray-900">
+                Escrutinio
+              </h1>
+            </div>
+            
+            <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-2">
+                <User className="h-4 w-4 text-gray-400" />
+                <span className="text-sm text-gray-700">{user.name}</span>
+              </div>
+              <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="p-2 rounded-lg hover:bg-gray-100 touch-target"
+              >
+                {isMobileMenuOpen ? (
+                  <X className="h-5 w-5 text-gray-600" />
+                ) : (
+                  <Menu className="h-5 w-5 text-gray-600" />
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Desktop Header */}
+      <header className="bg-white shadow-sm border-b hidden lg:block">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
@@ -236,10 +271,60 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex space-x-8">
-          {/* Sidebar */}
-          <div className="w-64 flex-shrink-0">
+      <div className="flex">
+        {/* Mobile Menu Overlay */}
+        {isMobileMenuOpen && (
+          <div className="fixed inset-0 z-40 lg:hidden">
+            <div className="fixed inset-0 bg-gray-600 bg-opacity-75" onClick={() => setIsMobileMenuOpen(false)}></div>
+            <div className="fixed inset-y-0 left-0 w-64 bg-white shadow-lg">
+              <div className="flex items-center justify-between p-4 border-b">
+                <h2 className="text-lg font-semibold text-gray-900">Menú</h2>
+                <button
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="p-2 rounded-lg hover:bg-gray-100 touch-target"
+                >
+                  <X className="h-5 w-5 text-gray-600" />
+                </button>
+              </div>
+              <nav className="p-4 space-y-2">
+                {menuItems.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => {
+                        setActiveTab(item.id);
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors touch-target ${
+                        activeTab === item.id
+                          ? 'bg-primary-50 text-primary-700 border border-primary-200'
+                          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                      }`}
+                    >
+                      <Icon className="h-5 w-5 mr-3" />
+                      {item.label}
+                    </button>
+                  );
+                })}
+                <div className="pt-4 border-t">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleLogout}
+                  >
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Cerrar Sesión
+                  </Button>
+                </div>
+              </nav>
+            </div>
+          </div>
+        )}
+
+        {/* Desktop Sidebar */}
+        <div className="hidden lg:block w-64 flex-shrink-0">
+          <div className="p-6">
             <nav className="space-y-2">
               {menuItems.map((item) => {
                 const Icon = item.icon;
@@ -260,9 +345,11 @@ export default function DashboardPage() {
               })}
             </nav>
           </div>
+        </div>
 
-          {/* Main Content */}
-          <div className="flex-1">
+        {/* Main Content */}
+        <div className="flex-1 p-4 lg:p-8">
+          <div className="max-w-2xl mx-auto">
             {renderContent()}
           </div>
         </div>

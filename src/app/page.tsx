@@ -96,44 +96,44 @@ export default function HomePage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center p-4">
-      <div className="max-w-md w-full space-y-8">
+    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center p-4 safe-top safe-bottom">
+      <div className="w-full max-w-sm mx-auto space-y-6">
         {/* Header */}
         <div className="text-center">
-          <div className="mx-auto h-16 w-16 bg-primary-600 rounded-full flex items-center justify-center mb-4">
-            <Vote className="h-8 w-8 text-white" />
+          <div className="mx-auto h-12 w-12 bg-primary-600 rounded-full flex items-center justify-center mb-3">
+            <Vote className="h-6 w-6 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900">
+          <h1 className="text-2xl font-bold text-gray-900">
             Escrutinio Transparente
           </h1>
-          <p className="mt-2 text-gray-600">
+          <p className="mt-1 text-sm text-gray-600">
             Sistema de registro y transmisión de resultados electorales
           </p>
         </div>
 
-        {/* Features */}
-        <div className="grid grid-cols-3 gap-4 text-center">
-          <div className="flex flex-col items-center space-y-2">
-            <Shield className="h-6 w-6 text-primary-600" />
+        {/* Features - Smaller and more compact */}
+        <div className="grid grid-cols-3 gap-3 text-center">
+          <div className="flex flex-col items-center space-y-1">
+            <Shield className="h-5 w-5 text-primary-600" />
             <span className="text-xs text-gray-600">Seguro</span>
           </div>
-          <div className="flex flex-col items-center space-y-2">
-            <MapPin className="h-6 w-6 text-primary-600" />
+          <div className="flex flex-col items-center space-y-1">
+            <MapPin className="h-5 w-5 text-primary-600" />
             <span className="text-xs text-gray-600">Geolocalizado</span>
           </div>
-          <div className="flex flex-col items-center space-y-2">
-            <Vote className="h-6 w-6 text-primary-600" />
+          <div className="flex flex-col items-center space-y-1">
+            <Vote className="h-5 w-5 text-primary-600" />
             <span className="text-xs text-gray-600">Auditable</span>
           </div>
         </div>
 
-        {/* Form */}
-        <div className="card">
-          <div className="mb-6">
+        {/* Form - iPhone-sized card */}
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 max-w-sm mx-auto">
+          <div className="mb-4">
             <div className="flex rounded-lg bg-gray-100 p-1">
               <button
                 type="button"
-                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+                className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors touch-target ${
                   isLogin
                     ? 'bg-white text-gray-900 shadow-sm'
                     : 'text-gray-600 hover:text-gray-900'
@@ -147,7 +147,7 @@ export default function HomePage() {
               </button>
               <button
                 type="button"
-                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+                className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors touch-target ${
                   !isLogin
                     ? 'bg-white text-gray-900 shadow-sm'
                     : 'text-gray-600 hover:text-gray-900'
@@ -164,17 +164,17 @@ export default function HomePage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {!isLogin && (
-              <div className="bg-blue-50 border border-blue-200 rounded-md p-4 mb-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
                 <div className="flex">
                   <div className="flex-shrink-0">
-                    <Shield className="h-5 w-5 text-blue-400" />
+                    <Shield className="h-4 w-4 text-blue-400" />
                   </div>
-                  <div className="ml-3">
-                    <h3 className="text-sm font-medium text-blue-800">
+                  <div className="ml-2">
+                    <h3 className="text-xs font-medium text-blue-800">
                       Primer Usuario del Sistema
                     </h3>
-                    <div className="mt-2 text-sm text-blue-700">
-                      <p>El primer usuario que se registre será automáticamente designado como <strong>Administrador del Sistema</strong> con acceso completo a todas las funcionalidades.</p>
+                    <div className="mt-1 text-xs text-blue-700">
+                      <p>El primer usuario será designado como <strong>Administrador</strong> con acceso completo.</p>
                     </div>
                   </div>
                 </div>
@@ -183,7 +183,7 @@ export default function HomePage() {
             
             {errors.general && (
               <div className="error-container">
-                <p className="error-message">{errors.general}</p>
+                <p className="error-message text-sm">{errors.general}</p>
               </div>
             )}
 
@@ -224,13 +224,13 @@ export default function HomePage() {
               />
               <button
                 type="button"
-                className="absolute right-3 top-9 text-gray-400 hover:text-gray-600"
+                className="absolute right-3 top-9 text-gray-400 hover:text-gray-600 touch-target"
                 onClick={() => setShowPassword(!showPassword)}
               >
                 {showPassword ? (
-                  <EyeOff className="h-5 w-5" />
+                  <EyeOff className="h-4 w-4" />
                 ) : (
-                  <Eye className="h-5 w-5" />
+                  <Eye className="h-4 w-4" />
                 )}
               </button>
             </div>
@@ -258,8 +258,8 @@ export default function HomePage() {
             </Button>
           </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
+          <div className="mt-4 text-center">
+            <p className="text-xs text-gray-600">
               Al usar este sistema, aceptas nuestros términos de uso y política de privacidad.
             </p>
           </div>
