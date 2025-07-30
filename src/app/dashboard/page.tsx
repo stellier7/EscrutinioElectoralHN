@@ -107,7 +107,15 @@ export default function DashboardPage() {
         <div className="text-center py-6 text-gray-500">
           <Vote className="h-10 w-10 mx-auto mb-3 text-gray-300" />
           <p className="text-sm">No hay actividad reciente</p>
-          <p className="text-xs text-gray-400">Comienza un nuevo escrutinio para ver tu actividad aquí</p>
+          <p className="text-xs text-gray-400 mb-4">Comienza un nuevo escrutinio para ver tu actividad aquí</p>
+          <Button 
+            variant="primary" 
+            size="lg"
+            onClick={() => router.push('/escrutinio')}
+          >
+            <Vote className="h-4 w-4 mr-2" />
+            Nuevo Escrutinio
+          </Button>
         </div>
       </div>
     </div>

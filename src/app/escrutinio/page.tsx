@@ -77,6 +77,13 @@ function EscrutinioPageContent() {
       return;
     }
 
+    // Configuración optimizada para móviles
+    const options = {
+      enableHighAccuracy: true,
+      timeout: 30000, // 30 segundos para móviles
+      maximumAge: 300000 // 5 minutos
+    };
+
     navigator.geolocation.getCurrentPosition(
       (position) => {
         setLocation({
@@ -87,14 +94,26 @@ function EscrutinioPageContent() {
         setCurrentStep(2);
       },
       (error) => {
-        setLocationError('Error al obtener ubicación: ' + error.message);
+        let errorMessage = 'Error al obtener ubicación: ';
+        
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage += 'Permiso denegado. Por favor, habilita la ubicación en tu dispositivo.';
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage += 'Información de ubicación no disponible.';
+            break;
+          case error.TIMEOUT:
+            errorMessage += 'Tiempo de espera agotado. Verifica tu conexión GPS.';
+            break;
+          default:
+            errorMessage += error.message;
+        }
+        
+        setLocationError(errorMessage);
         setIsLoading(false);
       },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 60000
-      }
+      options
     );
   };
 
@@ -138,27 +157,28 @@ function EscrutinioPageContent() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
+      {/* Header - Mobile optimized */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+          <div className="flex justify-between items-center h-14 lg:h-16">
             <div className="flex items-center">
               <Button
                 variant="secondary"
                 size="sm"
                 onClick={() => router.push('/dashboard')}
               >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Volver
+                <ArrowLeft className="h-4 w-4 mr-1 lg:mr-2" />
+                <span className="hidden sm:inline">Volver</span>
               </Button>
-              <h1 className="ml-4 text-xl font-semibold text-gray-900">
-                Nuevo Escrutinio
+              <h1 className="ml-2 lg:ml-4 text-lg lg:text-xl font-semibold text-gray-900">
+                <span className="hidden sm:inline">Nuevo Escrutinio</span>
+                <span className="sm:hidden">Escrutinio</span>
               </h1>
             </div>
             
             <div className="flex items-center space-x-2">
-              <MapPin className="h-5 w-5 text-gray-400" />
-              <span className="text-sm text-gray-700">
+              <MapPin className="h-4 w-4 lg:h-5 lg:w-5 text-gray-400" />
+              <span className="text-xs lg:text-sm text-gray-700 hidden sm:block">
                 {user?.name}
               </span>
             </div>
@@ -166,39 +186,39 @@ function EscrutinioPageContent() {
         </div>
       </header>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Progress Steps */}
-        <div className="mb-8">
-          <div className="flex items-center justify-center space-x-4">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 lg:py-8">
+        {/* Progress Steps - Mobile optimized */}
+        <div className="mb-6 lg:mb-8">
+          <div className="flex items-center justify-center space-x-2 lg:space-x-4">
             <div className={`flex items-center ${currentStep >= 1 ? 'text-primary-600' : 'text-gray-400'}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${
+              <div className={`w-6 h-6 lg:w-8 lg:h-8 rounded-full flex items-center justify-center border-2 text-xs lg:text-sm ${
                 currentStep >= 1 ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-300'
               }`}>
                 1
               </div>
-              <span className="ml-2 text-sm font-medium">Configuración</span>
+              <span className="ml-1 lg:ml-2 text-xs lg:text-sm font-medium hidden sm:block">Configuración</span>
             </div>
             
-            <div className={`w-16 h-0.5 ${currentStep >= 2 ? 'bg-primary-600' : 'bg-gray-300'}`}></div>
+            <div className={`w-8 lg:w-16 h-0.5 ${currentStep >= 2 ? 'bg-primary-600' : 'bg-gray-300'}`}></div>
             
             <div className={`flex items-center ${currentStep >= 2 ? 'text-primary-600' : 'text-gray-400'}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${
+              <div className={`w-6 h-6 lg:w-8 lg:h-8 rounded-full flex items-center justify-center border-2 text-xs lg:text-sm ${
                 currentStep >= 2 ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-300'
               }`}>
                 2
               </div>
-              <span className="ml-2 text-sm font-medium">Conteo</span>
+              <span className="ml-1 lg:ml-2 text-xs lg:text-sm font-medium hidden sm:block">Conteo</span>
             </div>
             
-            <div className={`w-16 h-0.5 ${currentStep >= 3 ? 'bg-primary-600' : 'bg-gray-300'}`}></div>
+            <div className={`w-8 lg:w-16 h-0.5 ${currentStep >= 3 ? 'bg-primary-600' : 'bg-gray-300'}`}></div>
             
             <div className={`flex items-center ${currentStep >= 3 ? 'text-primary-600' : 'text-gray-400'}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${
+              <div className={`w-6 h-6 lg:w-8 lg:h-8 rounded-full flex items-center justify-center border-2 text-xs lg:text-sm ${
                 currentStep >= 3 ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-300'
               }`}>
                 3
               </div>
-              <span className="ml-2 text-sm font-medium">Evidencia</span>
+              <span className="ml-1 lg:ml-2 text-xs lg:text-sm font-medium hidden sm:block">Evidencia</span>
             </div>
           </div>
         </div>
@@ -254,15 +274,32 @@ function EscrutinioPageContent() {
                   {isLoading ? (
                     <>
                       <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                      Obteniendo ubicación...
+                      <span className="hidden sm:inline">Obteniendo ubicación...</span>
+                      <span className="sm:hidden">Obteniendo GPS...</span>
                     </>
                   ) : (
                     <>
                       <MapPin className="h-5 w-5 mr-2" />
-                      Obtener Ubicación y Continuar
+                      <span className="hidden sm:inline">Obtener Ubicación y Continuar</span>
+                      <span className="sm:hidden">Obtener GPS y Continuar</span>
                     </>
                   )}
                 </Button>
+                
+                {/* Mobile-specific instructions */}
+                <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-start">
+                    <MapPin className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                    <div className="ml-2">
+                      <p className="text-xs text-blue-800 font-medium">Consejos para móviles:</p>
+                      <ul className="text-xs text-blue-700 mt-1 space-y-1">
+                        <li>• Asegúrate de tener GPS habilitado</li>
+                        <li>• Permite acceso a ubicación cuando se solicite</li>
+                        <li>• Si falla, intenta salir al exterior</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {locationError && (
