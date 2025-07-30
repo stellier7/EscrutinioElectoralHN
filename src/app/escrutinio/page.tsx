@@ -3,6 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../components/AuthProvider';
+import { useGeolocation } from '../../hooks/useGeolocation';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import { 
@@ -12,7 +13,9 @@ import {
   CheckCircle,
   ArrowLeft,
   AlertCircle,
-  Loader2
+  Loader2,
+  Settings,
+  Smartphone
 } from 'lucide-react';
 
 interface Mesa {
@@ -35,15 +38,23 @@ function EscrutinioPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   
-  const [isLoading, setIsLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedMesa, setSelectedMesa] = useState('');
   const [selectedLevel, setSelectedLevel] = useState('');
-  const [location, setLocation] = useState<{lat: number, lng: number} | null>(null);
-  const [locationError, setLocationError] = useState('');
   const [votes, setVotes] = useState<Record<string, number>>({});
   const [actaImage, setActaImage] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showInstructions, setShowInstructions] = useState(false);
+  
+  // Usar el hook de geolocalización
+  const { 
+    location, 
+    isLoading, 
+    error, 
+    permissionStatus,
+    getCurrentLocation, 
+    showLocationInstructions 
+  } = useGeolocation();
 
   const mesas: Mesa[] = [
     { id: '1', number: 'JRV-001', location: 'Escuela Central', address: 'Av. Principal 123' },
@@ -67,54 +78,11 @@ function EscrutinioPageContent() {
 
   const filteredCandidates = candidates.filter(c => c.electionLevel === selectedLevel);
 
-  const getCurrentLocation = () => {
-    setIsLoading(true);
-    setLocationError('');
-
-    if (!navigator.geolocation) {
-      setLocationError('Geolocalización no está disponible en este dispositivo');
-      setIsLoading(false);
-      return;
+  const handleGetLocation = async () => {
+    const result = await getCurrentLocation();
+    if (result) {
+      setCurrentStep(2);
     }
-
-    // Configuración optimizada para móviles
-    const options = {
-      enableHighAccuracy: true,
-      timeout: 30000, // 30 segundos para móviles
-      maximumAge: 300000 // 5 minutos
-    };
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setLocation({
-          lat: position.coords.latitude,
-          lng: position.coords.longitude
-        });
-        setIsLoading(false);
-        setCurrentStep(2);
-      },
-      (error) => {
-        let errorMessage = 'Error al obtener ubicación: ';
-        
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            errorMessage += 'Permiso denegado. Por favor, habilita la ubicación en tu dispositivo.';
-            break;
-          case error.POSITION_UNAVAILABLE:
-            errorMessage += 'Información de ubicación no disponible.';
-            break;
-          case error.TIMEOUT:
-            errorMessage += 'Tiempo de espera agotado. Verifica tu conexión GPS.';
-            break;
-          default:
-            errorMessage += error.message;
-        }
-        
-        setLocationError(errorMessage);
-        setIsLoading(false);
-      },
-      options
-    );
   };
 
   const handleVoteChange = (candidateId: string, value: string) => {
@@ -267,7 +235,7 @@ function EscrutinioPageContent() {
                 <Button
                   variant="primary"
                   size="lg"
-                  onClick={getCurrentLocation}
+                  onClick={handleGetLocation}
                   disabled={!selectedMesa || !selectedLevel || isLoading}
                   loading={isLoading}
                 >
@@ -300,14 +268,52 @@ function EscrutinioPageContent() {
                     </div>
                   </div>
                 </div>
+                
+                {/* Permission status indicator */}
+                {permissionStatus === 'denied' && (
+                  <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <div className="flex items-start">
+                      <Settings className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+                      <div className="ml-2">
+                        <p className="text-xs text-yellow-800 font-medium">Permisos de ubicación denegados</p>
+                        <button
+                          onClick={() => setShowInstructions(!showInstructions)}
+                          className="text-xs text-yellow-700 underline mt-1"
+                        >
+                          Ver instrucciones para habilitar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {locationError && (
+              {error && (
                 <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-md">
                   <div className="flex">
                     <AlertCircle className="h-5 w-5 text-red-400" />
                     <div className="ml-3">
-                      <p className="text-sm text-red-800">{locationError}</p>
+                      <p className="text-sm text-red-800">{error.userFriendlyMessage}</p>
+                      {error.code === 1 && (
+                        <button
+                          onClick={() => setShowInstructions(!showInstructions)}
+                          className="text-xs text-red-700 underline mt-1"
+                        >
+                          Ver instrucciones detalladas
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {showInstructions && (
+                <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-md">
+                  <div className="flex items-start">
+                    <Smartphone className="h-4 w-4 text-gray-600 mt-0.5 flex-shrink-0" />
+                    <div className="ml-2">
+                      <p className="text-xs text-gray-800 font-medium mb-2">Instrucciones para habilitar ubicación:</p>
+                      <pre className="text-xs text-gray-700 whitespace-pre-line">{showLocationInstructions()}</pre>
                     </div>
                   </div>
                 </div>
