@@ -113,6 +113,8 @@ function EscrutinioPageContent() {
         gps: { latitude: result.lat, longitude: result.lng, accuracy: result.accuracy },
       });
       if (resp.data?.success && resp.data?.data?.escrutinioId) {
+        // Reset any previous counts/batch when starting a brand new escrutinio
+        voteStore.clear();
         setEscrutinioId(resp.data.data.escrutinioId);
         setCurrentStep(2);
       } else {
@@ -200,6 +202,8 @@ function EscrutinioPageContent() {
       }
 
       alert('Escrutinio enviado exitosamente!');
+      // Clear local counts/batch after completing and sending the escrutinio
+      voteStore.clear();
       router.push('/resultados');
     } catch (error) {
       alert('Error al enviar el escrutinio');
@@ -449,7 +453,7 @@ function EscrutinioPageContent() {
 
         {currentStep === 2 && (
           <VoteFooter
-            escrutinioId={selectedMesa || 'escrutinio-temp'}
+            escrutinioId={escrutinioId || 'escrutinio-temp'}
             onContinue={() => setCurrentStep(3)}
           />
         )}
