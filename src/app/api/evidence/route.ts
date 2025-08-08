@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
       mesaId = mesa.id;
     }
 
-    const where: any = { actaImageUrl: { not: null } };
+    const where: any = { actaImageUrl: { not: null }, election: { isActive: true } };
     if (mesaId) where.mesaId = mesaId;
     if (level) where.electionLevel = level;
 

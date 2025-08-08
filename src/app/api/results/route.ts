@@ -11,6 +11,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
     // Get escrutinios with their votes (include in-progress too so recent votos appear)
     const escrutinios = await prisma.escrutinio.findMany({
+      where: {
+        election: {
+          isActive: true,
+        },
+      },
       include: {
         votes: {
           include: {
