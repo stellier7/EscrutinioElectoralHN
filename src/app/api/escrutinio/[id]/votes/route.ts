@@ -57,13 +57,41 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
     await prisma.$transaction(async (tx) => {
       for (const v of votes) {
-        // ensure candidate belongs to same level/election optional (skipped for brevity)
+        // Resolve candidateId: accept either real candidate ID or candidate number
+        let resolvedCandidateId = v.candidateId;
+
+        // Try direct ID first
+        let candidate = await tx.candidate.findUnique({ where: { id: resolvedCandidateId } });
+        if (!candidate) {
+          // If not found and looks numeric, map by (electionId, number, level)
+          const asNumber = Number(v.candidateId);
+          if (!Number.isNaN(asNumber)) {
+            candidate = await tx.candidate.findUnique({
+              where: {
+                electionId_number_electionLevel: {
+                  electionId: escrutinio.electionId,
+                  number: asNumber,
+                  electionLevel: escrutinio.electionLevel,
+                },
+              },
+            });
+            if (candidate) {
+              resolvedCandidateId = candidate.id;
+            }
+          }
+        }
+
+        if (!candidate) {
+          throw new Error(`Candidato no encontrado para '${v.candidateId}'`);
+        }
+
         const existing = await tx.vote.findUnique({
-          where: { escrutinioId_candidateId: { escrutinioId, candidateId: v.candidateId } },
+          where: { escrutinioId_candidateId: { escrutinioId, candidateId: resolvedCandidateId } },
         });
+
         if (!existing) {
           await tx.vote.create({
-            data: { escrutinioId, candidateId: v.candidateId, votes: Math.max(0, Math.max(0, v.delta)) },
+            data: { escrutinioId, candidateId: resolvedCandidateId, votes: Math.max(0, v.delta) },
           });
         } else {
           await tx.vote.update({
