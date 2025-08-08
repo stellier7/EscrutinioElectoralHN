@@ -134,6 +134,50 @@ function EscrutinioPageContent() {
     }
   };
 
+  const computeSHA256Hex = async (file: File): Promise<string> => {
+    const buf = await file.arrayBuffer();
+    const digest = await crypto.subtle.digest('SHA-256', buf);
+    const byteArray = Array.from(new Uint8Array(digest));
+    return byteArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+  };
+
+  const toDataUrl = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+  const uploadEvidenceIfNeeded = async (): Promise<void> => {
+    if (!actaImage || !escrutinioId) return;
+    try {
+      const presign = await axios.post('/api/upload/presign', {
+        escrutinioId,
+        fileName: actaImage.name,
+        contentType: actaImage.type || 'image/jpeg',
+      });
+      if (presign.data?.success) {
+        const { uploadUrl, publicUrl } = presign.data.data as { uploadUrl: string; publicUrl: string };
+        await fetch(uploadUrl, {
+          method: 'PUT',
+          headers: { 'Content-Type': actaImage.type || 'image/jpeg' },
+          body: actaImage,
+        });
+        const hash = await computeSHA256Hex(actaImage);
+        await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/evidence`, { publicUrl, hash });
+        return;
+      }
+    } catch {
+      // fallback below
+    }
+    try {
+      const dataUrl = await toDataUrl(actaImage);
+      const hash = await computeSHA256Hex(actaImage);
+      await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/evidence`, { publicUrl: dataUrl, hash });
+    } catch {}
+  };
+
   const handleSubmit = async () => {
     if (!location || !selectedMesa || !selectedLevel) {
       alert('Por favor completa todos los campos requeridos');
@@ -143,6 +187,7 @@ function EscrutinioPageContent() {
     setIsSubmitting(true);
 
     try {
+      await uploadEvidenceIfNeeded();
       // Marcar escrutinio como completado para que aparezca en resultados
       if (escrutinioId) {
         try {
