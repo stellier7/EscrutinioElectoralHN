@@ -1,19 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
 import type { ApiResponse, User } from '@/types';
 import jwt from 'jsonwebtoken';
+import { prisma } from '@/lib/prisma';
+import { env } from '@/config/env';
 
 // Force dynamic rendering to avoid SSG issues
 export const dynamic = 'force-dynamic';
 
-// Create Prisma client
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined
-}
-
-const prisma = globalForPrisma.prisma ?? new PrismaClient()
-
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+// Using shared Prisma client from lib/prisma
 
 // Auth function
 function verifyToken(request: NextRequest) {
@@ -23,7 +17,7 @@ function verifyToken(request: NextRequest) {
     throw new Error('No token provided')
   }
 
-  return jwt.verify(token, process.env.JWT_SECRET!)
+  return jwt.verify(token, env.JWT_SECRET)
 }
 
 export async function GET(request: NextRequest): Promise<NextResponse> {

@@ -1,6 +1,8 @@
 import jwt from 'jsonwebtoken'
 import { NextRequest } from 'next/server'
 
+import { env } from '@/config/env';
+
 export function verifyToken(request: NextRequest) {
   const token = request.headers.get('authorization')?.replace('Bearer ', '')
   
@@ -8,7 +10,7 @@ export function verifyToken(request: NextRequest) {
     throw new Error('No token provided')
   }
 
-  return jwt.verify(token, process.env.JWT_SECRET!)
+  return jwt.verify(token, env.JWT_SECRET)
 }
 
 export function extractTokenFromRequest(request: NextRequest) {
