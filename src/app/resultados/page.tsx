@@ -33,6 +33,9 @@ export default function ResultadosPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [results, setResults] = useState<ResultsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showEvidence, setShowEvidence] = useState(false);
+  const [evidence, setEvidence] = useState<Array<{ escrutinioId: string; mesaNumber: string; url: string; completedAt: string }>>([]);
+  const [selectedMesa, setSelectedMesa] = useState<string>('');
 
   useEffect(() => {
     const load = async () => {
@@ -54,6 +57,18 @@ export default function ResultadosPage() {
     };
     load();
   }, []);
+
+  const loadEvidence = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (selectedMesa) params.set('mesaNumber', selectedMesa);
+      params.set('level', activeLevel);
+      const resp = await fetch(`/api/evidence?${params.toString()}`, { cache: 'no-store' });
+      const json = await resp.json();
+      if (json?.success) setEvidence(json.data);
+      setShowEvidence(true);
+    } catch {}
+  };
 
   const currentResults = results ? results[activeLevel] : null;
   const completionPercentage = currentResults && currentResults.totalMesas > 0
@@ -182,6 +197,20 @@ export default function ResultadosPage() {
             <h3 className="text-lg font-semibold text-gray-900">
               Resultados - {currentResults.level}
             </h3>
+            <div className="mt-2 flex items-center space-x-3">
+              <input
+                className="border px-2 py-1 rounded text-sm"
+                placeholder="Filtrar por mesa (ej. JRV-001)"
+                value={selectedMesa}
+                onChange={(e) => setSelectedMesa(e.target.value)}
+              />
+              <button
+                onClick={loadEvidence}
+                className="text-sm px-3 py-1 bg-primary-600 text-white rounded"
+              >
+                Ver evidencia
+              </button>
+            </div>
           </div>
           
           <div className="overflow-x-auto">
@@ -248,6 +277,32 @@ export default function ResultadosPage() {
             </table>
           </div>
         </div>
+
+        {showEvidence && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4" onClick={() => setShowEvidence(false)}>
+            <div className="bg-white rounded-lg shadow-lg max-w-4xl w-full p-4" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-lg font-semibold">Evidencia fotográfica</h4>
+                <button className="text-sm text-gray-600" onClick={() => setShowEvidence(false)}>Cerrar</button>
+              </div>
+              {evidence.length === 0 ? (
+                <p className="text-sm text-gray-600">No hay evidencia para los filtros seleccionados.</p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 max-h-[70vh] overflow-auto">
+                  {evidence.map((img) => (
+                    <div key={img.escrutinioId} className="border rounded overflow-hidden">
+                      <img src={img.url} alt={img.mesaNumber} className="w-full h-40 object-cover" />
+                      <div className="p-2 text-xs text-gray-700 flex justify-between">
+                        <span>{img.mesaNumber}</span>
+                        <span>{new Date(img.completedAt).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Status Indicators */}
         <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
