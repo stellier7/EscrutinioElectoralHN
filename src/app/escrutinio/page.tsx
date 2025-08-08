@@ -70,24 +70,19 @@ function EscrutinioPageContent() {
     { id: '5', number: 'JRV-005', location: 'Club Deportivo', address: 'Jr. Deporte 321' },
   ];
 
-  const candidates: Candidate[] = [
-    // Presidencial: solo los indicados
-    { id: 'pres-1', name: 'Mario Rivera', party: 'Demócrata Cristiano', number: 1, electionLevel: 'PRESIDENTIAL' },
-    { id: 'pres-2', name: 'Rixi Moncada', party: 'LIBRE', number: 2, electionLevel: 'PRESIDENTIAL' },
-    { id: 'pres-3', name: 'Jorge Ávila', party: 'PINU-SD', number: 3, electionLevel: 'PRESIDENTIAL' },
-    { id: 'pres-4', name: 'Salvador Nasralla', party: 'Liberal', number: 4, electionLevel: 'PRESIDENTIAL' },
-    { id: 'pres-5', name: 'Nasry Asfura', party: 'Nacional', number: 5, electionLevel: 'PRESIDENTIAL' },
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
+  useEffect(() => {
+    const load = async () => {
+      if (!selectedLevel) { setCandidates([]); return; }
+      try {
+        const resp = await axios.get('/api/candidates', { params: { level: selectedLevel } });
+        if (resp.data?.success) setCandidates(resp.data.data);
+      } catch {}
+    };
+    load();
+  }, [selectedLevel]);
 
-    // Otros niveles (placeholder actuales)
-    { id: 'leg-1', name: 'Ana Rodríguez', party: 'Partido A', number: 101, electionLevel: 'LEGISLATIVE' },
-    { id: 'leg-2', name: 'Pedro Martínez', party: 'Partido B', number: 102, electionLevel: 'LEGISLATIVE' },
-    { id: 'leg-3', name: 'Laura González', party: 'Partido C', number: 103, electionLevel: 'LEGISLATIVE' },
-    { id: 'mun-1', name: 'Roberto Silva', party: 'Partido A', number: 201, electionLevel: 'MUNICIPAL' },
-    { id: 'mun-2', name: 'Carmen Díaz', party: 'Partido B', number: 202, electionLevel: 'MUNICIPAL' },
-    { id: 'mun-3', name: 'Miguel Torres', party: 'Partido C', number: 203, electionLevel: 'MUNICIPAL' },
-  ];
-
-  const filteredCandidates = candidates.filter(c => c.electionLevel === selectedLevel);
+  const filteredCandidates = candidates;
 
   const getPartyColor = (party: string) => {
     switch (party.toLowerCase()) {
