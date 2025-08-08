@@ -27,6 +27,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       },
     });
 
+    // Count total mesas (for UI)
+    const totalMesasCount = await prisma.mesa.count();
+
     // Group by election level
     const results: Record<string, {
       level: string;
@@ -42,21 +45,21 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }> = {
       PRESIDENTIAL: {
         level: 'Presidencial',
-        totalMesas: 5,
+        totalMesas: totalMesasCount,
         completedMesas: escrutinios.filter((e: any) => e.electionLevel === 'PRESIDENTIAL' && e.isCompleted).length,
         totalVotes: 0,
         candidates: [],
       },
       LEGISLATIVE: {
         level: 'Legislativo',
-        totalMesas: 5,
+        totalMesas: totalMesasCount,
         completedMesas: escrutinios.filter((e: any) => e.electionLevel === 'LEGISLATIVE' && e.isCompleted).length,
         totalVotes: 0,
         candidates: [],
       },
       MUNICIPAL: {
         level: 'Municipal',
-        totalMesas: 5,
+        totalMesas: totalMesasCount,
         completedMesas: escrutinios.filter((e: any) => e.electionLevel === 'MUNICIPAL' && e.isCompleted).length,
         totalVotes: 0,
         candidates: [],
