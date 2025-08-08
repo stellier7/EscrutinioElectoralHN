@@ -82,7 +82,23 @@ export async function POST(request: Request, { params }: { params: { id: string 
         }
 
         if (!candidate) {
-          throw new Error(`Candidato no encontrado para '${v.candidateId}'`);
+          // Auto-create placeholder candidate when numeric code provided but not present in DB
+          const asNumber = Number(v.candidateId);
+          if (!Number.isNaN(asNumber)) {
+            candidate = await tx.candidate.create({
+              data: {
+                name: `Candidato ${asNumber}`,
+                party: 'N/A',
+                number: asNumber,
+                electionId: escrutinio.electionId,
+                electionLevel: escrutinio.electionLevel,
+                isActive: true,
+              },
+            });
+            resolvedCandidateId = candidate.id;
+          } else {
+            return NextResponse.json({ success: false, error: `Candidato no encontrado para '${v.candidateId}'` }, { status: 400 });
+          }
         }
 
         const existing = await tx.vote.findUnique({
