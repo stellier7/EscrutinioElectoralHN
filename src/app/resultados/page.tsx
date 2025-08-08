@@ -26,54 +26,39 @@ interface CandidateResult {
   percentage: number;
 }
 
-export default function ResultadosPage() {
-  const [activeLevel, setActiveLevel] = useState('PRESIDENTIAL');
-  const [isLoading, setIsLoading] = useState(true);
+type ResultsResponse = Record<'PRESIDENTIAL' | 'LEGISLATIVE' | 'MUNICIPAL', ResultSummary>;
 
-  // Mock data - in real app this would come from API
-  const mockResults: Record<string, ResultSummary> = {
-    PRESIDENTIAL: {
-      level: 'Presidencial',
-      totalMesas: 5,
-      completedMesas: 2,
-      totalVotes: 1250,
-      candidates: [
-        { name: 'Juan Pérez', party: 'Partido A', votes: 450, percentage: 36 },
-        { name: 'María García', party: 'Partido B', votes: 380, percentage: 30.4 },
-        { name: 'Carlos López', party: 'Partido C', votes: 420, percentage: 33.6 },
-      ]
-    },
-    LEGISLATIVE: {
-      level: 'Legislativo',
-      totalMesas: 5,
-      completedMesas: 1,
-      totalVotes: 800,
-      candidates: [
-        { name: 'Ana Rodríguez', party: 'Partido A', votes: 280, percentage: 35 },
-        { name: 'Pedro Martínez', party: 'Partido B', votes: 320, percentage: 40 },
-        { name: 'Laura González', party: 'Partido C', votes: 200, percentage: 25 },
-      ]
-    },
-    MUNICIPAL: {
-      level: 'Municipal',
-      totalMesas: 5,
-      completedMesas: 0,
-      totalVotes: 0,
-      candidates: [
-        { name: 'Roberto Silva', party: 'Partido A', votes: 0, percentage: 0 },
-        { name: 'Carmen Díaz', party: 'Partido B', votes: 0, percentage: 0 },
-        { name: 'Miguel Torres', party: 'Partido C', votes: 0, percentage: 0 },
-      ]
-    }
-  };
+export default function ResultadosPage() {
+  const [activeLevel, setActiveLevel] = useState<'PRESIDENTIAL' | 'LEGISLATIVE' | 'MUNICIPAL'>('PRESIDENTIAL');
+  const [isLoading, setIsLoading] = useState(true);
+  const [results, setResults] = useState<ResultsResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Simulate loading
-    setTimeout(() => setIsLoading(false), 1000);
+    const load = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const resp = await fetch('/api/results', { cache: 'no-store' });
+        const json = await resp.json();
+        if (json?.success && json?.data) {
+          setResults(json.data as ResultsResponse);
+        } else {
+          setError(json?.error || 'No se pudieron cargar los resultados');
+        }
+      } catch (e: any) {
+        setError(e?.message || 'Error cargando resultados');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    load();
   }, []);
 
-  const currentResults = mockResults[activeLevel];
-  const completionPercentage = (currentResults.completedMesas / currentResults.totalMesas) * 100;
+  const currentResults = results ? results[activeLevel] : null;
+  const completionPercentage = currentResults && currentResults.totalMesas > 0
+    ? (currentResults.completedMesas / currentResults.totalMesas) * 100
+    : 0;
 
   if (isLoading) {
     return (
@@ -81,6 +66,27 @@ export default function ResultadosPage() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Cargando resultados...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <AlertCircle className="h-8 w-8 text-danger-600 mx-auto" />
+          <p className="mt-4 text-gray-600">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentResults) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="mt-4 text-gray-600">No hay resultados disponibles todavía.</p>
         </div>
       </div>
     );
@@ -153,7 +159,7 @@ export default function ResultadosPage() {
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Nivel Electoral</h2>
             
             <div className="flex space-x-4">
-              {Object.keys(mockResults).map((level) => (
+              {(['PRESIDENTIAL','LEGISLATIVE','MUNICIPAL'] as const).map((level) => (
                 <button
                   key={level}
                   onClick={() => setActiveLevel(level)}
@@ -163,7 +169,7 @@ export default function ResultadosPage() {
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  {mockResults[level].level}
+                  {results ? results[level].level : level}
                 </button>
               ))}
             </div>
