@@ -33,6 +33,7 @@ export default function RootLayout({
         <meta name="theme-color" content="#2563eb" />
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
         <link rel="icon" type="image/png" href="/favicon.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/hnFlag.png" />
       </head>
       <body className={`${inter.className} min-h-screen bg-gray-50 antialiased`}>
         <AuthProvider>
