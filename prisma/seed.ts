@@ -42,38 +42,28 @@ async function main() {
 
   console.log('✅ Auditor user created:', auditorUser.email);
 
-  // Create sample election
+  // Create Honduras 2025 election
   const election = await prisma.election.upsert({
-    where: { id: 'election-2024' },
+    where: { id: 'hn-2025' },
     update: {},
     create: {
-      id: 'election-2024',
-      name: 'Elecciones Generales 2024',
-      description: 'Elecciones presidenciales, legislativas y municipales',
-      startDate: new Date('2024-01-01'),
-      endDate: new Date('2024-12-31'),
+      id: 'hn-2025',
+      name: 'Elecciones Generales Honduras 2025',
+      description: 'Elecciones presidenciales, legislativas y municipales 2025',
+      startDate: new Date('2025-01-01'),
+      endDate: new Date('2025-12-31'),
       isActive: true,
     },
   });
 
   console.log('✅ Election created:', election.name);
 
-  // Create sample candidates
+  // Presidential candidates (HN 2025)
   const candidates = [
-    // Presidenciales
-    { name: 'Juan Pérez', party: 'Partido A', number: 1, level: 'PRESIDENTIAL' },
-    { name: 'María García', party: 'Partido B', number: 2, level: 'PRESIDENTIAL' },
-    { name: 'Carlos López', party: 'Partido C', number: 3, level: 'PRESIDENTIAL' },
-    
-    // Legislativos
-    { name: 'Ana Rodríguez', party: 'Partido A', number: 101, level: 'LEGISLATIVE' },
-    { name: 'Pedro Martínez', party: 'Partido B', number: 102, level: 'LEGISLATIVE' },
-    { name: 'Laura González', party: 'Partido C', number: 103, level: 'LEGISLATIVE' },
-    
-    // Municipales
-    { name: 'Roberto Silva', party: 'Partido A', number: 201, level: 'MUNICIPAL' },
-    { name: 'Carmen Díaz', party: 'Partido B', number: 202, level: 'MUNICIPAL' },
-    { name: 'Miguel Torres', party: 'Partido C', number: 203, level: 'MUNICIPAL' },
+    { name: 'Rixi Moncada', party: 'LIBRE', number: 1, level: 'PRESIDENTIAL' },
+    { name: 'Nasry Asfura', party: 'PNH', number: 2, level: 'PRESIDENTIAL' },
+    { name: 'Mauricio Villeda', party: 'PLH', number: 3, level: 'PRESIDENTIAL' },
+    { name: 'Salvador Nasralla', party: 'PSH', number: 4, level: 'PRESIDENTIAL' },
   ];
 
   for (const candidate of candidates) {
