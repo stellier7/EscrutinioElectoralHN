@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { AuthUtils } from '@/lib/auth';
 
+export const runtime = 'nodejs';
+
 const BodySchema = z.object({
   mesaNumber: z.string().min(1),
   electionLevel: z.enum(['PRESIDENTIAL', 'LEGISLATIVE', 'MUNICIPAL']),
@@ -29,9 +31,18 @@ export async function POST(request: Request) {
     const { mesaNumber, electionLevel, gps } = parsed.data;
 
     // Pick the first active election; adjust as needed
-    const election = await prisma.election.findFirst({ where: { isActive: true }, orderBy: { startDate: 'desc' } });
+    let election = await prisma.election.findFirst({ where: { isActive: true }, orderBy: { startDate: 'desc' } });
     if (!election) {
-      return NextResponse.json({ success: false, error: 'No hay elección activa configurada' }, { status: 400 });
+      // Crear elección por defecto si no existe (para ambientes sin seed)
+      election = await prisma.election.create({
+        data: {
+          name: 'Elección Activa',
+          description: 'Generada automáticamente',
+          startDate: new Date(),
+          endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          isActive: true,
+        },
+      });
     }
 
     // Ensure Mesa exists by number; create placeholder if not exists

@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { AuthUtils } from '@/lib/auth';
 
+export const runtime = 'nodejs';
+
 const VoteDeltaSchema = z.object({
   candidateId: z.string().min(1),
   delta: z.number().int().min(-1000).max(1000),
