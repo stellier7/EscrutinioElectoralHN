@@ -47,6 +47,12 @@ export async function POST(request: Request, { params }: { params: { id: string 
       return NextResponse.json({ success: false, error: 'ID inconsistente' }, { status: 400 });
     }
 
+    // Validate escrutinio exists to avoid FK errors
+    const escrutinio = await prisma.escrutinio.findUnique({ where: { id: escrutinioId } });
+    if (!escrutinio) {
+      return NextResponse.json({ success: false, error: 'Escrutinio no encontrado. Inicie el escrutinio antes de registrar votos.' }, { status: 400 });
+    }
+
     await prisma.$transaction(async (tx) => {
       for (const v of votes) {
         // ensure candidate belongs to same level/election optional (skipped for brevity)

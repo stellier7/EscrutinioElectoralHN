@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, Suspense } from 'react';
+import axios from 'axios';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../components/AuthProvider';
 import { useGeolocation } from '../../hooks/useGeolocation';
@@ -44,6 +45,8 @@ function EscrutinioPageContent() {
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedMesa, setSelectedMesa] = useState('');
   const [selectedLevel, setSelectedLevel] = useState('');
+  const [escrutinioId, setEscrutinioId] = useState<string | null>(null);
+  const [isStarting, setIsStarting] = useState(false);
   const voteStore = useVoteStore();
   const [actaImage, setActaImage] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -106,8 +109,24 @@ function EscrutinioPageContent() {
 
   const handleGetLocation = async () => {
     const result = await getCurrentLocation();
-    if (result) {
-      setCurrentStep(2);
+    if (!result) return;
+    try {
+      setIsStarting(true);
+      const resp = await axios.post('/api/escrutinio/start', {
+        mesaNumber: selectedMesa,
+        electionLevel: selectedLevel,
+        gps: { latitude: result.lat, longitude: result.lng, accuracy: result.accuracy },
+      });
+      if (resp.data?.success && resp.data?.data?.escrutinioId) {
+        setEscrutinioId(resp.data.data.escrutinioId);
+        setCurrentStep(2);
+      } else {
+        alert(resp.data?.error || 'No se pudo iniciar el escrutinio');
+      }
+    } catch (e: any) {
+      alert(e?.response?.data?.error || 'Error al iniciar el escrutinio');
+    } finally {
+      setIsStarting(false);
     }
   };
 
@@ -256,8 +275,8 @@ function EscrutinioPageContent() {
                   variant="primary"
                   size="lg"
                   onClick={handleGetLocation}
-                  disabled={!selectedMesa || !selectedLevel || isLoading}
-                  loading={isLoading}
+                  disabled={!selectedMesa || !selectedLevel || isLoading || isStarting}
+                  loading={isLoading || isStarting}
                 >
                   {isLoading ? (
                     <>
@@ -363,7 +382,7 @@ function EscrutinioPageContent() {
 
             <div className="space-y-4">
               <VoteList
-                escrutinioId={selectedMesa || 'escrutinio-temp'}
+                escrutinioId={escrutinioId || 'escrutinio-temp'}
                 candidates={filteredCandidates.map((c) => ({
                   id: c.id,
                   name: c.name,
