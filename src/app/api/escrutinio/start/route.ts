@@ -51,21 +51,41 @@ export async function POST(request: Request) {
       mesa = await prisma.mesa.create({ data: { number: mesaNumber, location: 'Sin definir' } });
     }
 
-    const escrutinio = await prisma.escrutinio.create({
-      data: {
+    // If already exists for this user/election/mesa/level, reuse it (update location)
+    const existing = await prisma.escrutinio.findFirst({
+      where: {
         userId: payload.userId,
         electionId: election.id,
         mesaId: mesa.id,
         electionLevel: electionLevel as any,
-        latitude: gps.latitude,
-        longitude: gps.longitude,
-        locationAccuracy: gps.accuracy,
-        status: 'PENDING',
-        isCompleted: false,
       },
     });
 
-    return NextResponse.json({ success: true, data: { escrutinioId: escrutinio.id } });
+    let escrutinioId: string;
+    if (existing) {
+      const updated = await prisma.escrutinio.update({
+        where: { id: existing.id },
+        data: { latitude: gps.latitude, longitude: gps.longitude, locationAccuracy: gps.accuracy },
+      });
+      escrutinioId = updated.id;
+    } else {
+      const created = await prisma.escrutinio.create({
+        data: {
+          userId: payload.userId,
+          electionId: election.id,
+          mesaId: mesa.id,
+          electionLevel: electionLevel as any,
+          latitude: gps.latitude,
+          longitude: gps.longitude,
+          locationAccuracy: gps.accuracy,
+          status: 'PENDING',
+          isCompleted: false,
+        },
+      });
+      escrutinioId = created.id;
+    }
+
+    return NextResponse.json({ success: true, data: { escrutinioId } });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error?.message || 'Error interno' }, { status: 500 });
   }
