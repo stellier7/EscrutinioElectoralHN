@@ -9,11 +9,8 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
-    // Get all escrutinios with their votes
+    // Get escrutinios with their votes (include in-progress too so recent votos appear)
     const escrutinios = await prisma.escrutinio.findMany({
-      where: {
-        isCompleted: true,
-      },
       include: {
         votes: {
           include: {
@@ -41,21 +38,21 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       PRESIDENTIAL: {
         level: 'Presidencial',
         totalMesas: 5,
-        completedMesas: escrutinios.filter((e: any) => e.electionLevel === 'PRESIDENTIAL').length,
+        completedMesas: escrutinios.filter((e: any) => e.electionLevel === 'PRESIDENTIAL' && e.isCompleted).length,
         totalVotes: 0,
         candidates: [],
       },
       LEGISLATIVE: {
         level: 'Legislativo',
         totalMesas: 5,
-        completedMesas: escrutinios.filter((e: any) => e.electionLevel === 'LEGISLATIVE').length,
+        completedMesas: escrutinios.filter((e: any) => e.electionLevel === 'LEGISLATIVE' && e.isCompleted).length,
         totalVotes: 0,
         candidates: [],
       },
       MUNICIPAL: {
         level: 'Municipal',
         totalMesas: 5,
-        completedMesas: escrutinios.filter((e: any) => e.electionLevel === 'MUNICIPAL').length,
+        completedMesas: escrutinios.filter((e: any) => e.electionLevel === 'MUNICIPAL' && e.isCompleted).length,
         totalVotes: 0,
         candidates: [],
       },

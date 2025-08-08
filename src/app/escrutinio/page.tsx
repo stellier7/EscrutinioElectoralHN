@@ -148,11 +148,19 @@ function EscrutinioPageContent() {
     setIsSubmitting(true);
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
+      // Marcar escrutinio como completado para que aparezca en resultados
+      if (escrutinioId) {
+        try {
+          await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/complete`, {
+            gps: { latitude: location.lat, longitude: location.lng, accuracy: location.accuracy },
+          });
+        } catch (e) {
+          // Continuar aunque falle el marcado como completo
+        }
+      }
+
       alert('Escrutinio enviado exitosamente!');
-      router.push('/dashboard');
+      router.push('/resultados');
     } catch (error) {
       alert('Error al enviar el escrutinio');
     } finally {
