@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '../components/AuthProvider';
+import { GlobalToast } from '@/components/ui/Toast';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -39,7 +40,7 @@ export default function RootLayout({
             {children}
           </div>
           <div id="modal-root" />
-          <div id="toast-root" />
+          <GlobalToast />
         </AuthProvider>
       </body>
     </html>

@@ -6,6 +6,9 @@ import { useAuth } from '../../components/AuthProvider';
 import { useGeolocation } from '../../hooks/useGeolocation';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
+import VoteList from '@/components/VoteList';
+import VoteFooter from '@/components/VoteFooter';
+import { useVoteStore } from '@/store/voteStore';
 import { 
   Vote, 
   MapPin, 
@@ -41,7 +44,7 @@ function EscrutinioPageContent() {
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedMesa, setSelectedMesa] = useState('');
   const [selectedLevel, setSelectedLevel] = useState('');
-  const [votes, setVotes] = useState<Record<string, number>>({});
+  const voteStore = useVoteStore();
   const [actaImage, setActaImage] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
@@ -65,18 +68,41 @@ function EscrutinioPageContent() {
   ];
 
   const candidates: Candidate[] = [
-    { id: '1', name: 'Juan Pérez', party: 'Partido A', number: 1, electionLevel: 'PRESIDENTIAL' },
-    { id: '2', name: 'María García', party: 'Partido B', number: 2, electionLevel: 'PRESIDENTIAL' },
-    { id: '3', name: 'Carlos López', party: 'Partido C', number: 3, electionLevel: 'PRESIDENTIAL' },
-    { id: '4', name: 'Ana Rodríguez', party: 'Partido A', number: 101, electionLevel: 'LEGISLATIVE' },
-    { id: '5', name: 'Pedro Martínez', party: 'Partido B', number: 102, electionLevel: 'LEGISLATIVE' },
-    { id: '6', name: 'Laura González', party: 'Partido C', number: 103, electionLevel: 'LEGISLATIVE' },
-    { id: '7', name: 'Roberto Silva', party: 'Partido A', number: 201, electionLevel: 'MUNICIPAL' },
-    { id: '8', name: 'Carmen Díaz', party: 'Partido B', number: 202, electionLevel: 'MUNICIPAL' },
-    { id: '9', name: 'Miguel Torres', party: 'Partido C', number: 203, electionLevel: 'MUNICIPAL' },
+    // Presidencial: solo los indicados
+    { id: 'pres-1', name: 'Mario Rivera', party: 'Demócrata Cristiano', number: 1, electionLevel: 'PRESIDENTIAL' },
+    { id: 'pres-2', name: 'Rixi Moncada', party: 'LIBRE', number: 2, electionLevel: 'PRESIDENTIAL' },
+    { id: 'pres-3', name: 'Jorge Ávila', party: 'PINU-SD', number: 3, electionLevel: 'PRESIDENTIAL' },
+    { id: 'pres-4', name: 'Salvador Nasralla', party: 'Liberal', number: 4, electionLevel: 'PRESIDENTIAL' },
+    { id: 'pres-5', name: 'Nasry Asfura', party: 'Nacional', number: 5, electionLevel: 'PRESIDENTIAL' },
+
+    // Otros niveles (placeholder actuales)
+    { id: 'leg-1', name: 'Ana Rodríguez', party: 'Partido A', number: 101, electionLevel: 'LEGISLATIVE' },
+    { id: 'leg-2', name: 'Pedro Martínez', party: 'Partido B', number: 102, electionLevel: 'LEGISLATIVE' },
+    { id: 'leg-3', name: 'Laura González', party: 'Partido C', number: 103, electionLevel: 'LEGISLATIVE' },
+    { id: 'mun-1', name: 'Roberto Silva', party: 'Partido A', number: 201, electionLevel: 'MUNICIPAL' },
+    { id: 'mun-2', name: 'Carmen Díaz', party: 'Partido B', number: 202, electionLevel: 'MUNICIPAL' },
+    { id: 'mun-3', name: 'Miguel Torres', party: 'Partido C', number: 203, electionLevel: 'MUNICIPAL' },
   ];
 
   const filteredCandidates = candidates.filter(c => c.electionLevel === selectedLevel);
+
+  const getPartyColor = (party: string) => {
+    switch (party.toLowerCase()) {
+      case 'demócrata cristiano':
+      case 'democrata cristiano':
+        return '#16a34a'; // green
+      case 'libre':
+        return '#dc2626'; // red
+      case 'pinu-sd':
+        return '#7c3aed'; // purple
+      case 'liberal':
+        return '#ef4444'; // red
+      case 'nacional':
+        return '#2563eb'; // blue
+      default:
+        return '#10b981';
+    }
+  };
 
   const handleGetLocation = async () => {
     const result = await getCurrentLocation();
@@ -85,13 +111,7 @@ function EscrutinioPageContent() {
     }
   };
 
-  const handleVoteChange = (candidateId: string, value: string) => {
-    const numValue = parseInt(value) || 0;
-    setVotes(prev => ({
-      ...prev,
-      [candidateId]: numValue
-    }));
-  };
+  // counts are managed by store now
 
   const handleActaUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -121,7 +141,7 @@ function EscrutinioPageContent() {
     }
   };
 
-  const totalVotes = Object.values(votes).reduce((sum, vote) => sum + vote, 0);
+  const totalVotes = Object.keys(voteStore.counts).reduce((sum, k) => sum + (voteStore.counts[k] || 0), 0);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -342,43 +362,29 @@ function EscrutinioPageContent() {
             )}
 
             <div className="space-y-4">
-              {filteredCandidates.map(candidate => (
-                <div key={candidate.id} className="flex items-center space-x-4 p-4 border border-gray-200 rounded-lg">
-                  <div className="flex-1">
-                    <h3 className="font-medium text-gray-900">{candidate.name}</h3>
-                    <p className="text-sm text-gray-600">{candidate.party} - Número {candidate.number}</p>
-                  </div>
-                  <div className="w-32">
-                    <Input
-                      name={`votes-${candidate.id}`}
-                      type="number"
-                      placeholder="0"
-                      value={votes[candidate.id]?.toString() || ''}
-                      onChange={(e) => handleVoteChange(candidate.id, e.target.value)}
-                    />
-                  </div>
-                </div>
-              ))}
-
-              <div className="pt-4 border-t border-gray-200">
-                <div className="flex justify-between items-center">
-                  <span className="text-lg font-medium text-gray-900">Total de votos:</span>
-                  <span className="text-2xl font-bold text-primary-600">{totalVotes}</span>
-                </div>
-              </div>
-
-              <div className="pt-4">
-                <Button
-                  variant="primary"
-                  size="lg"
-                  onClick={() => setCurrentStep(3)}
-                  disabled={totalVotes === 0}
-                >
-                  Continuar a Evidencia
-                </Button>
-              </div>
+              <VoteList
+                escrutinioId={selectedMesa || 'escrutinio-temp'}
+                candidates={filteredCandidates.map((c) => ({
+                  id: c.id,
+                  name: c.name,
+                  party: c.party,
+                  number: c.number,
+                  partyColor: getPartyColor(c.party),
+                }))}
+                userId={user?.id}
+                mesaId={selectedMesa}
+                gps={location ? { latitude: location.lat, longitude: location.lng, accuracy: location.accuracy } : null}
+                deviceId={typeof window !== 'undefined' ? localStorage.getItem('device-id') || undefined : undefined}
+              />
             </div>
           </div>
+        )}
+
+        {currentStep === 2 && (
+          <VoteFooter
+            escrutinioId={selectedMesa || 'escrutinio-temp'}
+            onContinue={() => setCurrentStep(3)}
+          />
         )}
 
         {/* Step 3: Evidence Upload */}
