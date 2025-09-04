@@ -4,8 +4,10 @@ import clsx from 'clsx';
 
 type Props = {
   id: string;
-  name: string;
+  // Title should display full party name (no abbreviations)
   party: string;
+  // Subtitle should display candidate initial + surname
+  name: string;
   partyColor?: string;
   number?: string | number;
   count: number;
@@ -79,8 +81,8 @@ export function VoteCard({ id, name, party, partyColor = '#e5e7eb', number, coun
       <div className="flex-1 p-4 text-left">
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-base font-semibold text-gray-900">{name}</div>
-            <div className="text-sm text-gray-600">{party}{number !== undefined ? ` • Lista ${number}` : ''}</div>
+            <div className="text-base font-semibold text-gray-900">{party}</div>
+            <div className="text-sm text-gray-600">{formatInitialSurname(name)}{number !== undefined ? ` • Lista ${number}` : ''}</div>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-2xl font-bold tabular-nums" aria-live="polite">{count}</span>
@@ -103,4 +105,12 @@ export function VoteCard({ id, name, party, partyColor = '#e5e7eb', number, coun
 }
 
 export default VoteCard;
+
+function formatInitialSurname(fullName: string): string {
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length === 0) return fullName;
+  const initial = parts[0].charAt(0).toUpperCase();
+  const surname = parts[parts.length - 1];
+  return `${initial}. ${surname}`;
+}
 

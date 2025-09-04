@@ -61,15 +61,15 @@ async function seedProduction() {
 
     console.log('✅ Election created/updated:', election.name);
 
-    // Create candidates
+    // Create presidential candidates (HN 2025) in required order
     const candidates = await Promise.all([
       prisma.candidate.upsert({
         where: { id: 'candidate-1' },
         update: {},
         create: {
           id: 'candidate-1',
-          name: 'Candidato A',
-          party: 'Partido A',
+          name: 'Mario Rivera',
+          party: 'PDC',
           number: 1,
           electionLevel: 'PRESIDENTIAL',
           electionId: election.id,
@@ -80,8 +80,8 @@ async function seedProduction() {
         update: {},
         create: {
           id: 'candidate-2',
-          name: 'Candidato B',
-          party: 'Partido B',
+          name: 'Rixi Moncada',
+          party: 'LIBRE',
           number: 2,
           electionLevel: 'PRESIDENTIAL',
           electionId: election.id,
@@ -92,9 +92,33 @@ async function seedProduction() {
         update: {},
         create: {
           id: 'candidate-3',
-          name: 'Candidato C',
-          party: 'Partido C',
+          name: 'Jorge Ávila',
+          party: 'PINU-SD',
           number: 3,
+          electionLevel: 'PRESIDENTIAL',
+          electionId: election.id,
+        },
+      }),
+      prisma.candidate.upsert({
+        where: { id: 'candidate-4' },
+        update: {},
+        create: {
+          id: 'candidate-4',
+          name: 'Salvador Nasralla',
+          party: 'PLH',
+          number: 4,
+          electionLevel: 'PRESIDENTIAL',
+          electionId: election.id,
+        },
+      }),
+      prisma.candidate.upsert({
+        where: { id: 'candidate-5' },
+        update: {},
+        create: {
+          id: 'candidate-5',
+          name: 'Nasry Asfura',
+          party: 'PNH',
+          number: 5,
           electionLevel: 'PRESIDENTIAL',
           electionId: election.id,
         },

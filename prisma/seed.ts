@@ -58,12 +58,13 @@ async function main() {
 
   console.log('✅ Election created:', election.name);
 
-  // Presidential candidates (HN 2025)
+  // Presidential candidates (HN 2025) - ordered as required for UI
   const candidates = [
-    { name: 'Rixi Moncada', party: 'LIBRE', number: 1, level: 'PRESIDENTIAL' },
-    { name: 'Nasry Asfura', party: 'PNH', number: 2, level: 'PRESIDENTIAL' },
-    { name: 'Mauricio Villeda', party: 'PLH', number: 3, level: 'PRESIDENTIAL' },
-    { name: 'Salvador Nasralla', party: 'PSH', number: 4, level: 'PRESIDENTIAL' },
+    { name: 'Mario Rivera', party: 'PDC', number: 1, level: 'PRESIDENTIAL' },
+    { name: 'Rixi Moncada', party: 'LIBRE', number: 2, level: 'PRESIDENTIAL' },
+    { name: 'Jorge Ávila', party: 'PINU-SD', number: 3, level: 'PRESIDENTIAL' },
+    { name: 'Salvador Nasralla', party: 'PLH', number: 4, level: 'PRESIDENTIAL' },
+    { name: 'Nasry Asfura', party: 'PNH', number: 5, level: 'PRESIDENTIAL' },
   ];
 
   for (const candidate of candidates) {

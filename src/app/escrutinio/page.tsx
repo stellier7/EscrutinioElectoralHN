@@ -44,7 +44,7 @@ function EscrutinioPageContent() {
   
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedMesa, setSelectedMesa] = useState('');
-  const [selectedLevel, setSelectedLevel] = useState('');
+  const [selectedLevel, setSelectedLevel] = useState('PRESIDENTIAL');
   const [escrutinioId, setEscrutinioId] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState(false);
   const voteStore = useVoteStore();
@@ -82,20 +82,67 @@ function EscrutinioPageContent() {
     load();
   }, [selectedLevel]);
 
-  const filteredCandidates = candidates;
+  // Map party acronyms to full names for display
+  const mapPartyToFullName = (party: string): string => {
+    const key = party.trim().toLowerCase();
+    switch (key) {
+      case 'pdc':
+      case 'demócrata cristiano':
+      case 'democrata cristiano':
+        return 'Partido Demócrata Cristiano';
+      case 'libre':
+        return 'Partido Libertad y Refundación (LIBRE)';
+      case 'pinu-sd':
+      case 'pinu':
+        return 'Partido Innovación y Unidad Social Demócrata (PINU-SD)';
+      case 'plh':
+      case 'liberal':
+        return 'Partido Liberal de Honduras';
+      case 'pnh':
+      case 'nacional':
+        return 'Partido Nacional de Honduras';
+      default:
+        return party;
+    }
+  };
+
+  const filteredCandidates = candidates
+    .filter((c) => c.electionLevel === 'PRESIDENTIAL')
+    .sort((a, b) => {
+      // desired order by party full name mapping
+      const order = [
+        'Partido Demócrata Cristiano',
+        'Partido Libertad y Refundación (LIBRE)',
+        'Partido Innovación y Unidad Social Demócrata (PINU-SD)',
+        'Partido Liberal de Honduras',
+        'Partido Nacional de Honduras',
+      ];
+      const aIdx = order.indexOf(mapPartyToFullName(a.party));
+      const bIdx = order.indexOf(mapPartyToFullName(b.party));
+      return aIdx - bIdx;
+    });
 
   const getPartyColor = (party: string) => {
-    switch (party.toLowerCase()) {
+    const key = party.trim().toLowerCase();
+    switch (key) {
+      case 'pdc':
       case 'demócrata cristiano':
       case 'democrata cristiano':
         return '#16a34a'; // green
       case 'libre':
+      case 'partido libertad y refundación (libre)':
         return '#dc2626'; // red
       case 'pinu-sd':
+      case 'pinu':
+      case 'partido innovación y unidad social demócrata (pinu-sd)':
         return '#7c3aed'; // purple
+      case 'plh':
       case 'liberal':
+      case 'partido liberal de honduras':
         return '#ef4444'; // red
+      case 'pnh':
       case 'nacional':
+      case 'partido nacional de honduras':
         return '#2563eb'; // blue
       default:
         return '#10b981';
@@ -317,8 +364,6 @@ function EscrutinioPageContent() {
                 >
                   <option value="">Seleccionar nivel...</option>
                   <option value="PRESIDENTIAL">Presidencial</option>
-                  <option value="LEGISLATIVE">Legislativo</option>
-                  <option value="MUNICIPAL">Municipal</option>
                 </select>
               </div>
 
@@ -438,7 +483,7 @@ function EscrutinioPageContent() {
                 candidates={filteredCandidates.map((c) => ({
                   id: c.id,
                   name: c.name,
-                  party: c.party,
+                  party: mapPartyToFullName(c.party),
                   number: c.number,
                   partyColor: getPartyColor(c.party),
                 }))}
