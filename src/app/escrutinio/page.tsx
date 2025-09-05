@@ -491,7 +491,6 @@ function EscrutinioPageContent() {
                 />
               </div>
             )}
-            </div>
           </div>
         )}
 
