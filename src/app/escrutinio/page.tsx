@@ -8,6 +8,7 @@ import { useGeolocation } from '../../hooks/useGeolocation';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import VoteList from '@/components/VoteList';
+import DiputadosEscrutinio from '@/components/DiputadosEscrutinio';
 import VoteFooter from '@/components/VoteFooter';
 import { useVoteStore } from '@/store/voteStore';
 import { 
@@ -452,7 +453,7 @@ function EscrutinioPageContent() {
         )}
 
         {/* Step 2: Vote Counting */}
-        {currentStep === 2 && (
+        {currentStep === 2 && selectedLevel !== 'LEGISLATIVE' && (
           <div className="bg-white p-6 rounded-lg shadow-sm border">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Conteo de Votos</h2>
             
@@ -469,27 +470,32 @@ function EscrutinioPageContent() {
                 </div>
               </div>
             )}
-
-            <div className="space-y-4">
-              <VoteList
-                escrutinioId={escrutinioId || 'escrutinio-temp'}
-                candidates={filteredCandidates.map((c) => ({
-                  id: c.id,
-                  name: c.name,
-                  party: mapPartyToDisplayName(c.party),
-                  number: c.number,
-                  partyColor: getPartyColor(c.party),
-                }))}
-                userId={user?.id}
-                mesaId={selectedMesa}
-                gps={location ? { latitude: location.lat, longitude: location.lng, accuracy: location.accuracy } : null}
-                deviceId={typeof window !== 'undefined' ? localStorage.getItem('device-id') || undefined : undefined}
-              />
+            {/* Show different UI based on election level */}
+            {selectedLevel === 'LEGISLATIVE' ? (
+              <DiputadosEscrutinio />
+            ) : (
+              <div className="space-y-4">
+                <VoteList
+                  escrutinioId={escrutinioId || 'escrutinio-temp'}
+                  candidates={filteredCandidates.map((c) => ({
+                    id: c.id,
+                    name: c.name,
+                    party: mapPartyToDisplayName(c.party),
+                    number: c.number,
+                    partyColor: getPartyColor(c.party),
+                  }))}
+                  userId={user?.id}
+                  mesaId={selectedMesa}
+                  gps={location ? { latitude: location.lat, longitude: location.lng, accuracy: location.accuracy } : null}
+                  deviceId={typeof window !== 'undefined' ? localStorage.getItem('device-id') || undefined : undefined}
+                />
+              </div>
+            )}
             </div>
           </div>
         )}
 
-        {currentStep === 2 && (
+        {currentStep === 2 && selectedLevel !== 'LEGISLATIVE' && (
           <VoteFooter
             escrutinioId={escrutinioId || 'escrutinio-temp'}
             onContinue={() => setCurrentStep(3)}
