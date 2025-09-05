@@ -44,7 +44,7 @@ function EscrutinioPageContent() {
   
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedMesa, setSelectedMesa] = useState('');
-  const [selectedLevel, setSelectedLevel] = useState('PRESIDENTIAL');
+  const [selectedLevel, setSelectedLevel] = useState('');
   const [escrutinioId, setEscrutinioId] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState(false);
   const voteStore = useVoteStore();
@@ -355,6 +355,8 @@ function EscrutinioPageContent() {
                 >
                   <option value="">Seleccionar nivel...</option>
                   <option value="PRESIDENTIAL">Presidencial</option>
+                  <option value="LEGISLATIVE">Legislativo</option>
+                  <option value="MUNICIPAL">Municipal</option>
                 </select>
               </div>
 
