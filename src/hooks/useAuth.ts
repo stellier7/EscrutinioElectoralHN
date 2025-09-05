@@ -95,12 +95,7 @@ export function useAuthState() {
     try {
       setIsLoading(true);
       
-      const loginData = {
-        ...credentials,
-        deviceId: getDeviceId(),
-      };
-
-      const response = await axios.post('/api/auth/login', loginData);
+      const response = await axios.post('/api/auth/login', credentials);
       
       if (response.data.success) {
         const authResponse: AuthResponse = response.data.data;
@@ -121,12 +116,7 @@ export function useAuthState() {
     try {
       setIsLoading(true);
       
-      const registerData = {
-        ...userData,
-        deviceId: getDeviceId(),
-      };
-
-      const response = await axios.post('/api/auth/register', registerData);
+      const response = await axios.post('/api/auth/register', userData);
       
       if (response.data.success) {
         const authResponse: AuthResponse = response.data.data;

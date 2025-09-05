@@ -27,7 +27,6 @@ export interface ApiResponse<T = any> {
 export interface LoginRequest {
   email: string;
   password: string;
-  deviceId: string;
 }
 
 export interface RegisterRequest {
@@ -35,7 +34,6 @@ export interface RegisterRequest {
   password: string;
   name: string;
   role: 'VOLUNTEER' | 'ORGANIZATION_MEMBER' | 'ADMIN';
-  deviceId: string;
 }
 
 export interface AuthResponse {

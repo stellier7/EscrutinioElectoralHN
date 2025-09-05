@@ -17,7 +17,6 @@ const registerSchema = z.object({
   password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
   name: z.string().min(2, 'El nombre debe tener al menos 2 caracteres'),
   role: z.enum(['VOLUNTEER', 'ORGANIZATION_MEMBER', 'ADMIN'] as const),
-  deviceId: z.string().min(1, 'ID de dispositivo requerido'),
 });
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
@@ -34,7 +33,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       } as ApiResponse, { status: 400 });
     }
 
-    const { email, password, name, role, deviceId }: RegisterRequest = validationResult.data;
+    const { email, password, name, role }: RegisterRequest = validationResult.data;
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
@@ -48,17 +47,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       } as ApiResponse, { status: 409 });
     }
 
-    // Check if device is already associated
-    const existingDevice = await prisma.user.findUnique({
-      where: { deviceId },
-    });
-
-    if (existingDevice) {
-      return NextResponse.json({
-        success: false,
-        error: 'Este dispositivo ya está asociado a otro usuario',
-      } as ApiResponse, { status: 409 });
-    }
+    // No device association required
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 12);
@@ -70,7 +59,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         password: hashedPassword,
         name,
         role,
-        deviceId,
+        deviceId: null,
         isActive: true,
       },
       select: {
@@ -90,7 +79,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       userId: newUser.id,
       email: newUser.email,
       role: newUser.role,
-      deviceId: newUser.deviceId,
     }, env.JWT_SECRET, {
       expiresIn: '24h',
       issuer: 'escrutinio-transparente',

@@ -72,7 +72,6 @@ export default function HomePage() {
         await login({
           email: formData.email,
           password: formData.password,
-          deviceId: '', // Will be generated in the hook
         });
       } else {
         await register({
@@ -80,7 +79,6 @@ export default function HomePage() {
           password: formData.password,
           name: formData.name,
           role: formData.role as any,
-          deviceId: '', // Will be generated in the hook
         });
       }
       

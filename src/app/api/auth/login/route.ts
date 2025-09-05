@@ -15,7 +15,6 @@ export const dynamic = 'force-dynamic';
 const loginSchema = z.object({
   email: z.string().email('Email inválido'),
   password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
-  deviceId: z.string().min(1, 'ID de dispositivo requerido'),
 });
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
@@ -32,7 +31,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       } as ApiResponse, { status: 400 });
     }
 
-    const { email, password, deviceId }: LoginRequest = validationResult.data;
+    const { email, password }: LoginRequest = validationResult.data;
 
     // Find user by email with better error handling
     let user;
@@ -83,25 +82,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       } as ApiResponse, { status: 401 });
     }
 
-    // Associate device if not already associated
-    if (!user.deviceId) {
-      try {
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { deviceId },
-        });
-      } catch (updateError) {
-        console.error('Error updating device ID:', updateError);
-        // Continue with login even if device update fails
-      }
-    }
+    // No device association required
 
     // Generate JWT token
     const token = jwt.sign({
       userId: user.id,
       email: user.email,
       role: user.role,
-      deviceId: deviceId,
     }, env.JWT_SECRET, {
       expiresIn: '24h',
       issuer: 'escrutinio-transparente',
@@ -125,7 +112,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         email: user.email,
         name: user.name,
         role: user.role,
-        deviceId: deviceId,
+        deviceId: null,
         isActive: user.isActive,
         createdAt: new Date(),
         updatedAt: new Date(),

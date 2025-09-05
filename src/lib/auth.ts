@@ -7,7 +7,6 @@ export interface JWTPayload {
   userId: string;
   email: string;
   role: string;
-  deviceId?: string;
 }
 
 export class AuthUtils {
@@ -24,7 +23,6 @@ export class AuthUtils {
       userId: user.id,
       email: user.email,
       role: user.role,
-      deviceId: user.deviceId || undefined,
     };
 
     return jwt.sign(payload, env.JWT_SECRET, {
@@ -46,9 +44,7 @@ export class AuthUtils {
     }
   }
 
-  static generateDeviceId(): string {
-    return `device-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  }
+  // Device ID generation removed - no longer needed
 
   static isTokenExpired(token: string): boolean {
     try {
