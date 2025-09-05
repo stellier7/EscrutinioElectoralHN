@@ -109,17 +109,8 @@ function EscrutinioPageContent() {
   const filteredCandidates = candidates
     .filter((c) => c.electionLevel === 'PRESIDENTIAL')
     .sort((a, b) => {
-      // desired order by party display name
-      const order = [
-        'Demócrata Cristiano',
-        'Libre',
-        'PINU-SD',
-        'Liberal',
-        'Nacional',
-      ];
-      const aIdx = order.indexOf(mapPartyToDisplayName(a.party));
-      const bIdx = order.indexOf(mapPartyToDisplayName(b.party));
-      return aIdx - bIdx;
+      // Force exact order by candidate number
+      return a.number - b.number;
     });
 
   const getPartyColor = (party: string) => {
