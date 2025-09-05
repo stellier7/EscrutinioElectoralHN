@@ -82,25 +82,25 @@ function EscrutinioPageContent() {
     load();
   }, [selectedLevel]);
 
-  // Map party acronyms to full names for display
-  const mapPartyToFullName = (party: string): string => {
+  // Map party acronyms to display names
+  const mapPartyToDisplayName = (party: string): string => {
     const key = party.trim().toLowerCase();
     switch (key) {
       case 'pdc':
       case 'demócrata cristiano':
       case 'democrata cristiano':
-        return 'Partido Demócrata Cristiano';
+        return 'Demócrata Cristiano';
       case 'libre':
-        return 'Partido Libertad y Refundación (LIBRE)';
+        return 'Libre';
       case 'pinu-sd':
       case 'pinu':
-        return 'Partido Innovación y Unidad Social Demócrata (PINU-SD)';
+        return 'PINU-SD';
       case 'plh':
       case 'liberal':
-        return 'Partido Liberal de Honduras';
+        return 'Liberal';
       case 'pnh':
       case 'nacional':
-        return 'Partido Nacional de Honduras';
+        return 'Nacional';
       default:
         return party;
     }
@@ -109,16 +109,16 @@ function EscrutinioPageContent() {
   const filteredCandidates = candidates
     .filter((c) => c.electionLevel === 'PRESIDENTIAL')
     .sort((a, b) => {
-      // desired order by party full name mapping
+      // desired order by party display name
       const order = [
-        'Partido Demócrata Cristiano',
-        'Partido Libertad y Refundación (LIBRE)',
-        'Partido Innovación y Unidad Social Demócrata (PINU-SD)',
-        'Partido Liberal de Honduras',
-        'Partido Nacional de Honduras',
+        'Demócrata Cristiano',
+        'Libre',
+        'PINU-SD',
+        'Liberal',
+        'Nacional',
       ];
-      const aIdx = order.indexOf(mapPartyToFullName(a.party));
-      const bIdx = order.indexOf(mapPartyToFullName(b.party));
+      const aIdx = order.indexOf(mapPartyToDisplayName(a.party));
+      const bIdx = order.indexOf(mapPartyToDisplayName(b.party));
       return aIdx - bIdx;
     });
 
@@ -483,7 +483,7 @@ function EscrutinioPageContent() {
                 candidates={filteredCandidates.map((c) => ({
                   id: c.id,
                   name: c.name,
-                  party: mapPartyToFullName(c.party),
+                  party: mapPartyToDisplayName(c.party),
                   number: c.number,
                   partyColor: getPartyColor(c.party),
                 }))}
