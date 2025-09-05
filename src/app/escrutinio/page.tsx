@@ -453,7 +453,7 @@ function EscrutinioPageContent() {
         )}
 
         {/* Step 2: Vote Counting */}
-        {currentStep === 2 && selectedLevel !== 'LEGISLATIVE' && (
+        {currentStep === 2 && (
           <div className="bg-white p-6 rounded-lg shadow-sm border">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Conteo de Votos</h2>
             
