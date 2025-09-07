@@ -55,7 +55,6 @@ export default function DashboardPage() {
   const menuItems = [
     { id: 'overview', label: 'Resumen', icon: BarChart3 },
     { id: 'escrutinio', label: 'Nuevo Escrutinio', icon: Vote },
-    { id: 'diputados', label: 'Diputados (Prototipo)', icon: Vote },
     { id: 'results', label: 'Resultados', icon: CheckCircle },
     { id: 'evidence', label: 'Evidencia', icon: Camera },
     { id: 'audit', label: 'Auditoría', icon: Shield },
@@ -175,24 +174,6 @@ export default function DashboardPage() {
         return renderOverview();
       case 'escrutinio':
         return renderNewEscrutinio();
-      case 'diputados':
-        return (
-          <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">Prototipo: Escrutinio de Diputados</h3>
-            <p className="text-gray-600 mb-4 text-sm">
-              Prueba el prototipo interactivo para el escrutinio de diputados. 
-              Haz clic en un partido para expandir el grid de 25 casillas.
-            </p>
-            <Button 
-              variant="primary" 
-              size="lg"
-              onClick={() => router.push('/diputados')}
-            >
-              <Vote className="h-4 w-4 mr-2" />
-              Probar Prototipo
-            </Button>
-          </div>
-        );
       case 'results':
         return (
           <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
