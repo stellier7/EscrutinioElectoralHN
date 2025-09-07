@@ -7,6 +7,7 @@ import { useAuth } from '../../components/AuthProvider';
 import { useGeolocation } from '../../hooks/useGeolocation';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
+import SearchInput from '../../components/ui/SearchInput';
 import VoteList from '@/components/VoteList';
 import DiputadosEscrutinio from '@/components/DiputadosEscrutinio';
 import VoteFooter from '@/components/VoteFooter';
@@ -30,6 +31,13 @@ interface Mesa {
   address?: string;
 }
 
+interface JRVSearchResult {
+  value: string;
+  label: string;
+  location: string;
+  department: string;
+}
+
 interface Candidate {
   id: string;
   name: string;
@@ -45,6 +53,7 @@ function EscrutinioPageContent() {
   
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedMesa, setSelectedMesa] = useState('');
+  const [selectedMesaInfo, setSelectedMesaInfo] = useState<JRVSearchResult | null>(null);
   const [selectedLevel, setSelectedLevel] = useState('');
   const [escrutinioId, setEscrutinioId] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState(false);
@@ -63,40 +72,18 @@ function EscrutinioPageContent() {
     showLocationInstructions 
   } = useGeolocation();
 
-  const [mesas, setMesas] = useState<Mesa[]>([]);
-  const [loadingMesas, setLoadingMesas] = useState(false);
+  // Manejar selección de JRV
+  const handleJRVSelect = (result: JRVSearchResult) => {
+    setSelectedMesa(result.value);
+    setSelectedMesaInfo(result);
+  };
 
-  // Cargar mesas desde la API
-  useEffect(() => {
-    const loadMesas = async () => {
-      try {
-        setLoadingMesas(true);
-        const response = await axios.get('/api/mesas?limit=50');
-        if (response.data?.success) {
-          setMesas(response.data.data.map((mesa: any) => ({
-            id: mesa.id,
-            number: mesa.number,
-            location: mesa.location,
-            address: mesa.address || undefined
-          })));
-        }
-      } catch (error) {
-        console.error('Error loading mesas:', error);
-        // Fallback a mesas de ejemplo si falla la API
-        setMesas([
-          { id: '1', number: 'JRV-001', location: 'Escuela Central', address: 'Av. Principal 123' },
-          { id: '2', number: 'JRV-002', location: 'Colegio San José', address: 'Jr. Lima 456' },
-          { id: '3', number: 'JRV-003', location: 'Centro Comunal', address: 'Plaza Mayor s/n' },
-          { id: '4', number: 'JRV-004', location: 'Universidad Local', address: 'Av. Universidad 789' },
-          { id: '5', number: 'JRV-005', location: 'Club Deportivo', address: 'Jr. Deporte 321' },
-        ]);
-      } finally {
-        setLoadingMesas(false);
-      }
-    };
-
-    loadMesas();
-  }, []);
+  const handleJRVChange = (value: string) => {
+    setSelectedMesa(value);
+    if (!value) {
+      setSelectedMesaInfo(null);
+    }
+  };
 
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   useEffect(() => {
@@ -358,21 +345,28 @@ function EscrutinioPageContent() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Mesa Electoral (JRV)
                 </label>
-                <select 
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                <SearchInput
                   value={selectedMesa}
-                  onChange={(e) => setSelectedMesa(e.target.value)}
-                  disabled={loadingMesas}
-                >
-                  <option value="">
-                    {loadingMesas ? 'Cargando mesas...' : 'Seleccionar mesa...'}
-                  </option>
-                  {mesas.map(mesa => (
-                    <option key={mesa.id} value={mesa.number}>
-                      {mesa.number} - {mesa.location}
-                    </option>
-                  ))}
-                </select>
+                  onChange={handleJRVChange}
+                  onSelect={handleJRVSelect}
+                  placeholder="Escribir número de JRV (ej: 00001)"
+                  disabled={isStarting}
+                />
+                {selectedMesaInfo && (
+                  <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-md">
+                    <div className="flex items-center">
+                      <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
+                      <div>
+                        <div className="text-sm font-medium text-green-800">
+                          {selectedMesaInfo.label}
+                        </div>
+                        <div className="text-xs text-green-600">
+                          {selectedMesaInfo.department}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -387,7 +381,6 @@ function EscrutinioPageContent() {
                   <option value="">Seleccionar nivel...</option>
                   <option value="PRESIDENTIAL">Presidencial</option>
                   <option value="LEGISLATIVE">Legislativo</option>
-                  <option value="MUNICIPAL">Municipal</option>
                 </select>
               </div>
 

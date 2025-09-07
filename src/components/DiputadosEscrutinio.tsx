@@ -15,23 +15,15 @@ interface Party {
 }
 
 interface JRVInfo {
-  id: string;
-  number: string;
-  location: string;
-  department: string;
-  municipality: string;
-}
-
-interface DepartmentInfo {
-  id: string;
-  name: string;
-  code: number | null;
+  jrv: string;
+  nombre: string;
+  departamento: string;
   diputados: number;
+  municipio?: string;
 }
 
 interface DiputadosData {
   jrv: JRVInfo;
-  department: DepartmentInfo;
   parties: Party[];
 }
 
@@ -76,15 +68,65 @@ export default function DiputadosEscrutinio({ jrvNumber }: DiputadosEscrutinioPr
         setLoading(true);
         setError(null);
         
-        const response = await axios.get(`/api/diputados/jrv/${encodeURIComponent(jrvNumber)}`);
+        const response = await axios.get(`/api/jrv/${encodeURIComponent(jrvNumber)}`);
         
         if (response.data?.success) {
-          const data = response.data.data;
+          const jrvData = response.data.data;
+          
+          // Configuración de partidos políticos
+          const parties = [
+            {
+              id: 'pdc',
+              name: 'Demócrata Cristiano',
+              fullName: 'Partido Demócrata Cristiano',
+              color: '#16a34a',
+              slots: jrvData.diputados,
+              slotRange: `1-${jrvData.diputados}`
+            },
+            {
+              id: 'libre',
+              name: 'Libre',
+              fullName: 'Partido Libertad y Refundación (LIBRE)',
+              color: '#dc2626',
+              slots: jrvData.diputados,
+              slotRange: `1-${jrvData.diputados}`
+            },
+            {
+              id: 'pinu-sd',
+              name: 'PINU-SD',
+              fullName: 'Partido Innovación y Unidad Social Demócrata (PINU-SD)',
+              color: '#7c3aed',
+              slots: jrvData.diputados,
+              slotRange: `1-${jrvData.diputados}`
+            },
+            {
+              id: 'liberal',
+              name: 'Liberal',
+              fullName: 'Partido Liberal de Honduras',
+              color: '#ef4444',
+              slots: jrvData.diputados,
+              slotRange: `1-${jrvData.diputados}`
+            },
+            {
+              id: 'nacional',
+              name: 'Nacional',
+              fullName: 'Partido Nacional de Honduras',
+              color: '#2563eb',
+              slots: jrvData.diputados,
+              slotRange: `1-${jrvData.diputados}`
+            }
+          ];
+
+          const data = {
+            jrv: jrvData,
+            parties: parties
+          };
+          
           setDiputadosData(data);
           
           // Inicializar conteos en 0 para todos los partidos
           const initialCounts: PartyCounts = {};
-          data.parties.forEach((party: Party) => {
+          parties.forEach((party: Party) => {
             initialCounts[party.id] = 0;
           });
           setPartyCounts(initialCounts);
@@ -325,10 +367,10 @@ export default function DiputadosEscrutinio({ jrvNumber }: DiputadosEscrutinioPr
             </div>
             <div className="text-right">
               <div className="text-sm text-gray-600">
-                {diputadosData.jrv.number}
+                {diputadosData.jrv.jrv}
               </div>
               <div className="text-xs text-gray-500">
-                {diputadosData.department.name}
+                {diputadosData.jrv.departamento}
               </div>
             </div>
           </div>
@@ -343,7 +385,7 @@ export default function DiputadosEscrutinio({ jrvNumber }: DiputadosEscrutinioPr
               {expandedParty ? 'Selección de Diputado' : 'Conteo de Diputados'}
             </h2>
             <p className="text-sm text-gray-600">
-              {diputadosData.jrv.location} - {diputadosData.department.name}
+              {diputadosData.jrv.nombre} - {diputadosData.jrv.departamento}
             </p>
           </div>
           
