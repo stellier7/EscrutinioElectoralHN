@@ -68,7 +68,12 @@ export default function DiputadosEscrutinio({ jrvNumber }: DiputadosEscrutinioPr
         setLoading(true);
         setError(null);
         
-        const response = await axios.get(`/api/jrv/${encodeURIComponent(jrvNumber)}`);
+        console.log('🔍 Buscando JRV:', jrvNumber);
+        const url = `/api/jrv/${encodeURIComponent(jrvNumber)}`;
+        console.log('🌐 URL:', url);
+        
+        const response = await axios.get(url);
+        console.log('✅ Respuesta:', response.data);
         
         if (response.data?.success) {
           const jrvData = response.data.data;
@@ -131,10 +136,17 @@ export default function DiputadosEscrutinio({ jrvNumber }: DiputadosEscrutinioPr
           });
           setPartyCounts(initialCounts);
         } else {
+          console.error('❌ Error en respuesta:', response.data);
           setError(response.data?.error || 'Error al cargar datos de diputados');
         }
       } catch (err: any) {
-        console.error('Error loading diputados data:', err);
+        console.error('❌ Error loading diputados data:', err);
+        console.error('❌ Error details:', {
+          message: err.message,
+          status: err.response?.status,
+          statusText: err.response?.statusText,
+          data: err.response?.data
+        });
         setError(err?.response?.data?.error || 'Error al cargar datos de diputados');
       } finally {
         setLoading(false);
