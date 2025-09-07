@@ -48,7 +48,13 @@ export async function POST(request: Request) {
     // Ensure Mesa exists by number; create placeholder if not exists
     let mesa = await prisma.mesa.findUnique({ where: { number: mesaNumber } });
     if (!mesa) {
-      mesa = await prisma.mesa.create({ data: { number: mesaNumber, location: 'Sin definir' } });
+      mesa = await prisma.mesa.create({ 
+        data: { 
+          number: mesaNumber, 
+          location: 'Sin definir',
+          department: 'Departamento no especificado'
+        } 
+      });
     }
 
     // If already exists for this user/election/mesa/level, reuse it (update location)
