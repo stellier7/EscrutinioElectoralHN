@@ -126,42 +126,31 @@ export default function DashboardPage() {
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
         <h3 className="text-lg font-semibold text-gray-900 mb-3">Iniciar Nuevo Escrutinio</h3>
         <p className="text-gray-600 mb-4 text-sm">
-          Selecciona una mesa y nivel electoral para comenzar el proceso de escrutinio.
+          Accede al sistema de escrutinio electoral con búsqueda inteligente de JRVs y vista dinámica de diputados.
         </p>
         
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Mesa Electoral (JRV)
-            </label>
-            <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm">
-              <option value="">Seleccionar mesa...</option>
-              <option value="JRV-001">JRV-001 - Escuela Central</option>
-              <option value="JRV-002">JRV-002 - Colegio San José</option>
-              <option value="JRV-003">JRV-003 - Centro Comunal</option>
-              <option value="JRV-004">JRV-004 - Universidad Local</option>
-              <option value="JRV-005">JRV-005 - Club Deportivo</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Nivel Electoral
-            </label>
-            <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm">
-              <option value="">Seleccionar nivel...</option>
-              <option value="PRESIDENTIAL">Presidencial</option>
-              <option value="LEGISLATIVE">Legislativo</option>
-              <option value="MUNICIPAL">Municipal</option>
-            </select>
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-center mb-2">
+              <Vote className="h-5 w-5 text-blue-600 mr-2" />
+              <h4 className="font-medium text-blue-900">Funcionalidades Disponibles</h4>
+            </div>
+            <ul className="text-sm text-blue-800 space-y-1">
+              <li>• Búsqueda inteligente de JRVs (18,298 disponibles)</li>
+              <li>• Escrutinio presidencial y legislativo</li>
+              <li>• Vista dinámica de diputados por departamento</li>
+              <li>• Animaciones y feedback visual</li>
+            </ul>
           </div>
 
           <Button 
             variant="primary" 
             size="lg"
             onClick={() => router.push('/escrutinio')}
+            className="w-full"
           >
-            Iniciar Escrutinio
+            <Vote className="h-4 w-4 mr-2" />
+            Ir a Escrutinio
           </Button>
         </div>
       </div>
