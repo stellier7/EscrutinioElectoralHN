@@ -63,13 +63,40 @@ function EscrutinioPageContent() {
     showLocationInstructions 
   } = useGeolocation();
 
-  const mesas: Mesa[] = [
-    { id: '1', number: 'JRV-001', location: 'Escuela Central', address: 'Av. Principal 123' },
-    { id: '2', number: 'JRV-002', location: 'Colegio San José', address: 'Jr. Lima 456' },
-    { id: '3', number: 'JRV-003', location: 'Centro Comunal', address: 'Plaza Mayor s/n' },
-    { id: '4', number: 'JRV-004', location: 'Universidad Local', address: 'Av. Universidad 789' },
-    { id: '5', number: 'JRV-005', location: 'Club Deportivo', address: 'Jr. Deporte 321' },
-  ];
+  const [mesas, setMesas] = useState<Mesa[]>([]);
+  const [loadingMesas, setLoadingMesas] = useState(false);
+
+  // Cargar mesas desde la API
+  useEffect(() => {
+    const loadMesas = async () => {
+      try {
+        setLoadingMesas(true);
+        const response = await axios.get('/api/mesas?limit=50');
+        if (response.data?.success) {
+          setMesas(response.data.data.map((mesa: any) => ({
+            id: mesa.id,
+            number: mesa.number,
+            location: mesa.location,
+            address: mesa.address || undefined
+          })));
+        }
+      } catch (error) {
+        console.error('Error loading mesas:', error);
+        // Fallback a mesas de ejemplo si falla la API
+        setMesas([
+          { id: '1', number: 'JRV-001', location: 'Escuela Central', address: 'Av. Principal 123' },
+          { id: '2', number: 'JRV-002', location: 'Colegio San José', address: 'Jr. Lima 456' },
+          { id: '3', number: 'JRV-003', location: 'Centro Comunal', address: 'Plaza Mayor s/n' },
+          { id: '4', number: 'JRV-004', location: 'Universidad Local', address: 'Av. Universidad 789' },
+          { id: '5', number: 'JRV-005', location: 'Club Deportivo', address: 'Jr. Deporte 321' },
+        ]);
+      } finally {
+        setLoadingMesas(false);
+      }
+    };
+
+    loadMesas();
+  }, []);
 
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   useEffect(() => {
@@ -335,8 +362,11 @@ function EscrutinioPageContent() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                   value={selectedMesa}
                   onChange={(e) => setSelectedMesa(e.target.value)}
+                  disabled={loadingMesas}
                 >
-                  <option value="">Seleccionar mesa...</option>
+                  <option value="">
+                    {loadingMesas ? 'Cargando mesas...' : 'Seleccionar mesa...'}
+                  </option>
                   {mesas.map(mesa => (
                     <option key={mesa.id} value={mesa.number}>
                       {mesa.number} - {mesa.location}
@@ -472,7 +502,7 @@ function EscrutinioPageContent() {
             )}
             {/* Show different UI based on election level */}
             {selectedLevel === 'LEGISLATIVE' ? (
-              <DiputadosEscrutinio />
+              <DiputadosEscrutinio jrvNumber={selectedMesa} />
             ) : (
               <div className="space-y-4">
                 <VoteList

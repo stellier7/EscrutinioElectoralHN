@@ -1,0 +1,116 @@
+[
+  {
+    "id": "diputado-0",
+    "department": "Atlántida",
+    "diputados": 8,
+    "code": 1
+  },
+  {
+    "id": "diputado-1",
+    "department": "Colón",
+    "diputados": 4,
+    "code": 2
+  },
+  {
+    "id": "diputado-2",
+    "department": "Comayagua",
+    "diputados": 7,
+    "code": 3
+  },
+  {
+    "id": "diputado-3",
+    "department": "Copán",
+    "diputados": 7,
+    "code": 4
+  },
+  {
+    "id": "diputado-4",
+    "department": "Cortés",
+    "diputados": 20,
+    "code": 5
+  },
+  {
+    "id": "diputado-5",
+    "department": "Choluteca",
+    "diputados": 9,
+    "code": 6
+  },
+  {
+    "id": "diputado-6",
+    "department": "El Paraíso",
+    "diputados": 6,
+    "code": 7
+  },
+  {
+    "id": "diputado-7",
+    "department": "Francisco Morazán",
+    "diputados": 23,
+    "code": 8
+  },
+  {
+    "id": "diputado-8",
+    "department": "Gracias a Dios",
+    "diputados": 1,
+    "code": 9
+  },
+  {
+    "id": "diputado-9",
+    "department": "Intibucá",
+    "diputados": 3,
+    "code": 10
+  },
+  {
+    "id": "diputado-10",
+    "department": "Islas de la Bahía",
+    "diputados": 1,
+    "code": 11
+  },
+  {
+    "id": "diputado-11",
+    "department": "La Paz",
+    "diputados": 3,
+    "code": 12
+  },
+  {
+    "id": "diputado-12",
+    "department": "Lempira",
+    "diputados": 5,
+    "code": 13
+  },
+  {
+    "id": "diputado-13",
+    "department": "Ocotepeque",
+    "diputados": 2,
+    "code": 14
+  },
+  {
+    "id": "diputado-14",
+    "department": "Olancho",
+    "diputados": 7,
+    "code": 15
+  },
+  {
+    "id": "diputado-15",
+    "department": "Santa Bárbara",
+    "diputados": 9,
+    "code": 16
+  },
+  {
+    "id": "diputado-16",
+    "department": "Valle",
+    "diputados": 4,
+    "code": 17
+  },
+  {
+    "id": "diputado-17",
+    "department": "Yoro",
+    "diputados": 9,
+    "code": 18
+  },
+  {
+    "id": "diputado-18",
+    "department": "Total",
+    "diputados": 128,
+    "code": null
+  }
+]

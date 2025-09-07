@@ -99,6 +99,10 @@ model Mesa {
   number          String    @unique // JRV number
   location        String
   address         String?
+  department      String    // Departamento de la JRV
+  municipality    String?   // Municipio
+  area            String?   // Área (urbana/rural)
+  electoralLoad   Int?      // Carga electoral
   latitude        Float?
   longitude       Float?
   isActive        Boolean   @default(true)
@@ -109,6 +113,18 @@ model Mesa {
   escrutinios     Escrutinio[]
   
   @@map("mesas")
+}
+
+model Department {
+  id              String    @id @default(cuid())
+  name            String    @unique // Nombre del departamento
+  code            Int?      // Código del departamento
+  diputados       Int       @default(0) // Número de diputados
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@map("departments")
 }
 
 model Escrutinio {

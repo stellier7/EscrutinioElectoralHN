@@ -1,43 +1,39 @@
 "use client";
-import React, { useState, useCallback } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import React, { useState, useCallback, useEffect } from 'react';
+import { ArrowLeft, Loader2, AlertCircle } from 'lucide-react';
 import clsx from 'clsx';
+import axios from 'axios';
 
-// Party configuration with colors and display names
-const PARTIES = [
-  {
-    id: 'pdc',
-    name: 'Demócrata Cristiano',
-    color: '#16a34a', // green
-    fullName: 'Partido Demócrata Cristiano'
-  },
-  {
-    id: 'libre',
-    name: 'Libre',
-    color: '#dc2626', // red
-    fullName: 'Partido Libertad y Refundación (LIBRE)'
-  },
-  {
-    id: 'pinu-sd',
-    name: 'PINU-SD',
-    color: '#7c3aed', // purple
-    fullName: 'Partido Innovación y Unidad Social Demócrata (PINU-SD)'
-  },
-  {
-    id: 'liberal',
-    name: 'Liberal',
-    color: '#ef4444', // red
-    fullName: 'Partido Liberal de Honduras'
-  },
-  {
-    id: 'nacional',
-    name: 'Nacional',
-    color: '#2563eb', // blue
-    fullName: 'Partido Nacional de Honduras'
-  }
-] as const;
+// Interfaces
+interface Party {
+  id: string;
+  name: string;
+  fullName: string;
+  color: string;
+  slots: number;
+  slotRange: string;
+}
 
-type PartyId = typeof PARTIES[number]['id'];
+interface JRVInfo {
+  id: string;
+  number: string;
+  location: string;
+  department: string;
+  municipality: string;
+}
+
+interface DepartmentInfo {
+  id: string;
+  name: string;
+  code: number | null;
+  diputados: number;
+}
+
+interface DiputadosData {
+  jrv: JRVInfo;
+  department: DepartmentInfo;
+  parties: Party[];
+}
 
 interface PartyCounts {
   [key: string]: number;
@@ -47,33 +43,72 @@ interface AnimationState {
   show: boolean;
   x: number;
   y: number;
-  partyId: PartyId;
+  partyId: string;
 }
 
-export default function DiputadosEscrutinio() {
-  const [partyCounts, setPartyCounts] = useState<PartyCounts>({
-    pdc: 0,
-    libre: 0,
-    'pinu-sd': 0,
-    liberal: 0,
-    nacional: 0
-  });
-  
-  const [expandedParty, setExpandedParty] = useState<PartyId | null>(null);
+interface DiputadosEscrutinioProps {
+  jrvNumber?: string;
+}
+
+export default function DiputadosEscrutinio({ jrvNumber }: DiputadosEscrutinioProps) {
+  const [diputadosData, setDiputadosData] = useState<DiputadosData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [partyCounts, setPartyCounts] = useState<PartyCounts>({});
+  const [expandedParty, setExpandedParty] = useState<string | null>(null);
   const [animation, setAnimation] = useState<AnimationState>({
     show: false,
     x: 0,
     y: 0,
-    partyId: 'pdc'
+    partyId: ''
   });
 
+  // Cargar datos de diputados según la JRV
+  useEffect(() => {
+    const loadDiputadosData = async () => {
+      if (!jrvNumber) {
+        setError('Número de JRV no proporcionado');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const response = await axios.get(`/api/diputados/jrv/${encodeURIComponent(jrvNumber)}`);
+        
+        if (response.data?.success) {
+          const data = response.data.data;
+          setDiputadosData(data);
+          
+          // Inicializar conteos en 0 para todos los partidos
+          const initialCounts: PartyCounts = {};
+          data.parties.forEach((party: Party) => {
+            initialCounts[party.id] = 0;
+          });
+          setPartyCounts(initialCounts);
+        } else {
+          setError(response.data?.error || 'Error al cargar datos de diputados');
+        }
+      } catch (err: any) {
+        console.error('Error loading diputados data:', err);
+        setError(err?.response?.data?.error || 'Error al cargar datos de diputados');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDiputadosData();
+  }, [jrvNumber]);
+
   // Handle party card click - expand to grid
-  const handlePartyClick = useCallback((partyId: PartyId) => {
+  const handlePartyClick = useCallback((partyId: string) => {
     setExpandedParty(partyId);
   }, []);
 
   // Handle grid slot click - add vote and animate
-  const handleSlotClick = useCallback((partyId: PartyId, slotNumber: number, event: React.MouseEvent) => {
+  const handleSlotClick = useCallback((partyId: string, slotNumber: number, event: React.MouseEvent) => {
     // Get click position for animation
     const rect = event.currentTarget.getBoundingClientRect();
     const x = rect.left + rect.width / 2;
@@ -90,7 +125,7 @@ export default function DiputadosEscrutinio() {
     // Update count
     setPartyCounts(prev => ({
       ...prev,
-      [partyId]: prev[partyId] + 1
+      [partyId]: (prev[partyId] || 0) + 1
     }));
 
     // Hide animation after 300ms
@@ -119,46 +154,55 @@ export default function DiputadosEscrutinio() {
   }, []);
 
   // Get party by ID
-  const getParty = (partyId: PartyId) => PARTIES.find(p => p.id === partyId)!;
+  const getParty = (partyId: string) => diputadosData?.parties.find(p => p.id === partyId);
 
   // Render party cards (initial view)
-  const renderPartyCards = () => (
-    <div className="space-y-3">
-      {PARTIES.map((party) => (
-        <button
-          key={party.id}
-          onClick={() => handlePartyClick(party.id)}
-          className={clsx(
-            'w-full flex items-center rounded-lg border shadow-sm focus:outline-none focus:ring-2 transition-transform',
-            'active:scale-[0.98] hover:scale-[1.01]',
-            'bg-white'
-          )}
-          style={{ borderLeftWidth: 6, borderLeftColor: party.color }}
-        >
-          <div className="flex-1 p-4 text-left">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-base font-semibold text-gray-900">{party.name}</div>
-                <div className="text-sm text-gray-600">Diputados</div>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-2xl font-bold tabular-nums" aria-live="polite">
-                  {partyCounts[party.id]}
-                </span>
-                <div className="text-sm text-gray-500">+</div>
+  const renderPartyCards = () => {
+    if (!diputadosData) return null;
+
+    return (
+      <div className="space-y-3">
+        {diputadosData.parties.map((party) => (
+          <button
+            key={party.id}
+            onClick={() => handlePartyClick(party.id)}
+            className={clsx(
+              'w-full flex items-center rounded-lg border shadow-sm focus:outline-none focus:ring-2 transition-transform',
+              'active:scale-[0.98] hover:scale-[1.01]',
+              'bg-white'
+            )}
+            style={{ borderLeftWidth: 6, borderLeftColor: party.color }}
+          >
+            <div className="flex-1 p-4 text-left">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-base font-semibold text-gray-900">{party.fullName}</div>
+                  <div className="text-sm text-gray-600">Casillas {party.slotRange}</div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl font-bold tabular-nums" aria-live="polite">
+                    {partyCounts[party.id] || 0}
+                  </span>
+                  <div className="text-sm text-gray-500">+</div>
+                </div>
               </div>
             </div>
-          </div>
-        </button>
-      ))}
-    </div>
-  );
+          </button>
+        ))}
+      </div>
+    );
+  };
 
-  // Render grid of 25 slots (5x5)
+  // Render grid of dynamic slots based on department
   const renderGrid = () => {
-    if (!expandedParty) return null;
+    if (!expandedParty || !diputadosData) return null;
     
     const party = getParty(expandedParty);
+    if (!party) return null;
+    
+    // Calcular número de columnas para el grid (máximo 5)
+    const columns = Math.min(5, party.slots);
+    const rows = Math.ceil(party.slots / columns);
     
     return (
       <div className="space-y-4">
@@ -173,21 +217,27 @@ export default function DiputadosEscrutinio() {
               <ArrowLeft className="h-4 w-4" />
             </button>
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">{party.name}</h3>
+              <h3 className="text-lg font-semibold text-gray-900">{party.fullName}</h3>
               <p className="text-sm text-gray-600">Selecciona diputado</p>
             </div>
           </div>
           <div className="text-right">
             <div className="text-2xl font-bold" style={{ color: party.color }}>
-              {partyCounts[expandedParty]}
+              {partyCounts[expandedParty] || 0}
             </div>
             <div className="text-xs text-gray-500">Total</div>
           </div>
         </div>
 
-        {/* 5x5 Grid */}
-        <div className="grid grid-cols-5 gap-2">
-          {Array.from({ length: 25 }, (_, index) => {
+        {/* Dynamic Grid */}
+        <div 
+          className="grid gap-2"
+          style={{ 
+            gridTemplateColumns: `repeat(${columns}, 1fr)`,
+            gridTemplateRows: `repeat(${rows}, 1fr)`
+          }}
+        >
+          {Array.from({ length: party.slots }, (_, index) => {
             const slotNumber = index + 1;
             return (
               <button
@@ -218,6 +268,49 @@ export default function DiputadosEscrutinio() {
     );
   };
 
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-primary-600 mx-auto mb-4" />
+          <p className="text-gray-600">Cargando datos de diputados...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-6">
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-lg font-semibold text-gray-900 mb-2">Error</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+          >
+            Reintentar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // No data state
+  if (!diputadosData) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-600">No se encontraron datos de diputados</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -230,6 +323,14 @@ export default function DiputadosEscrutinio() {
                 <span className="sm:hidden">Diputados</span>
               </h1>
             </div>
+            <div className="text-right">
+              <div className="text-sm text-gray-600">
+                {diputadosData.jrv.number}
+              </div>
+              <div className="text-xs text-gray-500">
+                {diputadosData.department.name}
+              </div>
+            </div>
           </div>
         </div>
       </header>
@@ -237,9 +338,14 @@ export default function DiputadosEscrutinio() {
       {/* Main Content */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 lg:py-8">
         <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            {expandedParty ? 'Selección de Diputado' : 'Conteo de Diputados'}
-          </h2>
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">
+              {expandedParty ? 'Selección de Diputado' : 'Conteo de Diputados'}
+            </h2>
+            <p className="text-sm text-gray-600">
+              {diputadosData.jrv.location} - {diputadosData.department.name}
+            </p>
+          </div>
           
           {expandedParty ? renderGrid() : renderPartyCards()}
         </div>
@@ -260,7 +366,7 @@ export default function DiputadosEscrutinio() {
               'text-2xl font-bold text-white px-3 py-1 rounded-full shadow-lg',
               'animate-pulse'
             )}
-            style={{ backgroundColor: getParty(animation.partyId).color }}
+            style={{ backgroundColor: getParty(animation.partyId)?.color || '#10b981' }}
           >
             +1
           </div>
