@@ -10,6 +10,7 @@ const Button: React.FC<ButtonProps> = ({
   size = 'md',
   disabled = false,
   loading = false,
+  className,
 }) => {
   const baseClasses = [
     'inline-flex',
@@ -68,7 +69,8 @@ const Button: React.FC<ButtonProps> = ({
     sizeClasses[size],
     {
       'cursor-wait': loading,
-    }
+    },
+    className
   );
 
   const handleClick = () => {

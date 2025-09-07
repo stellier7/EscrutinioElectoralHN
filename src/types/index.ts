@@ -141,6 +141,7 @@ export interface ButtonProps {
   size?: 'sm' | 'md' | 'lg';
   disabled?: boolean;
   loading?: boolean;
+  className?: string;
 }
 
 export interface InputProps {
