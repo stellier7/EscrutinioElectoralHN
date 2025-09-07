@@ -89,13 +89,13 @@ async function main() {
 
   console.log('✅ Candidates created');
 
-  // Create sample mesas
+  // Create sample mesas (these will be overridden by the real data from Excel)
   const mesas = [
-    { number: 'JRV-001', location: 'Escuela Central', address: 'Av. Principal 123', lat: -12.0464, lng: -77.0428 },
-    { number: 'JRV-002', location: 'Colegio San José', address: 'Jr. Lima 456', lat: -12.0565, lng: -77.0328 },
-    { number: 'JRV-003', location: 'Centro Comunal', address: 'Plaza Mayor s/n', lat: -12.0664, lng: -77.0228 },
-    { number: 'JRV-004', location: 'Universidad Local', address: 'Av. Universidad 789', lat: -12.0764, lng: -77.0128 },
-    { number: 'JRV-005', location: 'Club Deportivo', address: 'Jr. Deporte 321', lat: -12.0864, lng: -77.0028 },
+    { number: 'JRV-001', location: 'Escuela Central', address: 'Av. Principal 123', department: 'Francisco Morazán', municipality: 'Tegucigalpa', lat: -12.0464, lng: -77.0428 },
+    { number: 'JRV-002', location: 'Colegio San José', address: 'Jr. Lima 456', department: 'Francisco Morazán', municipality: 'Tegucigalpa', lat: -12.0565, lng: -77.0328 },
+    { number: 'JRV-003', location: 'Centro Comunal', address: 'Plaza Mayor s/n', department: 'Francisco Morazán', municipality: 'Tegucigalpa', lat: -12.0664, lng: -77.0228 },
+    { number: 'JRV-004', location: 'Universidad Local', address: 'Av. Universidad 789', department: 'Francisco Morazán', municipality: 'Tegucigalpa', lat: -12.0764, lng: -77.0128 },
+    { number: 'JRV-005', location: 'Club Deportivo', address: 'Jr. Deporte 321', department: 'Francisco Morazán', municipality: 'Tegucigalpa', lat: -12.0864, lng: -77.0028 },
   ];
 
   for (const mesa of mesas) {
@@ -106,6 +106,8 @@ async function main() {
         number: mesa.number,
         location: mesa.location,
         address: mesa.address,
+        department: mesa.department,
+        municipality: mesa.municipality,
         latitude: mesa.lat,
         longitude: mesa.lng,
       },
