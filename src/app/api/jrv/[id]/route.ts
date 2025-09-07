@@ -61,11 +61,35 @@ export async function GET(
       );
     }
 
+    // Mapear código de departamento a nombre
+    const departmentMapping: { [key: string]: string } = {
+      '01-ATLANTIDA': 'Atlántida',
+      '02-COLON': 'Colón',
+      '03-COMAYAGUA': 'Comayagua',
+      '04-COPAN': 'Copán',
+      '05-CORTES': 'Cortés',
+      '06-CHOLUTECA': 'Choluteca',
+      '07-EL PARAISO': 'El Paraíso',
+      '08-FRANCISCO MORAZAN': 'Francisco Morazán',
+      '09-GRACIAS A DIOS': 'Gracias a Dios',
+      '10-INTIBUCA': 'Intibucá',
+      '11-ISLAS DE LA BAHIA': 'Islas de la Bahía',
+      '12-LA PAZ': 'La Paz',
+      '13-LEMPIRA': 'Lempira',
+      '14-OCOTEPEQUE': 'Ocotepeque',
+      '15-OLANCHO': 'Olancho',
+      '16-SANTA BARBARA': 'Santa Bárbara',
+      '17-VALLE': 'Valle',
+      '18-YORO': 'Yoro'
+    };
+
+    const departmentName = departmentMapping[mesa.department] || mesa.department;
+
     // Buscar información del departamento
     const department = await prisma.department.findFirst({
       where: {
         name: {
-          contains: mesa.department,
+          contains: departmentName,
           mode: 'insensitive'
         },
         isActive: true

@@ -66,12 +66,34 @@ export async function GET(request: NextRequest) {
       take: limit
     });
 
+    // Mapear código de departamento a nombre
+    const departmentMapping: { [key: string]: string } = {
+      '01-ATLANTIDA': 'Atlántida',
+      '02-COLON': 'Colón',
+      '03-COMAYAGUA': 'Comayagua',
+      '04-COPAN': 'Copán',
+      '05-CORTES': 'Cortés',
+      '06-CHOLUTECA': 'Choluteca',
+      '07-EL PARAISO': 'El Paraíso',
+      '08-FRANCISCO MORAZAN': 'Francisco Morazán',
+      '09-GRACIAS A DIOS': 'Gracias a Dios',
+      '10-INTIBUCA': 'Intibucá',
+      '11-ISLAS DE LA BAHIA': 'Islas de la Bahía',
+      '12-LA PAZ': 'La Paz',
+      '13-LEMPIRA': 'Lempira',
+      '14-OCOTEPEQUE': 'Ocotepeque',
+      '15-OLANCHO': 'Olancho',
+      '16-SANTA BARBARA': 'Santa Bárbara',
+      '17-VALLE': 'Valle',
+      '18-YORO': 'Yoro'
+    };
+
     // Formatear resultados para autocompletado
     const results = mesas.map(mesa => ({
       value: mesa.number.trim(),
       label: `${mesa.number.trim()} – ${formatLocationName(mesa.location)}`,
       location: formatLocationName(mesa.location),
-      department: mesa.department
+      department: departmentMapping[mesa.department] || mesa.department
     }));
 
     return NextResponse.json({
