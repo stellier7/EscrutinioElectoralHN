@@ -15,13 +15,34 @@ export async function GET(
       );
     }
 
-    // Buscar la JRV por número
+    // Normalizar el número de JRV (1 → 00001, 123 → 00123)
+    const normalizeJRVNumber = (input: string): string => {
+      // Si es solo números, normalizar a 5 dígitos
+      if (/^\d+$/.test(input)) {
+        return input.padStart(5, '0');
+      }
+      return input;
+    };
+
+    const normalizedId = normalizeJRVNumber(id);
+
+    // Buscar la JRV por número (tanto normalizado como original)
     const mesa = await prisma.mesa.findFirst({
       where: {
-        number: {
-          contains: id,
-          mode: 'insensitive'
-        },
+        OR: [
+          {
+            number: {
+              contains: normalizedId,
+              mode: 'insensitive'
+            }
+          },
+          {
+            number: {
+              contains: id,
+              mode: 'insensitive'
+            }
+          }
+        ],
         isActive: true
       },
       select: {

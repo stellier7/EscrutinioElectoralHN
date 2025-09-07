@@ -5,15 +5,26 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const query = searchParams.get('q');
-    const limit = parseInt(searchParams.get('limit') || '10');
+    const limit = parseInt(searchParams.get('limit') || '20');
 
-    if (!query || query.length < 2) {
+    if (!query || query.length < 1) {
       return NextResponse.json({
         success: true,
         data: [],
         count: 0
       });
     }
+
+    // Normalizar el número de JRV (1 → 00001, 123 → 00123)
+    const normalizeJRVNumber = (input: string): string => {
+      // Si es solo números, normalizar a 5 dígitos
+      if (/^\d+$/.test(input)) {
+        return input.padStart(5, '0');
+      }
+      return input;
+    };
+
+    const normalizedQuery = normalizeJRVNumber(query);
 
     // Buscar JRVs que coincidan con la consulta
     const mesas = await prisma.mesa.findMany({
@@ -22,6 +33,12 @@ export async function GET(request: NextRequest) {
           { isActive: true },
           {
             OR: [
+              {
+                number: {
+                  contains: normalizedQuery,
+                  mode: 'insensitive'
+                }
+              },
               {
                 number: {
                   contains: query,

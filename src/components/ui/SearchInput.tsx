@@ -37,7 +37,7 @@ export default function SearchInput({
   // Buscar JRVs cuando cambia el valor
   useEffect(() => {
     const searchJRVs = async () => {
-      if (value.length < 2) {
+      if (value.length < 1) {
         setResults([]);
         setIsOpen(false);
         return;
@@ -45,7 +45,7 @@ export default function SearchInput({
 
       setIsLoading(true);
       try {
-        const response = await fetch(`/api/jrv/search?q=${encodeURIComponent(value)}&limit=10`);
+        const response = await fetch(`/api/jrv/search?q=${encodeURIComponent(value)}&limit=20`);
         const data = await response.json();
         
         if (data.success) {
