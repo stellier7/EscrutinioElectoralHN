@@ -495,7 +495,11 @@ function EscrutinioPageContent() {
             )}
             {/* Show different UI based on election level */}
             {selectedLevel === 'LEGISLATIVE' ? (
-              <DiputadosEscrutinio jrvNumber={selectedMesa} />
+              <DiputadosEscrutinio 
+                jrvNumber={selectedMesa} 
+                escrutinioId={escrutinioId || undefined}
+                userId={user?.id}
+              />
             ) : (
               <div className="space-y-4">
                 <VoteList
