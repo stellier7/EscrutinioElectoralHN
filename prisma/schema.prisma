@@ -40,6 +40,12 @@ enum AuditLogAction {
   VIEW_RESULTS
 }
 
+enum PapeletaStatus {
+  OPEN
+  CLOSED
+  ANULADA
+}
+
 model User {
   id              String    @id @default(cuid())
   email           String    @unique
@@ -165,6 +171,7 @@ model Escrutinio {
   mesa            Mesa               @relation(fields: [mesaId], references: [id])
   votes           Vote[]
   corrections     Correction[]
+  papeletas       Papeleta[]
   
   @@unique([userId, electionId, mesaId, electionLevel])
   @@map("escrutinios")
@@ -174,7 +181,7 @@ model Vote {
   id              String    @id @default(cuid())
   escrutinioId    String
   candidateId     String
-  votes           Int       @default(0)
+  count           Int       @default(0)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   
@@ -215,6 +222,26 @@ model AuditLog {
   user            User?          @relation(fields: [userId], references: [id])
   
   @@map("audit_logs")
+}
+
+model Papeleta {
+  id              String         @id @default(cuid())
+  escrutinioId    String
+  userId          String
+  status          PapeletaStatus @default(OPEN)
+  votesBuffer     Json           @default("[]") // Array de {partyId, casillaNumber, timestamp}
+  
+  // Timestamps
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  closedAt        DateTime?
+  anuladaAt       DateTime?
+  anuladaReason   String?
+  
+  // Relaciones
+  escrutinio      Escrutinio     @relation(fields: [escrutinioId], references: [id], onDelete: Cascade)
+  
+  @@map("papeletas")
 }
 
 model SystemConfig {

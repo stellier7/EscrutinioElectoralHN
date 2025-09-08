@@ -1,8 +1,9 @@
 "use client";
 import React, { useState, useCallback, useEffect } from 'react';
-import { ArrowLeft, Loader2, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Loader2, AlertCircle, Check, X, FileText } from 'lucide-react';
 import clsx from 'clsx';
 import axios from 'axios';
+import { usePapeleta } from '@/hooks/usePapeleta';
 
 // Utility function to generate block-based slot ranges for legislative elections
 // Input: parties[] (fixed order array), S = seatCount (number of diputados)
@@ -60,9 +61,11 @@ interface AnimationState {
 
 interface DiputadosEscrutinioProps {
   jrvNumber?: string;
+  escrutinioId?: string;
+  userId?: string;
 }
 
-export default function DiputadosEscrutinio({ jrvNumber }: DiputadosEscrutinioProps) {
+export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }: DiputadosEscrutinioProps) {
   const [diputadosData, setDiputadosData] = useState<DiputadosData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -74,6 +77,18 @@ export default function DiputadosEscrutinio({ jrvNumber }: DiputadosEscrutinioPr
     y: 0,
     partyId: ''
   });
+
+  // Hook para manejar papeletas
+  const { 
+    papeleta, 
+    isLoading: papeletaLoading, 
+    error: papeletaError, 
+    startPapeleta, 
+    addVoteToBuffer, 
+    closePapeleta, 
+    anularPapeleta, 
+    resetPapeleta 
+  } = usePapeleta();
 
   // Cargar datos de diputados según la JRV
   useEffect(() => {
@@ -177,13 +192,25 @@ export default function DiputadosEscrutinio({ jrvNumber }: DiputadosEscrutinioPr
     loadDiputadosData();
   }, [jrvNumber]);
 
+  // Iniciar papeleta cuando se cargan los datos y tenemos escrutinioId
+  useEffect(() => {
+    if (diputadosData && escrutinioId && userId && !papeleta.id) {
+      startPapeleta(escrutinioId, userId);
+    }
+  }, [diputadosData, escrutinioId, userId, papeleta.id, startPapeleta]);
+
   // Handle party card click - expand to grid
   const handlePartyClick = useCallback((partyId: string) => {
     setExpandedParty(partyId);
   }, []);
 
-  // Handle grid slot click - add vote and animate
-  const handleSlotClick = useCallback((partyId: string, slotNumber: number, event: React.MouseEvent) => {
+  // Handle grid slot click - add vote to buffer and animate
+  const handleSlotClick = useCallback(async (partyId: string, slotNumber: number, event: React.MouseEvent) => {
+    if (!userId || papeleta.status !== 'OPEN') {
+      setError('No hay papeleta abierta');
+      return;
+    }
+
     // Get click position for animation
     const rect = event.currentTarget.getBoundingClientRect();
     const x = rect.left + rect.width / 2;
@@ -197,36 +224,63 @@ export default function DiputadosEscrutinio({ jrvNumber }: DiputadosEscrutinioPr
       partyId
     });
 
-    // Update count
-    setPartyCounts(prev => ({
-      ...prev,
-      [partyId]: (prev[partyId] || 0) + 1
-    }));
+    // Add vote to papeleta buffer
+    const success = await addVoteToBuffer(partyId, slotNumber, userId);
+    
+    if (success) {
+      // Update local count for UI feedback
+      setPartyCounts(prev => ({
+        ...prev,
+        [partyId]: (prev[partyId] || 0) + 1
+      }));
+    }
 
     // Hide animation after 300ms
     setTimeout(() => {
       setAnimation(prev => ({ ...prev, show: false }));
     }, 300);
 
-    // Close grid and return to party view after animation
-    setTimeout(() => {
-      setExpandedParty(null);
-    }, 400);
-
-    // TODO: Future AuditLogger integration
-    // AuditLogger.log({
-    //   event: 'diputado_vote',
-    //   partyId,
-    //   slotNumber,
-    //   timestamp: Date.now(),
-    //   metadata: { action: 'increment' }
-    // });
-  }, []);
+    // Don't auto-close grid - stay in grid for multiple votes
+    // setTimeout(() => {
+    //   setExpandedParty(null);
+    // }, 400);
+  }, [userId, papeleta.status, addVoteToBuffer]);
 
   // Handle back button
   const handleBack = useCallback(() => {
     setExpandedParty(null);
   }, []);
+
+  // Handle close papeleta
+  const handleClosePapeleta = useCallback(async () => {
+    if (!userId) return;
+    
+    const success = await closePapeleta(userId);
+    if (success) {
+      // Reset local counts and start new papeleta
+      setPartyCounts({});
+      setExpandedParty(null);
+      if (escrutinioId) {
+        startPapeleta(escrutinioId, userId);
+      }
+    }
+  }, [userId, closePapeleta, escrutinioId, startPapeleta]);
+
+  // Handle anular papeleta
+  const handleAnularPapeleta = useCallback(async () => {
+    if (!userId) return;
+    
+    const reason = prompt('Motivo de anulación (opcional):') || 'Anulada por usuario';
+    const success = await anularPapeleta(userId, reason);
+    if (success) {
+      // Reset local counts and start new papeleta
+      setPartyCounts({});
+      setExpandedParty(null);
+      if (escrutinioId) {
+        startPapeleta(escrutinioId, userId);
+      }
+    }
+  }, [userId, anularPapeleta, escrutinioId, startPapeleta]);
 
   // Get party by ID
   const getParty = (partyId: string) => diputadosData?.parties.find(p => p.id === partyId);
@@ -296,11 +350,19 @@ export default function DiputadosEscrutinio({ jrvNumber }: DiputadosEscrutinioPr
               <p className="text-sm text-gray-600">Selecciona diputado</p>
             </div>
           </div>
-          <div className="text-right">
-            <div className="text-2xl font-bold" style={{ color: party.color }}>
-              {partyCounts[expandedParty] || 0}
+          <div className="flex items-center gap-4">
+            <div className="text-right">
+              <div className="text-2xl font-bold" style={{ color: party.color }}>
+                {partyCounts[expandedParty] || 0}
+              </div>
+              <div className="text-xs text-gray-500">Total</div>
             </div>
-            <div className="text-xs text-gray-500">Total</div>
+            <button
+              onClick={handleBack}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Partidos
+            </button>
           </div>
         </div>
 
@@ -338,6 +400,47 @@ export default function DiputadosEscrutinio({ jrvNumber }: DiputadosEscrutinioPr
         <div className="text-center text-sm text-gray-500">
           Toca una casilla para agregar un diputado
         </div>
+
+        {/* Papeleta Status and Controls */}
+        {papeleta.status === 'OPEN' && (
+          <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-blue-600" />
+                <span className="text-sm font-medium text-blue-900">Papeleta Abierta</span>
+              </div>
+              <span className="text-sm text-blue-700">
+                {papeleta.votesBuffer.length} voto{papeleta.votesBuffer.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+            
+            <div className="flex gap-2">
+              <button
+                onClick={handleClosePapeleta}
+                disabled={papeletaLoading}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <Check className="h-4 w-4" />
+                Cerrar Papeleta
+              </button>
+              <button
+                onClick={handleAnularPapeleta}
+                disabled={papeletaLoading}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <X className="h-4 w-4" />
+                Anular Papeleta
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Papeleta Error */}
+        {papeletaError && (
+          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-sm text-red-700">{papeletaError}</p>
+          </div>
+        )}
       </div>
     );
   };
@@ -391,11 +494,17 @@ export default function DiputadosEscrutinio({ jrvNumber }: DiputadosEscrutinioPr
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-14 lg:h-16">
-            <div className="flex items-center">
+            <div className="flex items-center gap-4">
               <h1 className="text-lg lg:text-xl font-semibold text-gray-900">
                 <span className="hidden sm:inline">Escrutinio de Diputados</span>
                 <span className="sm:hidden">Diputados</span>
               </h1>
+              {papeleta.status === 'OPEN' && (
+                <div className="flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+                  <FileText className="h-4 w-4" />
+                  Papeleta Abierta
+                </div>
+              )}
             </div>
             <div className="text-right">
               <div className="text-sm text-gray-600">
