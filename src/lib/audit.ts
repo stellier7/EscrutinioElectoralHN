@@ -98,7 +98,7 @@ export class AuditLogger {
     const metadata = {
       escrutinioId,
       totalCandidates: votesData.length,
-      totalVotes: votesData.reduce((sum, vote) => sum + (vote.votes || 0), 0),
+      totalVotes: votesData.reduce((sum, vote) => sum + (vote.count || 0), 0),
       timestamp: new Date().toISOString(),
     };
 

@@ -81,7 +81,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
               votes: 0,
             };
           }
-          candidateVotes[candidateId].votes += vote.votes;
+          candidateVotes[candidateId].votes += vote.count;
         });
       });
 

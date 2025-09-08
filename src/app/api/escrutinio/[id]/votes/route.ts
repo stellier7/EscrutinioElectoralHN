@@ -107,12 +107,12 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
         if (!existing) {
           await tx.vote.create({
-            data: { escrutinioId, candidateId: resolvedCandidateId, votes: Math.max(0, v.delta) },
+            data: { escrutinioId, candidateId: resolvedCandidateId, count: Math.max(0, v.delta) },
           });
         } else {
           await tx.vote.update({
             where: { id: existing.id },
-            data: { votes: Math.max(0, existing.votes + v.delta) },
+            data: { count: Math.max(0, existing.count + v.delta) },
           });
         }
       }
