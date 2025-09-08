@@ -4,6 +4,25 @@ import { ArrowLeft, Loader2, AlertCircle } from 'lucide-react';
 import clsx from 'clsx';
 import axios from 'axios';
 
+// Utility function to generate block-based slot ranges for legislative elections
+// Input: parties[] (fixed order array), S = seatCount (number of diputados)
+// Algorithm: For each party i: start = i * S + 1, end = (i + 1) * S
+export function generatePartySlotRanges(seatCount: number, partyCount: number): Array<{ start: number; end: number; range: string; casillas: number[] }> {
+  const ranges = [];
+  for (let i = 0; i < partyCount; i++) {
+    const start = i * seatCount + 1;
+    const end = (i + 1) * seatCount;
+    const casillas = Array.from({ length: seatCount }, (_, idx) => start + idx);
+    ranges.push({
+      start,
+      end,
+      range: `${start}–${end}`,
+      casillas
+    });
+  }
+  return ranges;
+}
+
 // Interfaces
 interface Party {
   id: string;
@@ -12,6 +31,7 @@ interface Party {
   color: string;
   slots: number;
   slotRange: string;
+  casillas: number[];
 }
 
 interface JRVInfo {
@@ -78,49 +98,50 @@ export default function DiputadosEscrutinio({ jrvNumber }: DiputadosEscrutinioPr
         if (response.data?.success) {
           const jrvData = response.data.data;
           
-          // Configuración de partidos políticos
-          const parties = [
+          // Configuración base de partidos políticos (orden fijo)
+          const baseParties = [
             {
               id: 'pdc',
               name: 'Demócrata Cristiano',
               fullName: 'Partido Demócrata Cristiano',
-              color: '#16a34a',
-              slots: jrvData.diputados,
-              slotRange: `1-${jrvData.diputados}`
+              color: '#16a34a'
             },
             {
               id: 'libre',
               name: 'Libre',
               fullName: 'Partido Libertad y Refundación (LIBRE)',
-              color: '#dc2626',
-              slots: jrvData.diputados,
-              slotRange: `1-${jrvData.diputados}`
+              color: '#dc2626'
             },
             {
               id: 'pinu-sd',
               name: 'PINU-SD',
               fullName: 'Partido Innovación y Unidad Social Demócrata (PINU-SD)',
-              color: '#7c3aed',
-              slots: jrvData.diputados,
-              slotRange: `1-${jrvData.diputados}`
+              color: '#7c3aed'
             },
             {
               id: 'liberal',
               name: 'Liberal',
               fullName: 'Partido Liberal de Honduras',
-              color: '#ef4444',
-              slots: jrvData.diputados,
-              slotRange: `1-${jrvData.diputados}`
+              color: '#ef4444'
             },
             {
               id: 'nacional',
               name: 'Nacional',
               fullName: 'Partido Nacional de Honduras',
-              color: '#2563eb',
-              slots: jrvData.diputados,
-              slotRange: `1-${jrvData.diputados}`
+              color: '#2563eb'
             }
           ];
+
+          // Generar rangos de casillas por bloques
+          const slotRanges = generatePartySlotRanges(jrvData.diputados, baseParties.length);
+          
+          // Combinar datos base con rangos generados
+          const parties = baseParties.map((party, index) => ({
+            ...party,
+            slots: jrvData.diputados,
+            slotRange: slotRanges[index].range,
+            casillas: slotRanges[index].casillas
+          }));
 
           const data = {
             jrv: jrvData,
@@ -291,12 +312,11 @@ export default function DiputadosEscrutinio({ jrvNumber }: DiputadosEscrutinioPr
             gridTemplateRows: `repeat(${rows}, 1fr)`
           }}
         >
-          {Array.from({ length: party.slots }, (_, index) => {
-            const slotNumber = index + 1;
+          {party.casillas.map((casillaNumber, index) => {
             return (
               <button
-                key={slotNumber}
-                onClick={(e) => handleSlotClick(expandedParty, slotNumber, e)}
+                key={casillaNumber}
+                onClick={(e) => handleSlotClick(expandedParty, casillaNumber, e)}
                 className={clsx(
                   'aspect-square rounded-lg border-2 border-dashed transition-all duration-200',
                   'hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2',
@@ -308,7 +328,7 @@ export default function DiputadosEscrutinio({ jrvNumber }: DiputadosEscrutinioPr
                   '--tw-ring-color': party.color
                 } as React.CSSProperties}
               >
-                {slotNumber}
+                {casillaNumber}
               </button>
             );
           })}
