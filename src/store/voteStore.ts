@@ -68,8 +68,8 @@ type Actions = {
   reconcileFailure: (deltas: VoteDelta[]) => void;
 };
 
-const MAX_EVENTS = 20;
-const IDLE_MS = 3000;
+const MAX_EVENTS = 10; // Reducir para más responsividad
+const IDLE_MS = 1000; // Reducir de 3s a 1s para más responsividad
 
 let idleTimer: ReturnType<typeof setTimeout> | null = null;
 

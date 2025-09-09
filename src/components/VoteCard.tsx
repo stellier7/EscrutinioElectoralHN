@@ -71,9 +71,9 @@ export function VoteCard({ id, name, party, partyColor = '#e5e7eb', number, coun
       onMouseUp={cancelLongPress}
       className={clsx(
         'w-full flex items-center rounded-lg border shadow-sm focus:outline-none focus:ring-2 transition-transform',
-        'active:scale-[0.98]',
+        'active:scale-[0.98] touch-manipulation select-none',
         animate && 'scale-[1.02]',
-        'bg-white'
+        'bg-white min-h-[60px]' // Altura mínima para mejor toque
       )}
       style={{ borderLeftWidth: 6, borderLeftColor: partyColor }}
       data-testid={`vote-card-${id}`}
@@ -90,15 +90,12 @@ export function VoteCard({ id, name, party, partyColor = '#e5e7eb', number, coun
               type="button"
               aria-label={`Restar 1 a ${name}`}
               onClick={(e) => { e.stopPropagation(); onDecrement(); }}
-              className="px-2 py-1 text-sm rounded border bg-gray-50 hover:bg-gray-100"
+              className="px-3 py-2 text-sm rounded border bg-gray-50 active:bg-gray-100 touch-manipulation select-none min-h-[32px] min-w-[32px]"
             >
               –
             </button>
           </div>
         </div>
-        {isPending && (
-          <div className="mt-2 text-xs text-amber-600">Sincronizando…</div>
-        )}
       </div>
     </button>
   );
