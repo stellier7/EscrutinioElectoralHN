@@ -461,11 +461,9 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
                 style={{
                   borderColor: party.color,
                   backgroundColor: isSelected 
-                    ? `${party.color}25`  // Más intenso para selección actual
-                    : isApplied 
-                      ? `${party.color}15`  // Menos intenso para votos aplicados
-                      : 'transparent',
-                  color: (isSelected || isApplied) ? party.color : '#374151',
+                    ? `${party.color}25`  // Solo color para selección actual (papeleta abierta)
+                    : 'transparent',      // Votos aplicados vuelven a blanco
+                  color: isSelected ? party.color : '#374151',
                   '--tw-ring-color': party.color
                 } as React.CSSProperties}
               >
@@ -505,8 +503,8 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
             <span>Sin votos</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded border-2 border-solid" style={{ borderColor: party.color, backgroundColor: `${party.color}15` }}></div>
-            <span>Votos aplicados</span>
+            <div className="w-4 h-4 rounded border-2 border-solid" style={{ borderColor: party.color }}></div>
+            <span>Con votos (numerito)</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 rounded border-2 border-solid" style={{ borderColor: party.color, backgroundColor: `${party.color}25` }}></div>
