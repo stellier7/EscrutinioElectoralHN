@@ -94,6 +94,70 @@ describe('usePapeleta', () => {
     expect(typeof result.current.papeleta.votesBuffer[0].timestamp).toBe('number');
   });
 
+  test('should remove vote from buffer locally', () => {
+    const { result } = renderHook(() => usePapeleta());
+
+    // Set up papeleta with votes
+    act(() => {
+      result.current.papeleta.id = 'papeleta-123';
+      result.current.papeleta.status = 'OPEN';
+      result.current.papeleta.votesBuffer = [
+        { partyId: 'pdc', casillaNumber: 1, timestamp: 1234567890 },
+        { partyId: 'libre', casillaNumber: 9, timestamp: 1234567891 }
+      ];
+    });
+
+    // Remove vote
+    act(() => {
+      result.current.removeVoteFromBuffer('pdc', 1);
+    });
+
+    expect(result.current.papeleta.votesBuffer).toHaveLength(1);
+    expect(result.current.papeleta.votesBuffer[0]).toEqual({
+      partyId: 'libre',
+      casillaNumber: 9,
+      timestamp: 1234567891
+    });
+  });
+
+  test('should check if casilla is selected', () => {
+    const { result } = renderHook(() => usePapeleta());
+
+    // Set up papeleta with votes
+    act(() => {
+      result.current.papeleta.id = 'papeleta-123';
+      result.current.papeleta.status = 'OPEN';
+      result.current.papeleta.votesBuffer = [
+        { partyId: 'pdc', casillaNumber: 1, timestamp: 1234567890 },
+        { partyId: 'pdc', casillaNumber: 2, timestamp: 1234567891 }
+      ];
+    });
+
+    expect(result.current.isCasillaSelected('pdc', 1)).toBe(true);
+    expect(result.current.isCasillaSelected('pdc', 2)).toBe(true);
+    expect(result.current.isCasillaSelected('pdc', 3)).toBe(false);
+    expect(result.current.isCasillaSelected('libre', 1)).toBe(false);
+  });
+
+  test('should get casilla vote count', () => {
+    const { result } = renderHook(() => usePapeleta());
+
+    // Set up papeleta with multiple votes for same casilla
+    act(() => {
+      result.current.papeleta.id = 'papeleta-123';
+      result.current.papeleta.status = 'OPEN';
+      result.current.papeleta.votesBuffer = [
+        { partyId: 'pdc', casillaNumber: 1, timestamp: 1234567890 },
+        { partyId: 'pdc', casillaNumber: 1, timestamp: 1234567891 },
+        { partyId: 'pdc', casillaNumber: 2, timestamp: 1234567892 }
+      ];
+    });
+
+    expect(result.current.getCasillaVoteCount('pdc', 1)).toBe(2);
+    expect(result.current.getCasillaVoteCount('pdc', 2)).toBe(1);
+    expect(result.current.getCasillaVoteCount('pdc', 3)).toBe(0);
+  });
+
   test('should close papeleta successfully', async () => {
     const mockResponse = {
       data: {

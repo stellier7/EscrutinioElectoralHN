@@ -20,9 +20,12 @@ export interface UsePapeletaReturn {
   error: string | null;
   startPapeleta: (escrutinioId: string, userId: string) => Promise<boolean>;
   addVoteToBuffer: (partyId: string, casillaNumber: number, userId: string) => Promise<boolean>;
+  removeVoteFromBuffer: (partyId: string, casillaNumber: number) => void;
   closePapeleta: (userId: string) => Promise<boolean>;
   anularPapeleta: (userId: string, reason?: string) => Promise<boolean>;
   resetPapeleta: () => void;
+  isCasillaSelected: (partyId: string, casillaNumber: number) => boolean;
+  getCasillaVoteCount: (partyId: string, casillaNumber: number) => number;
 }
 
 export function usePapeleta(): UsePapeletaReturn {
@@ -174,6 +177,27 @@ export function usePapeleta(): UsePapeletaReturn {
     }
   }, [papeleta.id, papeleta.status]);
 
+  const removeVoteFromBuffer = useCallback((partyId: string, casillaNumber: number) => {
+    setPapeleta(prev => ({
+      ...prev,
+      votesBuffer: prev.votesBuffer.filter(vote => 
+        !(vote.partyId === partyId && vote.casillaNumber === casillaNumber)
+      )
+    }));
+  }, []);
+
+  const isCasillaSelected = useCallback((partyId: string, casillaNumber: number): boolean => {
+    return papeleta.votesBuffer.some(vote => 
+      vote.partyId === partyId && vote.casillaNumber === casillaNumber
+    );
+  }, [papeleta.votesBuffer]);
+
+  const getCasillaVoteCount = useCallback((partyId: string, casillaNumber: number): number => {
+    return papeleta.votesBuffer.filter(vote => 
+      vote.partyId === partyId && vote.casillaNumber === casillaNumber
+    ).length;
+  }, [papeleta.votesBuffer]);
+
   const resetPapeleta = useCallback(() => {
     setPapeleta({
       id: null,
@@ -190,8 +214,11 @@ export function usePapeleta(): UsePapeletaReturn {
     error,
     startPapeleta,
     addVoteToBuffer,
+    removeVoteFromBuffer,
     closePapeleta,
     anularPapeleta,
-    resetPapeleta
+    resetPapeleta,
+    isCasillaSelected,
+    getCasillaVoteCount
   };
 }

@@ -85,9 +85,12 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     error: papeletaError, 
     startPapeleta, 
     addVoteToBuffer, 
+    removeVoteFromBuffer,
     closePapeleta, 
     anularPapeleta, 
-    resetPapeleta 
+    resetPapeleta,
+    isCasillaSelected,
+    getCasillaVoteCount
   } = usePapeleta();
 
   // Cargar datos de diputados según la JRV
@@ -204,7 +207,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     setExpandedParty(partyId);
   }, []);
 
-  // Handle grid slot click - add vote to buffer and animate
+  // Handle grid slot click - toggle vote in buffer and animate
   const handleSlotClick = useCallback(async (partyId: string, slotNumber: number, event: React.MouseEvent) => {
     if (!userId || papeleta.status !== 'OPEN') {
       setError('No hay papeleta abierta');
@@ -216,35 +219,52 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     const x = rect.left + rect.width / 2;
     const y = rect.top + rect.height / 2;
 
-    // Show animation
-    setAnimation({
-      show: true,
-      x,
-      y,
-      partyId
-    });
+    // Check if casilla is already selected
+    const isSelected = isCasillaSelected(partyId, slotNumber);
 
-    // Add vote to papeleta buffer
-    const success = await addVoteToBuffer(partyId, slotNumber, userId);
-    
-    if (success) {
+    if (isSelected) {
+      // Deseleccionar - remover del buffer localmente
+      removeVoteFromBuffer(partyId, slotNumber);
+      
       // Update local count for UI feedback
       setPartyCounts(prev => ({
         ...prev,
-        [partyId]: (prev[partyId] || 0) + 1
+        [partyId]: Math.max(0, (prev[partyId] || 0) - 1)
       }));
+
+      // Show removal animation
+      setAnimation({
+        show: true,
+        x,
+        y,
+        partyId
+      });
+    } else {
+      // Seleccionar - agregar al buffer
+      const success = await addVoteToBuffer(partyId, slotNumber, userId);
+      
+      if (success) {
+        // Update local count for UI feedback
+        setPartyCounts(prev => ({
+          ...prev,
+          [partyId]: (prev[partyId] || 0) + 1
+        }));
+
+        // Show addition animation
+        setAnimation({
+          show: true,
+          x,
+          y,
+          partyId
+        });
+      }
     }
 
     // Hide animation after 300ms
     setTimeout(() => {
       setAnimation(prev => ({ ...prev, show: false }));
     }, 300);
-
-    // Don't auto-close grid - stay in grid for multiple votes
-    // setTimeout(() => {
-    //   setExpandedParty(null);
-    // }, 400);
-  }, [userId, papeleta.status, addVoteToBuffer]);
+  }, [userId, papeleta.status, addVoteToBuffer, removeVoteFromBuffer, isCasillaSelected]);
 
   // Handle back button
   const handleBack = useCallback(() => {
@@ -257,7 +277,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     
     const success = await closePapeleta(userId);
     if (success) {
-      // Reset local counts and start new papeleta
+      // Reset local counts, clear highlights, and start new papeleta
       setPartyCounts({});
       setExpandedParty(null);
       if (escrutinioId) {
@@ -273,7 +293,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     const reason = prompt('Motivo de anulación (opcional):') || 'Anulada por usuario';
     const success = await anularPapeleta(userId, reason);
     if (success) {
-      // Reset local counts and start new papeleta
+      // Reset local counts, clear highlights, and start new papeleta
       setPartyCounts({});
       setExpandedParty(null);
       if (escrutinioId) {
@@ -375,22 +395,39 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
           }}
         >
           {party.casillas.map((casillaNumber, index) => {
+            const isSelected = isCasillaSelected(expandedParty, casillaNumber);
+            const voteCount = getCasillaVoteCount(expandedParty, casillaNumber);
+            
             return (
               <button
                 key={casillaNumber}
                 onClick={(e) => handleSlotClick(expandedParty, casillaNumber, e)}
                 className={clsx(
-                  'aspect-square rounded-lg border-2 border-dashed transition-all duration-200',
+                  'aspect-square rounded-lg border-2 transition-all duration-200 relative',
                   'hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2',
-                  'text-sm font-medium text-gray-700 hover:text-gray-900',
-                  'flex items-center justify-center min-h-[60px]'
+                  'text-sm font-medium flex items-center justify-center min-h-[60px]',
+                  isSelected 
+                    ? 'border-solid shadow-md' 
+                    : 'border-dashed hover:border-solid'
                 )}
                 style={{
                   borderColor: party.color,
+                  backgroundColor: isSelected ? `${party.color}15` : 'transparent',
+                  color: isSelected ? party.color : '#374151',
                   '--tw-ring-color': party.color
                 } as React.CSSProperties}
               >
-                {casillaNumber}
+                <div className="flex flex-col items-center justify-center">
+                  <span className="font-semibold">{casillaNumber}</span>
+                  {isSelected && voteCount > 0 && (
+                    <div 
+                      className="absolute -top-1 -right-1 w-5 h-5 rounded-full text-xs font-bold text-white flex items-center justify-center shadow-sm"
+                      style={{ backgroundColor: party.color }}
+                    >
+                      {voteCount}
+                    </div>
+                  )}
+                </div>
               </button>
             );
           })}
@@ -398,7 +435,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
 
         {/* Instructions */}
         <div className="text-center text-sm text-gray-500">
-          Toca una casilla para agregar un diputado
+          Toca una casilla para seleccionar/deseleccionar diputado
         </div>
 
         {/* Papeleta Status and Controls */}
