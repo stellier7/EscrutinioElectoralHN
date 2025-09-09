@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useCallback, useEffect } from 'react';
-import { ArrowLeft, Loader2, AlertCircle, Check, X, FileText } from 'lucide-react';
+import { ArrowLeft, Loader2, AlertCircle, Check, X, FileText, Camera, Upload } from 'lucide-react';
 import clsx from 'clsx';
 import axios from 'axios';
 import { usePapeleta } from '@/hooks/usePapeleta';
@@ -84,6 +84,11 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     y: 0,
     partyId: ''
   });
+  
+  // Estados para foto y cierre de escrutinio
+  const [actaImage, setActaImage] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
 
   // Hook para manejar papeletas
   const { 
@@ -354,6 +359,85 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     const appliedCount = partyCounts[partyId] || 0;
     return appliedCount + bufferCount;
   }, [papeleta.votesBuffer, partyCounts]);
+
+  // Funciones para manejar foto y cierre de escrutinio
+  const handleActaUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setActaImage(file);
+    }
+  }, []);
+
+  const computeSHA256Hex = async (file: File): Promise<string> => {
+    const buf = await file.arrayBuffer();
+    const digest = await crypto.subtle.digest('SHA-256', buf);
+    const byteArray = Array.from(new Uint8Array(digest));
+    return byteArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+  };
+
+  const toDataUrl = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+  const uploadEvidenceIfNeeded = async (): Promise<void> => {
+    if (!actaImage || !escrutinioId) return;
+    try {
+      const presign = await axios.post('/api/upload/presign', {
+        escrutinioId,
+        fileName: actaImage.name,
+        contentType: actaImage.type || 'image/jpeg',
+      });
+      if (presign.data?.success) {
+        const { uploadUrl, publicUrl } = presign.data.data as { uploadUrl: string; publicUrl: string };
+        await fetch(uploadUrl, {
+          method: 'PUT',
+          headers: { 'Content-Type': actaImage.type || 'image/jpeg' },
+          body: actaImage,
+        });
+        const hash = await computeSHA256Hex(actaImage);
+        await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/evidence`, { publicUrl, hash });
+        return;
+      }
+    } catch {
+      // fallback below
+    }
+    try {
+      const dataUrl = await toDataUrl(actaImage);
+      const hash = await computeSHA256Hex(actaImage);
+      await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/evidence`, { publicUrl: dataUrl, hash });
+    } catch {}
+  };
+
+  const handleCompleteEscrutinio = useCallback(async () => {
+    if (!escrutinioId) {
+      setError('No hay escrutinio activo');
+      return;
+    }
+
+    setIsCompleting(true);
+    try {
+      // Subir foto si existe
+      await uploadEvidenceIfNeeded();
+      
+      // Cerrar escrutinio
+      await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/complete`);
+      
+      // Mostrar mensaje de éxito
+      alert('Escrutinio completado exitosamente');
+      
+      // Opcional: redirigir o resetear
+      window.location.reload();
+    } catch (error: any) {
+      console.error('Error completando escrutinio:', error);
+      setError(error?.response?.data?.error || 'Error completando escrutinio');
+    } finally {
+      setIsCompleting(false);
+    }
+  }, [escrutinioId, actaImage, uploadEvidenceIfNeeded]);
 
   // Render party cards (initial view)
   const renderPartyCards = () => {
@@ -644,6 +728,61 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
           </div>
           
           {expandedParty ? renderGrid() : renderPartyCards()}
+          
+          {/* Sección de Foto y Cierre de Escrutinio */}
+          {!expandedParty && (
+            <div className="mt-8 space-y-4">
+              {/* Subir Foto del Acta */}
+              <div className="bg-gray-50 p-4 rounded-lg border">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <Camera className="h-5 w-5" />
+                  Foto del Acta
+                </h3>
+                <div className="space-y-3">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleActaUpload}
+                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  />
+                  {actaImage && (
+                    <div className="flex items-center gap-2 text-sm text-green-600">
+                      <Check className="h-4 w-4" />
+                      <span>Foto seleccionada: {actaImage.name}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Cerrar Escrutinio */}
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h3 className="text-lg font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                  <Upload className="h-5 w-5" />
+                  Finalizar Escrutinio
+                </h3>
+                <p className="text-sm text-blue-700 mb-4">
+                  Una vez que hayas completado el conteo de todas las papeletas, sube la foto del acta y finaliza el escrutinio.
+                </p>
+                <button
+                  onClick={handleCompleteEscrutinio}
+                  disabled={isCompleting || isUploading}
+                  className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                >
+                  {isCompleting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Finalizando...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="h-4 w-4" />
+                      Finalizar Escrutinio
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
