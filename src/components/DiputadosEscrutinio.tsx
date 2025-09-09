@@ -290,8 +290,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
   const handleAnularPapeleta = useCallback(async () => {
     if (!userId) return;
     
-    const reason = prompt('Motivo de anulación (opcional):') || 'Anulada por usuario';
-    const success = await anularPapeleta(userId, reason);
+    const success = await anularPapeleta(userId, 'Anulada por usuario');
     if (success) {
       // Reset local counts, clear highlights, and start new papeleta
       setPartyCounts({});
