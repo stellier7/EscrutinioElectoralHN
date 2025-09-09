@@ -221,15 +221,8 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
 
   // Handle grid slot click - toggle vote in buffer and animate (optimized for touch)
   const handleSlotClick = useCallback(async (partyId: string, slotNumber: number, event: React.MouseEvent) => {
-    // Prevenir múltiples clicks rápidos
-    if (event.currentTarget.getAttribute('data-clicking') === 'true') {
-      return;
-    }
-    event.currentTarget.setAttribute('data-clicking', 'true');
-    
     if (!userId || papeleta.status !== 'OPEN') {
       setError('No hay papeleta abierta');
-      event.currentTarget.setAttribute('data-clicking', 'false');
       return;
     }
 
@@ -245,13 +238,8 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
       // Deseleccionar - remover del buffer localmente
       removeVoteFromBuffer(partyId, slotNumber);
       
-      // Update local count for UI feedback
-      setPartyCounts(prev => ({
-        ...prev,
-        [partyId]: Math.max(0, (prev[partyId] || 0) - 1)
-      }));
-
-      // Show removal animation
+      // No actualizar partyCounts aquí - el hook ya maneja el buffer
+      // Solo mostrar animación
       setAnimation({
         show: true,
         x,
@@ -263,13 +251,8 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
       const success = await addVoteToBuffer(partyId, slotNumber, userId);
       
       if (success) {
-        // Update local count for UI feedback
-        setPartyCounts(prev => ({
-          ...prev,
-          [partyId]: (prev[partyId] || 0) + 1
-        }));
-
-        // Show addition animation
+        // No actualizar partyCounts aquí - el hook ya maneja el buffer
+        // Solo mostrar animación
         setAnimation({
           show: true,
           x,
@@ -283,11 +266,6 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     setTimeout(() => {
       setAnimation(prev => ({ ...prev, show: false }));
     }, 200);
-
-    // Reset click protection after 100ms
-    setTimeout(() => {
-      event.currentTarget.setAttribute('data-clicking', 'false');
-    }, 100);
   }, [userId, papeleta.status, addVoteToBuffer, removeVoteFromBuffer, isCasillaSelected]);
 
   // Handle back button
