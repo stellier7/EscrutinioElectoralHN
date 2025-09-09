@@ -52,6 +52,12 @@ interface PartyCounts {
   [key: string]: number;
 }
 
+interface AppliedVotes {
+  [partyId: string]: {
+    [casillaNumber: number]: number;
+  };
+}
+
 interface AnimationState {
   show: boolean;
   x: number;
@@ -70,6 +76,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [partyCounts, setPartyCounts] = useState<PartyCounts>({});
+  const [appliedVotes, setAppliedVotes] = useState<AppliedVotes>({});
   const [expandedParty, setExpandedParty] = useState<string | null>(null);
   const [animation, setAnimation] = useState<AnimationState>({
     show: false,
@@ -277,14 +284,42 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     
     const success = await closePapeleta(userId);
     if (success) {
-      // Reset local counts, clear highlights, and start new papeleta
-      setPartyCounts({});
+      // Aplicar votos del buffer a los votos aplicados (conteo general)
+      const newAppliedVotes = { ...appliedVotes };
+      const newPartyCounts = { ...partyCounts };
+      
+      // Procesar cada voto del buffer
+      papeleta.votesBuffer.forEach((vote) => {
+        const { partyId, casillaNumber } = vote;
+        
+        // Inicializar estructura si no existe
+        if (!newAppliedVotes[partyId]) {
+          newAppliedVotes[partyId] = {};
+        }
+        if (!newAppliedVotes[partyId][casillaNumber]) {
+          newAppliedVotes[partyId][casillaNumber] = 0;
+        }
+        
+        // Incrementar conteo aplicado
+        newAppliedVotes[partyId][casillaNumber] += 1;
+      });
+      
+      // Actualizar conteos de partidos
+      Object.keys(newAppliedVotes).forEach(partyId => {
+        const partyVotes = Object.values(newAppliedVotes[partyId]);
+        newPartyCounts[partyId] = partyVotes.reduce((sum, count) => sum + count, 0);
+      });
+      
+      setAppliedVotes(newAppliedVotes);
+      setPartyCounts(newPartyCounts);
       setExpandedParty(null);
+      
+      // Iniciar nueva papeleta
       if (escrutinioId) {
         startPapeleta(escrutinioId, userId);
       }
     }
-  }, [userId, closePapeleta, escrutinioId, startPapeleta]);
+  }, [userId, closePapeleta, escrutinioId, startPapeleta, appliedVotes, partyCounts, papeleta.votesBuffer]);
 
   // Handle anular papeleta
   const handleAnularPapeleta = useCallback(async () => {
@@ -292,9 +327,10 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     
     const success = await anularPapeleta(userId, 'Anulada por usuario');
     if (success) {
-      // Reset local counts, clear highlights, and start new papeleta
-      setPartyCounts({});
+      // Solo limpiar el grid actual, mantener votos aplicados
       setExpandedParty(null);
+      
+      // Iniciar nueva papeleta
       if (escrutinioId) {
         startPapeleta(escrutinioId, userId);
       }
@@ -303,6 +339,21 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
 
   // Get party by ID
   const getParty = (partyId: string) => diputadosData?.parties.find(p => p.id === partyId);
+
+  // Helper functions for applied votes
+  const isCasillaApplied = useCallback((partyId: string, casillaNumber: number): boolean => {
+    return appliedVotes[partyId]?.[casillaNumber] > 0;
+  }, [appliedVotes]);
+
+  const getCasillaAppliedCount = useCallback((partyId: string, casillaNumber: number): number => {
+    return appliedVotes[partyId]?.[casillaNumber] || 0;
+  }, [appliedVotes]);
+
+  const getTotalPartyCount = useCallback((partyId: string): number => {
+    const bufferCount = papeleta.votesBuffer.filter(vote => vote.partyId === partyId).length;
+    const appliedCount = partyCounts[partyId] || 0;
+    return appliedCount + bufferCount;
+  }, [papeleta.votesBuffer, partyCounts]);
 
   // Render party cards (initial view)
   const renderPartyCards = () => {
@@ -329,7 +380,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-2xl font-bold tabular-nums" aria-live="polite">
-                    {partyCounts[party.id] || 0}
+                    {getTotalPartyCount(party.id)}
                   </span>
                   <div className="text-sm text-gray-500">+</div>
                 </div>
@@ -372,7 +423,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
           <div className="flex items-center gap-4">
             <div className="text-right">
               <div className="text-2xl font-bold" style={{ color: party.color }}>
-                {partyCounts[expandedParty] || 0}
+                {getTotalPartyCount(expandedParty)}
               </div>
               <div className="text-xs text-gray-500">Total</div>
             </div>
@@ -395,7 +446,10 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
         >
           {party.casillas.map((casillaNumber, index) => {
             const isSelected = isCasillaSelected(expandedParty, casillaNumber);
-            const voteCount = getCasillaVoteCount(expandedParty, casillaNumber);
+            const isApplied = isCasillaApplied(expandedParty, casillaNumber);
+            const bufferVoteCount = getCasillaVoteCount(expandedParty, casillaNumber);
+            const appliedVoteCount = getCasillaAppliedCount(expandedParty, casillaNumber);
+            const totalVoteCount = bufferVoteCount + appliedVoteCount;
             
             return (
               <button
@@ -405,25 +459,37 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
                   'aspect-square rounded-lg border-2 transition-all duration-200 relative',
                   'hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2',
                   'text-sm font-medium flex items-center justify-center min-h-[60px]',
-                  isSelected 
+                  (isSelected || isApplied)
                     ? 'border-solid shadow-md' 
                     : 'border-dashed hover:border-solid'
                 )}
                 style={{
                   borderColor: party.color,
-                  backgroundColor: isSelected ? `${party.color}15` : 'transparent',
-                  color: isSelected ? party.color : '#374151',
+                  backgroundColor: isSelected 
+                    ? `${party.color}25`  // Más intenso para selección actual
+                    : isApplied 
+                      ? `${party.color}15`  // Menos intenso para votos aplicados
+                      : 'transparent',
+                  color: (isSelected || isApplied) ? party.color : '#374151',
                   '--tw-ring-color': party.color
                 } as React.CSSProperties}
               >
                 <div className="flex flex-col items-center justify-center">
                   <span className="font-semibold">{casillaNumber}</span>
-                  {isSelected && voteCount > 0 && (
+                  {totalVoteCount > 0 && (
                     <div 
-                      className="absolute -top-1 -right-1 w-5 h-5 rounded-full text-xs font-bold text-white flex items-center justify-center shadow-sm"
-                      style={{ backgroundColor: party.color }}
+                      className={clsx(
+                        "absolute -top-1 -right-1 w-6 h-6 rounded-full text-xs font-bold text-white flex items-center justify-center shadow-lg border-2 border-white",
+                        isSelected && bufferVoteCount > 0 ? "ring-2 ring-white ring-offset-1" : ""
+                      )}
+                      style={{ 
+                        backgroundColor: party.color,
+                        boxShadow: isSelected && bufferVoteCount > 0 
+                          ? `0 0 0 3px ${party.color}60, 0 2px 8px ${party.color}40`
+                          : `0 2px 8px ${party.color}40`
+                      }}
                     >
-                      {voteCount}
+                      {totalVoteCount}
                     </div>
                   )}
                 </div>
@@ -433,8 +499,24 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
         </div>
 
         {/* Instructions */}
-        <div className="text-center text-sm text-gray-500">
+        <div className="text-center text-sm text-gray-500 mb-4">
           Toca una casilla para seleccionar/deseleccionar diputado
+        </div>
+
+        {/* Legend */}
+        <div className="flex justify-center gap-6 text-xs text-gray-600">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded border-2 border-dashed" style={{ borderColor: party.color }}></div>
+            <span>Sin votos</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded border-2 border-solid" style={{ borderColor: party.color, backgroundColor: `${party.color}15` }}></div>
+            <span>Votos aplicados</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded border-2 border-solid" style={{ borderColor: party.color, backgroundColor: `${party.color}25` }}></div>
+            <span>Seleccionado actual</span>
+          </div>
         </div>
 
         {/* Papeleta Status and Controls */}
