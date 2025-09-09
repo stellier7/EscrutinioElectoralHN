@@ -219,10 +219,17 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     setExpandedParty(partyId);
   }, []);
 
-  // Handle grid slot click - toggle vote in buffer and animate
+  // Handle grid slot click - toggle vote in buffer and animate (optimized for touch)
   const handleSlotClick = useCallback(async (partyId: string, slotNumber: number, event: React.MouseEvent) => {
+    // Prevenir múltiples clicks rápidos
+    if (event.currentTarget.getAttribute('data-clicking') === 'true') {
+      return;
+    }
+    event.currentTarget.setAttribute('data-clicking', 'true');
+    
     if (!userId || papeleta.status !== 'OPEN') {
       setError('No hay papeleta abierta');
+      event.currentTarget.setAttribute('data-clicking', 'false');
       return;
     }
 
@@ -272,10 +279,15 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
       }
     }
 
-    // Hide animation after 300ms
+    // Hide animation after 200ms (más rápido)
     setTimeout(() => {
       setAnimation(prev => ({ ...prev, show: false }));
-    }, 300);
+    }, 200);
+
+    // Reset click protection after 100ms
+    setTimeout(() => {
+      event.currentTarget.setAttribute('data-clicking', 'false');
+    }, 100);
   }, [userId, papeleta.status, addVoteToBuffer, removeVoteFromBuffer, isCasillaSelected]);
 
   // Handle back button
@@ -451,8 +463,8 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
             onClick={() => handlePartyClick(party.id)}
             className={clsx(
               'w-full flex items-center rounded-lg border shadow-sm focus:outline-none focus:ring-2 transition-transform',
-              'active:scale-[0.98] hover:scale-[1.01]',
-              'bg-white'
+              'active:scale-[0.98] touch-manipulation select-none',
+              'bg-white min-h-[60px]' // Altura mínima para mejor toque
             )}
             style={{ borderLeftWidth: 6, borderLeftColor: party.color }}
           >
@@ -513,7 +525,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
             </div>
             <button
               onClick={handleBack}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap"
+              className="px-4 py-3 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg active:bg-gray-50 transition-colors whitespace-nowrap touch-manipulation select-none min-h-[44px]"
             >
               Partidos
             </button>
@@ -521,7 +533,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
         </div>
 
         {/* Dynamic Grid - Responsive */}
-        <div className="grid gap-2 grid-cols-3 sm:grid-cols-4 md:grid-cols-5">
+        <div className="grid gap-3 grid-cols-3 sm:grid-cols-4 md:grid-cols-5">
           {party.casillas.map((casillaNumber, index) => {
             const isSelected = isCasillaSelected(expandedParty, casillaNumber);
             const isApplied = isCasillaApplied(expandedParty, casillaNumber);
@@ -534,13 +546,15 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
                 key={casillaNumber}
                 onClick={(e) => handleSlotClick(expandedParty, casillaNumber, e)}
                 className={clsx(
-                  'aspect-square rounded-lg border-2 transition-all duration-200 relative',
-                  'hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2',
+                  'aspect-square rounded-lg border-2 transition-all duration-150 relative',
+                  'active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2',
                   'text-sm font-medium flex items-center justify-center',
-                  'min-h-[50px] sm:min-h-[60px]', // Más pequeño en móvil
+                  'min-h-[60px] sm:min-h-[70px]', // Más grande para mejor toque
+                  'touch-manipulation', // Optimización para touch
+                  'select-none', // Evitar selección de texto
                   (isSelected || isApplied)
                     ? 'border-solid shadow-md' 
-                    : 'border-dashed hover:border-solid'
+                    : 'border-dashed'
                 )}
                 style={{
                   borderColor: party.color,
@@ -548,7 +562,8 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
                     ? `${party.color}25`  // Solo color para selección actual (papeleta abierta)
                     : 'transparent',      // Votos aplicados vuelven a blanco
                   color: isSelected ? party.color : '#374151',
-                  '--tw-ring-color': party.color
+                  '--tw-ring-color': party.color,
+                  borderWidth: isSelected ? '3px' : '2px' // Borde más grueso para seleccionadas
                 } as React.CSSProperties}
               >
                 <div className="flex flex-col items-center justify-center">
