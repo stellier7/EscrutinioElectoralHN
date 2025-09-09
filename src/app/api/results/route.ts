@@ -88,10 +88,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       const totalVotes = Object.values(candidateVotes).reduce((sum, candidate) => sum + candidate.votes, 0);
       
       results[level as keyof typeof results].totalVotes = totalVotes;
-      results[level as keyof typeof results].candidates = Object.values(candidateVotes).map(candidate => ({
-        ...candidate,
-        percentage: totalVotes > 0 ? (candidate.votes / totalVotes) * 100 : 0,
-      }));
+      results[level as keyof typeof results].candidates = Object.values(candidateVotes)
+        .map(candidate => ({
+          ...candidate,
+          percentage: totalVotes > 0 ? (candidate.votes / totalVotes) * 100 : 0,
+        }))
+        .sort((a, b) => b.votes - a.votes); // Ordenar por votos descendente (ganador arriba)
     });
 
     return NextResponse.json({

@@ -8,8 +8,11 @@ import {
   MapPin,
   CheckCircle,
   Clock,
-  AlertCircle
+  AlertCircle,
+  Eye,
+  Calendar
 } from 'lucide-react';
+import { MesaSearchInput } from '@/components/MesaSearchInput';
 
 interface ResultSummary {
   level: string;
@@ -26,6 +29,23 @@ interface CandidateResult {
   percentage: number;
 }
 
+interface MesaOption {
+  id: string;
+  number: string;
+  location: string;
+  department: string;
+  displayName: string;
+}
+
+interface RecentMesa {
+  id: string;
+  mesaNumber: string;
+  mesaName: string;
+  department: string;
+  completedAt: string;
+  electionLevel: string;
+}
+
 type ResultsResponse = Record<'PRESIDENTIAL' | 'LEGISLATIVE' | 'MUNICIPAL', ResultSummary>;
 
 export default function ResultadosPage() {
@@ -36,6 +56,11 @@ export default function ResultadosPage() {
   const [showEvidence, setShowEvidence] = useState(false);
   const [evidence, setEvidence] = useState<Array<{ escrutinioId: string; mesaNumber: string; url: string; completedAt: string }>>([]);
   const [selectedMesa, setSelectedMesa] = useState<string>('');
+  const [selectedMesaOption, setSelectedMesaOption] = useState<MesaOption | null>(null);
+  const [recentMesas, setRecentMesas] = useState<RecentMesa[]>([]);
+  const [showRecentMesas, setShowRecentMesas] = useState(false);
+  const [mesaVotes, setMesaVotes] = useState<any>(null);
+  const [showMesaVotes, setShowMesaVotes] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -57,6 +82,34 @@ export default function ResultadosPage() {
     };
     load();
   }, []);
+
+  // Cargar mesas recientes
+  const loadRecentMesas = async () => {
+    try {
+      const resp = await fetch(`/api/mesas/recent?level=${activeLevel}&limit=10`, { cache: 'no-store' });
+      const json = await resp.json();
+      if (json?.success) {
+        setRecentMesas(json.data);
+        setShowRecentMesas(true);
+      }
+    } catch (e) {
+      console.error('Error loading recent mesas:', e);
+    }
+  };
+
+  // Cargar votos de mesa específica
+  const loadMesaVotes = async (mesaId: string) => {
+    try {
+      const resp = await fetch(`/api/mesas/${mesaId}/votes`, { cache: 'no-store' });
+      const json = await resp.json();
+      if (json?.success) {
+        setMesaVotes(json.data);
+        setShowMesaVotes(true);
+      }
+    } catch (e) {
+      console.error('Error loading mesa votes:', e);
+    }
+  };
 
   const loadEvidence = async () => {
     try {
@@ -198,17 +251,26 @@ export default function ResultadosPage() {
               Resultados - {currentResults.level}
             </h3>
             <div className="mt-2 flex items-center space-x-3">
-              <input
-                className="border px-2 py-1 rounded text-sm"
-                placeholder="Filtrar por mesa (ej. JRV-001)"
-                value={selectedMesa}
-                onChange={(e) => setSelectedMesa(e.target.value)}
-              />
+              <div className="flex-1">
+                <MesaSearchInput
+                  value={selectedMesa}
+                  onChange={setSelectedMesa}
+                  onSelect={setSelectedMesaOption}
+                  placeholder="Buscar mesa (ej. 001, colegio, departamento...)"
+                  className="w-full"
+                />
+              </div>
               <button
                 onClick={loadEvidence}
-                className="text-sm px-3 py-1 bg-primary-600 text-white rounded"
+                className="text-sm px-3 py-2 bg-primary-600 text-white rounded hover:bg-primary-700 transition-colors"
               >
                 Ver evidencia
+              </button>
+              <button
+                onClick={loadRecentMesas}
+                className="text-sm px-3 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
+              >
+                Mesas recientes
               </button>
             </div>
           </div>
@@ -300,6 +362,93 @@ export default function ResultadosPage() {
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Mesas Recientes */}
+        {showRecentMesas && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4" onClick={() => setShowRecentMesas(false)}>
+            <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full p-4" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-lg font-semibold">Mesas Más Recientes</h4>
+                <button className="text-sm text-gray-600" onClick={() => setShowRecentMesas(false)}>Cerrar</button>
+              </div>
+              <div className="space-y-2 max-h-[60vh] overflow-auto">
+                {recentMesas.map((mesa) => (
+                  <div key={mesa.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+                    <div className="flex items-center gap-3">
+                      <MapPin className="h-4 w-4 text-gray-400" />
+                      <div>
+                        <div className="font-medium text-gray-900">{mesa.mesaNumber}</div>
+                        <div className="text-sm text-gray-600">{mesa.mesaName}</div>
+                        <div className="text-xs text-gray-500">{mesa.department}</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="text-right">
+                        <div className="text-xs text-gray-500">
+                          {new Date(mesa.completedAt).toLocaleString()}
+                        </div>
+                        <div className="text-xs text-green-600 font-medium">Completada</div>
+                      </div>
+                      <button
+                        onClick={() => loadMesaVotes(mesa.id)}
+                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        title="Ver votos de esta mesa"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Votos de Mesa Específica */}
+        {showMesaVotes && mesaVotes && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4" onClick={() => setShowMesaVotes(false)}>
+            <div className="bg-white rounded-lg shadow-lg max-w-4xl w-full p-4" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-lg font-semibold">Votos por Mesa</h4>
+                <button className="text-sm text-gray-600" onClick={() => setShowMesaVotes(false)}>Cerrar</button>
+              </div>
+              <div className="space-y-6 max-h-[70vh] overflow-auto">
+                {Object.entries(mesaVotes).map(([level, data]: [string, any]) => (
+                  <div key={level} className="border rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h5 className="font-semibold text-gray-900">{data.level}</h5>
+                      <div className="text-sm text-gray-600">
+                        {data.mesaNumber} - {data.mesaName}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      {data.candidates.map((candidate: CandidateResult, index: number) => (
+                        <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                          <div className="flex items-center gap-3">
+                            <div className="w-6 h-6 bg-primary-100 rounded-full flex items-center justify-center text-xs font-medium text-primary-600">
+                              {index + 1}
+                            </div>
+                            <div>
+                              <div className="font-medium text-gray-900">{candidate.name}</div>
+                              <div className="text-sm text-gray-600">{candidate.party}</div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-medium text-gray-900">{candidate.votes.toLocaleString()}</div>
+                            <div className="text-sm text-gray-600">{candidate.percentage.toFixed(1)}%</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-3 pt-3 border-t text-sm text-gray-600">
+                      Total de votos: {data.totalVotes.toLocaleString()}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
