@@ -372,14 +372,14 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
             )}
             style={{ borderLeftWidth: 6, borderLeftColor: party.color }}
           >
-            <div className="flex-1 p-4 text-left">
+            <div className="flex-1 p-3 sm:p-4 text-left">
               <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-base font-semibold text-gray-900">{party.fullName}</div>
-                  <div className="text-sm text-gray-600">Casillas {party.slotRange}</div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm sm:text-base font-semibold text-gray-900 truncate">{party.fullName}</div>
+                  <div className="text-xs sm:text-sm text-gray-600">Casillas {party.slotRange}</div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl font-bold tabular-nums" aria-live="polite">
+                <div className="flex items-center gap-2 ml-3">
+                  <span className="text-xl sm:text-2xl font-bold tabular-nums" aria-live="polite">
                     {getTotalPartyCount(party.id)}
                   </span>
                   <div className="text-sm text-gray-500">+</div>
@@ -399,14 +399,14 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     const party = getParty(expandedParty);
     if (!party) return null;
     
-    // Calcular número de columnas para el grid (máximo 5)
-    const columns = Math.min(5, party.slots);
+    // Calcular número de columnas responsive para el grid
+    const columns = Math.min(4, party.slots); // Máximo 4 columnas en móvil
     const rows = Math.ceil(party.slots / columns);
     
     return (
       <div className="space-y-4">
-        {/* Header with party info and back button */}
-        <div className="flex items-center justify-between">
+        {/* Header with party info and back button - Responsive */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <button
               onClick={handleBack}
@@ -415,35 +415,29 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
             >
               <ArrowLeft className="h-4 w-4" />
             </button>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">{party.fullName}</h3>
+            <div className="min-w-0 flex-1">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 truncate">{party.fullName}</h3>
               <p className="text-sm text-gray-600">Selecciona diputado</p>
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center justify-between sm:justify-end gap-4">
             <div className="text-right">
-              <div className="text-2xl font-bold" style={{ color: party.color }}>
+              <div className="text-xl sm:text-2xl font-bold" style={{ color: party.color }}>
                 {getTotalPartyCount(expandedParty)}
               </div>
               <div className="text-xs text-gray-500">Total</div>
             </div>
             <button
               onClick={handleBack}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap"
             >
               Partidos
             </button>
           </div>
         </div>
 
-        {/* Dynamic Grid */}
-        <div 
-          className="grid gap-2"
-          style={{ 
-            gridTemplateColumns: `repeat(${columns}, 1fr)`,
-            gridTemplateRows: `repeat(${rows}, 1fr)`
-          }}
-        >
+        {/* Dynamic Grid - Responsive */}
+        <div className="grid gap-2 grid-cols-3 sm:grid-cols-4 md:grid-cols-5">
           {party.casillas.map((casillaNumber, index) => {
             const isSelected = isCasillaSelected(expandedParty, casillaNumber);
             const isApplied = isCasillaApplied(expandedParty, casillaNumber);
@@ -458,7 +452,8 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
                 className={clsx(
                   'aspect-square rounded-lg border-2 transition-all duration-200 relative',
                   'hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2',
-                  'text-sm font-medium flex items-center justify-center min-h-[60px]',
+                  'text-sm font-medium flex items-center justify-center',
+                  'min-h-[50px] sm:min-h-[60px]', // Más pequeño en móvil
                   (isSelected || isApplied)
                     ? 'border-solid shadow-md' 
                     : 'border-dashed hover:border-solid'
@@ -479,7 +474,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
                   {totalVoteCount > 0 && (
                     <div 
                       className={clsx(
-                        "absolute -top-1 -right-1 w-6 h-6 rounded-full text-xs font-bold text-white flex items-center justify-center shadow-lg border-2 border-white",
+                        "absolute -top-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 rounded-full text-xs font-bold text-white flex items-center justify-center shadow-lg border-2 border-white",
                         isSelected && bufferVoteCount > 0 ? "ring-2 ring-white ring-offset-1" : ""
                       )}
                       style={{ 
@@ -503,8 +498,8 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
           Toca una casilla para seleccionar/deseleccionar diputado
         </div>
 
-        {/* Legend */}
-        <div className="flex justify-center gap-6 text-xs text-gray-600">
+        {/* Legend - Responsive */}
+        <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-6 text-xs text-gray-600">
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 rounded border-2 border-dashed" style={{ borderColor: party.color }}></div>
             <span>Sin votos</span>
@@ -532,22 +527,24 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
               </span>
             </div>
             
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <button
                 onClick={handleClosePapeleta}
                 disabled={papeletaLoading}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
               >
                 <Check className="h-4 w-4" />
-                Cerrar Papeleta
+                <span className="hidden sm:inline">Cerrar Papeleta</span>
+                <span className="sm:hidden">Cerrar</span>
               </button>
               <button
                 onClick={handleAnularPapeleta}
                 disabled={papeletaLoading}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
               >
                 <X className="h-4 w-4" />
-                Anular Papeleta
+                <span className="hidden sm:inline">Anular Papeleta</span>
+                <span className="sm:hidden">Anular</span>
               </button>
             </div>
           </div>
@@ -637,8 +634,8 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
       </header>
 
       {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 lg:py-8">
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
+      <div className="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-4 lg:py-8">
+        <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border">
           <div className="mb-4">
             <h2 className="text-lg font-semibold text-gray-900">
               {expandedParty ? 'Selección de Diputado' : 'Conteo de Diputados'}
