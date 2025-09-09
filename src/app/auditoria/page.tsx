@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
+import BackButton from '../../components/ui/BackButton';
 
 interface AuditLog {
   id: string;
@@ -214,6 +215,7 @@ export default function AuditoriaPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
+              <BackButton className="mr-4" />
               <Shield className="h-8 w-8 text-primary-600" />
               <h1 className="ml-3 text-xl font-semibold text-gray-900">
                 Auditoría del Sistema

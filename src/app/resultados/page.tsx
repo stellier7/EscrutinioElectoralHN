@@ -13,6 +13,7 @@ import {
   Calendar
 } from 'lucide-react';
 import { MesaSearchInput } from '@/components/MesaSearchInput';
+import BackButton from '@/components/ui/BackButton';
 
 interface ResultSummary {
   level: string;
@@ -46,6 +47,16 @@ interface RecentMesa {
   electionLevel: string;
 }
 
+interface LocationData {
+  location: string;
+  department: string;
+  total: number;
+  completed: number;
+  pending: number;
+  completionPercentage: number;
+  status: 'completed' | 'partial' | 'pending';
+}
+
 type ResultsResponse = Record<'PRESIDENTIAL' | 'LEGISLATIVE' | 'MUNICIPAL', ResultSummary>;
 
 export default function ResultadosPage() {
@@ -61,6 +72,8 @@ export default function ResultadosPage() {
   const [showRecentMesas, setShowRecentMesas] = useState(false);
   const [mesaVotes, setMesaVotes] = useState<any>(null);
   const [showMesaVotes, setShowMesaVotes] = useState(false);
+  const [locationData, setLocationData] = useState<LocationData[]>([]);
+  const [showAllRecentMesas, setShowAllRecentMesas] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -82,6 +95,22 @@ export default function ResultadosPage() {
     };
     load();
   }, []);
+
+  // Cargar datos de ubicación cuando cambia el nivel
+  useEffect(() => {
+    const loadLocationData = async () => {
+      try {
+        const resp = await fetch(`/api/mesas/by-location?level=${activeLevel}`, { cache: 'no-store' });
+        const json = await resp.json();
+        if (json?.success) {
+          setLocationData(json.data);
+        }
+      } catch (e) {
+        console.error('Error loading location data:', e);
+      }
+    };
+    loadLocationData();
+  }, [activeLevel]);
 
   // Cargar mesas recientes
   const loadRecentMesas = async () => {
@@ -167,6 +196,7 @@ export default function ResultadosPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
+              <BackButton className="mr-4" />
               <Vote className="h-8 w-8 text-primary-600" />
               <h1 className="ml-3 text-xl font-semibold text-gray-900">
                 Resultados Electorales
@@ -453,6 +483,67 @@ export default function ResultadosPage() {
           </div>
         )}
 
+        {/* Mesas Recientes */}
+        <div className="mt-8">
+          <div className="bg-white p-6 rounded-lg shadow-sm border">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Mesas Más Recientes</h3>
+              <button
+                onClick={loadRecentMesas}
+                className="text-sm px-3 py-2 bg-primary-600 text-white rounded hover:bg-primary-700 transition-colors"
+              >
+                Actualizar
+              </button>
+            </div>
+            
+            {recentMesas.length > 0 ? (
+              <div className="space-y-3">
+                {(showAllRecentMesas ? recentMesas : recentMesas.slice(0, 5)).map((mesa) => (
+                  <div key={mesa.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+                    <div className="flex items-center gap-3">
+                      <MapPin className="h-4 w-4 text-gray-400" />
+                      <div>
+                        <div className="font-medium text-gray-900">{mesa.mesaNumber}</div>
+                        <div className="text-sm text-gray-600">{mesa.mesaName}</div>
+                        <div className="text-xs text-gray-500">{mesa.department}</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="text-right">
+                        <div className="text-xs text-gray-500">
+                          {new Date(mesa.completedAt).toLocaleString()}
+                        </div>
+                        <div className="text-xs text-green-600 font-medium">Completada</div>
+                      </div>
+                      <button
+                        onClick={() => loadMesaVotes(mesa.id)}
+                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        title="Ver votos de esta mesa"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {recentMesas.length > 5 && (
+                  <button
+                    onClick={() => setShowAllRecentMesas(!showAllRecentMesas)}
+                    className="w-full py-2 text-sm text-primary-600 hover:text-primary-700 font-medium"
+                  >
+                    {showAllRecentMesas ? 'Ver menos' : `Ver todas (${recentMesas.length})`}
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-6 text-gray-500">
+                <Calendar className="h-10 w-10 mx-auto mb-3 text-gray-300" />
+                <p className="text-sm">No hay mesas completadas recientemente</p>
+                <p className="text-xs text-gray-400">Los escrutinios completados aparecerán aquí</p>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Status Indicators */}
         <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-white p-6 rounded-lg shadow-sm border">
@@ -490,47 +581,50 @@ export default function ResultadosPage() {
           <div className="bg-white p-6 rounded-lg shadow-sm border">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Mesas por Ubicación</h3>
             
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <MapPin className="h-5 w-5 text-gray-400 mr-2" />
-                  <span className="text-sm text-gray-700">Escuela Central</span>
-                </div>
-                <span className="text-sm font-medium text-green-600">Completada</span>
+            {locationData.length > 0 ? (
+              <div className="space-y-3">
+                {locationData.slice(0, 5).map((location, index) => (
+                  <div key={index} className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <MapPin className="h-5 w-5 text-gray-400 mr-2" />
+                      <div>
+                        <span className="text-sm text-gray-700">{location.location}</span>
+                        <div className="text-xs text-gray-500">{location.department}</div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className={`text-sm font-medium ${
+                        location.status === 'completed' ? 'text-green-600' :
+                        location.status === 'partial' ? 'text-yellow-600' : 'text-gray-500'
+                      }`}>
+                        {location.completed}/{location.total}
+                      </span>
+                      <div className="w-16 bg-gray-200 rounded-full h-1 mt-1">
+                        <div 
+                          className={`h-1 rounded-full transition-all duration-500 ${
+                            location.status === 'completed' ? 'bg-green-600' :
+                            location.status === 'partial' ? 'bg-yellow-600' : 'bg-gray-400'
+                          }`}
+                          style={{ width: `${location.completionPercentage}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {locationData.length > 5 && (
+                  <div className="text-center pt-2">
+                    <span className="text-xs text-gray-500">
+                      Y {locationData.length - 5} ubicaciones más...
+                    </span>
+                  </div>
+                )}
               </div>
-              
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <MapPin className="h-5 w-5 text-gray-400 mr-2" />
-                  <span className="text-sm text-gray-700">Colegio San José</span>
-                </div>
-                <span className="text-sm font-medium text-green-600">Completada</span>
+            ) : (
+              <div className="text-center py-4 text-gray-500">
+                <MapPin className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                <p className="text-sm">Cargando ubicaciones...</p>
               </div>
-              
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <MapPin className="h-5 w-5 text-gray-400 mr-2" />
-                  <span className="text-sm text-gray-700">Centro Comunal</span>
-                </div>
-                <span className="text-sm font-medium text-gray-500">Pendiente</span>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <MapPin className="h-5 w-5 text-gray-400 mr-2" />
-                  <span className="text-sm text-gray-700">Universidad Local</span>
-                </div>
-                <span className="text-sm font-medium text-gray-500">Pendiente</span>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <MapPin className="h-5 w-5 text-gray-400 mr-2" />
-                  <span className="text-sm text-gray-700">Club Deportivo</span>
-                </div>
-                <span className="text-sm font-medium text-gray-500">Pendiente</span>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

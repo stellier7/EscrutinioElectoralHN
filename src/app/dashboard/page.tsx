@@ -20,17 +20,58 @@ import {
   X
 } from 'lucide-react';
 
+interface DashboardStats {
+  totalMesas: number;
+  completedEscrutinios: number;
+  pendingEscrutinios: number;
+  recentActivity: Array<{
+    id: string;
+    mesaNumber: string;
+    mesaName: string;
+    department: string;
+    electionLevel: string;
+    completedAt: string;
+  }>;
+  statsByLevel: Array<{
+    level: string;
+    completed: number;
+    pending: number;
+    total: number;
+  }>;
+}
+
 export default function DashboardPage() {
   const { user, logout, isLoading } = useAuth();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('overview');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
 
   useEffect(() => {
     if (!isLoading && !user) {
       router.push('/');
     }
   }, [user, isLoading, router]);
+
+  // Cargar estadísticas del dashboard
+  useEffect(() => {
+    const loadStats = async () => {
+      try {
+        setStatsLoading(true);
+        const resp = await fetch('/api/dashboard/stats', { cache: 'no-store' });
+        const json = await resp.json();
+        if (json?.success) {
+          setStats(json.data);
+        }
+      } catch (e) {
+        console.error('Error loading dashboard stats:', e);
+      } finally {
+        setStatsLoading(false);
+      }
+    };
+    loadStats();
+  }, []);
 
   const handleLogout = async () => {
     await logout();
@@ -72,7 +113,9 @@ export default function DashboardPage() {
             </div>
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-600">Escrutinios Completados</p>
-              <p className="text-xl font-bold text-gray-900">0</p>
+              <p className="text-xl font-bold text-gray-900">
+                {statsLoading ? '...' : stats?.completedEscrutinios || 0}
+              </p>
             </div>
           </div>
         </div>
@@ -84,7 +127,9 @@ export default function DashboardPage() {
             </div>
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-600">Pendientes</p>
-              <p className="text-xl font-bold text-gray-900">0</p>
+              <p className="text-xl font-bold text-gray-900">
+                {statsLoading ? '...' : stats?.pendingEscrutinios || 0}
+              </p>
             </div>
           </div>
         </div>
@@ -95,8 +140,10 @@ export default function DashboardPage() {
               <MapPin className="h-5 w-5 text-purple-600" />
             </div>
             <div className="ml-3">
-              <p className="text-sm font-medium text-gray-600">Mesas Asignadas</p>
-              <p className="text-xl font-bold text-gray-900">0</p>
+              <p className="text-sm font-medium text-gray-600">Total de Mesas</p>
+              <p className="text-xl font-bold text-gray-900">
+                {statsLoading ? '...' : stats?.totalMesas || 0}
+              </p>
             </div>
           </div>
         </div>
@@ -104,19 +151,60 @@ export default function DashboardPage() {
 
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
         <h3 className="text-lg font-semibold text-gray-900 mb-3">Actividad Reciente</h3>
-        <div className="text-center py-6 text-gray-500">
-          <Vote className="h-10 w-10 mx-auto mb-3 text-gray-300" />
-          <p className="text-sm">No hay actividad reciente</p>
-          <p className="text-xs text-gray-400 mb-4">Comienza un nuevo escrutinio para ver tu actividad aquí</p>
-          <Button 
-            variant="primary" 
-            size="lg"
-            onClick={() => router.push('/escrutinio')}
-          >
-            <Vote className="h-4 w-4 mr-2" />
-            Nuevo Escrutinio
-          </Button>
-        </div>
+        {statsLoading ? (
+          <div className="text-center py-6 text-gray-500">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto"></div>
+            <p className="text-sm mt-2">Cargando actividad...</p>
+          </div>
+        ) : stats?.recentActivity && stats.recentActivity.length > 0 ? (
+          <div className="space-y-3">
+            {stats.recentActivity.map((activity) => (
+              <div key={activity.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{activity.mesaNumber}</p>
+                    <p className="text-xs text-gray-600">{activity.mesaName}</p>
+                    <p className="text-xs text-gray-500">{activity.department}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-gray-500">
+                    {new Date(activity.completedAt).toLocaleDateString()}
+                  </p>
+                  <p className="text-xs text-green-600 font-medium">{activity.electionLevel}</p>
+                </div>
+              </div>
+            ))}
+            <div className="pt-3 border-t">
+              <Button 
+                variant="primary" 
+                size="lg"
+                onClick={() => router.push('/escrutinio')}
+                className="w-full"
+              >
+                <Vote className="h-4 w-4 mr-2" />
+                Nuevo Escrutinio
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-6 text-gray-500">
+            <Vote className="h-10 w-10 mx-auto mb-3 text-gray-300" />
+            <p className="text-sm">No hay actividad reciente</p>
+            <p className="text-xs text-gray-400 mb-4">Comienza un nuevo escrutinio para ver tu actividad aquí</p>
+            <Button 
+              variant="primary" 
+              size="lg"
+              onClick={() => router.push('/escrutinio')}
+            >
+              <Vote className="h-4 w-4 mr-2" />
+              Nuevo Escrutinio
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

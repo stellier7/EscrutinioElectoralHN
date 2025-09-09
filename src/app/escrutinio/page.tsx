@@ -8,6 +8,7 @@ import { useGeolocation } from '../../hooks/useGeolocation';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import SearchInput from '../../components/ui/SearchInput';
+import BackButton from '../../components/ui/BackButton';
 import VoteList from '@/components/VoteList';
 import DiputadosEscrutinio from '@/components/DiputadosEscrutinio';
 import VoteFooter from '@/components/VoteFooter';
