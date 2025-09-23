@@ -14,6 +14,7 @@ import VoteList from '@/components/VoteList';
 import DiputadosEscrutinio from '@/components/DiputadosEscrutinio';
 import VoteFooter from '@/components/VoteFooter';
 import { useVoteStore } from '@/store/voteStore';
+import { getPartyConfig } from '@/lib/party-config';
 import { 
   Vote, 
   MapPin, 
@@ -102,28 +103,22 @@ function EscrutinioPageContent() {
     load();
   }, [selectedLevel]);
 
-  // Map party acronyms to display names
+  // Cargar votos existentes cuando se establece el escrutinioId
+  useEffect(() => {
+    const loadExistingVotes = async () => {
+      if (!escrutinioId) return;
+      try {
+        await voteStore.loadFromServer(escrutinioId);
+      } catch (error) {
+        console.warn('No se pudieron cargar votos existentes:', error);
+      }
+    };
+    loadExistingVotes();
+  }, [escrutinioId, voteStore]);
+
+  // Map party acronyms to display names using party config
   const mapPartyToDisplayName = (party: string): string => {
-    const key = party.trim().toLowerCase();
-    switch (key) {
-      case 'pdc':
-      case 'demócrata cristiano':
-      case 'democrata cristiano':
-        return 'Demócrata Cristiano';
-      case 'libre':
-        return 'Libre';
-      case 'pinu-sd':
-      case 'pinu':
-        return 'PINU-SD';
-      case 'plh':
-      case 'liberal':
-        return 'Liberal';
-      case 'pnh':
-      case 'nacional':
-        return 'Nacional';
-      default:
-        return party;
-    }
+    return getPartyConfig(party).name;
   };
 
   const filteredCandidates = candidates
@@ -134,30 +129,7 @@ function EscrutinioPageContent() {
     });
 
   const getPartyColor = (party: string) => {
-    const key = party.trim().toLowerCase();
-    switch (key) {
-      case 'pdc':
-      case 'demócrata cristiano':
-      case 'democrata cristiano':
-        return '#16a34a'; // green
-      case 'libre':
-      case 'partido libertad y refundación (libre)':
-        return '#dc2626'; // red
-      case 'pinu-sd':
-      case 'pinu':
-      case 'partido innovación y unidad social demócrata (pinu-sd)':
-        return '#7c3aed'; // purple
-      case 'plh':
-      case 'liberal':
-      case 'partido liberal de honduras':
-        return '#ef4444'; // red
-      case 'pnh':
-      case 'nacional':
-      case 'partido nacional de honduras':
-        return '#2563eb'; // blue
-      default:
-        return '#10b981';
-    }
+    return getPartyConfig(party).color;
   };
 
   const handleGetLocation = async () => {

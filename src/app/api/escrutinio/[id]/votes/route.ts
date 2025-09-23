@@ -27,6 +27,63 @@ const BodySchema = z.object({
   audit: z.any().array().optional(),
 });
 
+export async function GET(request: Request, { params }: { params: { id: string } }) {
+  try {
+    const authHeader = request.headers.get('authorization') || undefined;
+    const token = AuthUtils.extractTokenFromHeader(authHeader);
+    if (!token) {
+      return NextResponse.json({ success: false, error: 'No autorizado' }, { status: 401 });
+    }
+    const payload = AuthUtils.verifyToken(token);
+    if (!payload) {
+      return NextResponse.json({ success: false, error: 'Token inválido' }, { status: 401 });
+    }
+
+    const escrutinioId = params.id;
+
+    // Verificar que el escrutinio existe
+    const escrutinio = await prisma.escrutinio.findUnique({ 
+      where: { id: escrutinioId },
+      include: {
+        votes: {
+          include: {
+            candidate: true,
+          },
+        },
+      },
+    });
+
+    if (!escrutinio) {
+      return NextResponse.json({ success: false, error: 'Escrutinio no encontrado' }, { status: 404 });
+    }
+
+    // Formatear votos para el cliente
+    const votes = escrutinio.votes.map(vote => ({
+      candidateId: vote.candidateId,
+      count: vote.count,
+      candidate: {
+        id: vote.candidate.id,
+        name: vote.candidate.name,
+        party: vote.candidate.party,
+        number: vote.candidate.number,
+      },
+    }));
+
+    return NextResponse.json({ 
+      success: true, 
+      data: votes,
+      message: 'Votos obtenidos exitosamente'
+    });
+
+  } catch (error: any) {
+    console.error('Error fetching votes:', error);
+    return NextResponse.json({ 
+      success: false, 
+      error: error?.message || 'Error interno del servidor' 
+    }, { status: 500 });
+  }
+}
+
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   try {
     const authHeader = request.headers.get('authorization') || undefined;

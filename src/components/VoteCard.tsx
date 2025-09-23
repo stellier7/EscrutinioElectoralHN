@@ -1,6 +1,8 @@
 "use client";
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
+import { getPartyConfig } from '@/lib/party-config';
+import Image from 'next/image';
 
 type Props = {
   id: string;
@@ -19,6 +21,10 @@ type Props = {
 export function VoteCard({ id, name, party, partyColor = '#e5e7eb', number, count, onIncrement, onDecrement, isPending }: Props) {
   const [animate, setAnimate] = useState(false);
   const pressTimer = useRef<number | null>(null);
+  
+  // Obtener configuración del partido
+  const partyConfig = getPartyConfig(party);
+  const effectivePartyColor = partyColor !== '#e5e7eb' ? partyColor : partyConfig.color;
 
   const handleClick = useCallback(() => {
     onIncrement();
@@ -73,24 +79,43 @@ export function VoteCard({ id, name, party, partyColor = '#e5e7eb', number, coun
         'w-full flex items-center rounded-lg border shadow-sm focus:outline-none focus:ring-2 transition-transform',
         'active:scale-[0.98] touch-manipulation select-none',
         animate && 'scale-[1.02]',
-        'bg-white min-h-[60px]' // Altura mínima para mejor toque
+        'min-h-[70px]' // Altura mínima para mejor toque
       )}
-      style={{ borderLeftWidth: 6, borderLeftColor: partyColor }}
+      style={{ 
+        backgroundColor: effectivePartyColor,
+        borderLeftWidth: 6, 
+        borderLeftColor: effectivePartyColor,
+        borderColor: effectivePartyColor
+      }}
       data-testid={`vote-card-${id}`}
     >
       <div className="flex-1 p-4 text-left">
         <div className="flex items-center justify-between">
-          <div>
-            <div className="text-base font-semibold text-gray-900">{party}</div>
-            <div className="text-sm text-gray-600">{formatInitialSurname(name)}{number !== undefined ? ` • Lista ${number}` : ''}</div>
+          <div className="flex items-center gap-3">
+            {/* Logo del partido */}
+            {partyConfig.logoUrl && (
+              <div className="flex-shrink-0">
+                <Image
+                  src={partyConfig.logoUrl}
+                  alt={`Logo ${partyConfig.name}`}
+                  width={40}
+                  height={40}
+                  className="rounded-full bg-white/20 p-1"
+                />
+              </div>
+            )}
+            <div>
+              <div className="text-base font-semibold text-white drop-shadow-sm">{partyConfig.name}</div>
+              <div className="text-sm text-white/90 drop-shadow-sm">{formatInitialSurname(name)}{number !== undefined ? ` • Lista ${number}` : ''}</div>
+            </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-2xl font-bold tabular-nums" aria-live="polite">{count}</span>
+            <span className="text-2xl font-bold tabular-nums text-white drop-shadow-sm" aria-live="polite">{count}</span>
             <button
               type="button"
               aria-label={`Restar 1 a ${name}`}
               onClick={(e) => { e.stopPropagation(); onDecrement(); }}
-              className="px-3 py-2 text-sm rounded border bg-gray-50 active:bg-gray-100 touch-manipulation select-none min-h-[32px] min-w-[32px]"
+              className="px-3 py-2 text-sm rounded border bg-white/20 active:bg-white/30 touch-manipulation select-none min-h-[32px] min-w-[32px] text-white border-white/30 hover:bg-white/30"
             >
               –
             </button>

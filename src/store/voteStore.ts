@@ -3,7 +3,6 @@ import { persist } from 'zustand/middleware';
 import { z } from 'zod';
 import axios from 'axios';
 import { AuditClient } from '@/lib/audit-client';
-import { notifyError } from '@/components/ui/Toast';
 
 export type CandidateDisplay = {
   id: string;
@@ -18,26 +17,23 @@ export type VoteDelta = {
   delta: number; // +1 or -1
   timestamp: number;
   clientBatchId: string;
-};
-
-export type VoteBatchPayload = {
   escrutinioId: string;
-  votes: VoteDelta[];
+  userId?: string;
+  mesaId?: string;
   gps?: { latitude: number; longitude: number; accuracy?: number };
   deviceId?: string;
-  audit?: any[];
 };
 
-const VoteBatchSchema = z.object({
+const VoteDeltaSchema = z.object({
+  candidateId: z.string().min(1),
+  delta: z.number().int().min(-1000).max(1000),
+  timestamp: z.number(),
+  clientBatchId: z.string().uuid(),
+});
+
+const VotePayloadSchema = z.object({
   escrutinioId: z.string().min(1),
-  votes: z.array(
-    z.object({
-      candidateId: z.string().min(1),
-      delta: z.number().int().min(-1000).max(1000),
-      timestamp: z.number(),
-      clientBatchId: z.string().uuid(),
-    })
-  ),
+  votes: z.array(VoteDeltaSchema),
   gps: z
     .object({
       latitude: z.number(),
@@ -51,40 +47,39 @@ const VoteBatchSchema = z.object({
 
 type State = {
   counts: Record<string, number>;
-  pending: boolean;
-  lastError?: string;
-  batch: VoteDelta[];
-  lastFlushedAt?: number;
-  batchIndicator: Record<string, boolean>;
+  pendingVotes: VoteDelta[]; // Votos pendientes de sincronización
+  lastSyncAt?: number;
   context?: { gps?: { latitude: number; longitude: number; accuracy?: number }; deviceId?: string };
 };
 
 type Actions = {
   increment: (candidateId: string, meta: { escrutinioId: string; userId?: string; mesaId?: string; gps?: { latitude: number; longitude: number; accuracy?: number }; deviceId?: string }) => void;
   decrement: (candidateId: string, meta: { escrutinioId: string; userId?: string; mesaId?: string; gps?: { latitude: number; longitude: number; accuracy?: number }; deviceId?: string }) => void;
-  flush: (escrutinioId: string) => Promise<void>;
+  syncPendingVotes: () => Promise<void>;
   setCounts: (counts: Record<string, number>) => void;
   clear: () => void;
-  reconcileFailure: (deltas: VoteDelta[]) => void;
+  loadFromServer: (escrutinioId: string) => Promise<void>;
 };
 
-const MAX_EVENTS = 10; // Reducir para más responsividad
-const IDLE_MS = 1000; // Reducir de 3s a 1s para más responsividad
+// Configuración optimizada para sincronización silenciosa
+const SYNC_INTERVAL_MS = 2000; // Sincronizar cada 2 segundos
+const MAX_RETRIES = 3;
+const RETRY_DELAY_MS = 1000;
 
-let idleTimer: ReturnType<typeof setTimeout> | null = null;
+let syncTimer: ReturnType<typeof setInterval> | null = null;
 
 export const useVoteStore = create<State & Actions>()(
   persist(
     (set, get) => ({
       counts: {},
-      pending: false,
-      batch: [],
-      batchIndicator: {},
+      pendingVotes: [],
+      lastSyncAt: undefined,
+      context: undefined,
 
       setCounts: (counts) => set({ counts }),
 
       increment: (candidateId, meta) => {
-        const { counts, batch } = get();
+        const { counts, pendingVotes } = get();
         const newCount = (counts[candidateId] || 0) + 1;
         const clientBatchId = AuditClient.createBatchId();
         const delta: VoteDelta = {
@@ -92,8 +87,14 @@ export const useVoteStore = create<State & Actions>()(
           delta: +1,
           timestamp: Date.now(),
           clientBatchId,
+          escrutinioId: meta.escrutinioId,
+          userId: meta.userId,
+          mesaId: meta.mesaId,
+          gps: meta.gps,
+          deviceId: meta.deviceId,
         };
 
+        // Log para auditoría
         AuditClient.log({
           event: 'vote_increment',
           userId: meta.userId,
@@ -107,19 +108,19 @@ export const useVoteStore = create<State & Actions>()(
           clientBatchId,
         });
 
+        // Actualizar estado inmediatamente (conteo instantáneo)
         set({
           counts: { ...counts, [candidateId]: newCount },
-          batch: [...batch, delta],
-          batchIndicator: { ...get().batchIndicator, [candidateId]: true },
+          pendingVotes: [...pendingVotes, delta],
           context: { gps: meta.gps, deviceId: meta.deviceId },
-          lastError: undefined,
         });
 
-        scheduleFlush(meta.escrutinioId);
+        // Iniciar sincronización silenciosa si no está activa
+        startSilentSync();
       },
 
       decrement: (candidateId, meta) => {
-        const { counts, batch } = get();
+        const { counts, pendingVotes } = get();
         const newCount = Math.max(0, (counts[candidateId] || 0) - 1);
         const clientBatchId = AuditClient.createBatchId();
         const delta: VoteDelta = {
@@ -127,8 +128,14 @@ export const useVoteStore = create<State & Actions>()(
           delta: -1,
           timestamp: Date.now(),
           clientBatchId,
+          escrutinioId: meta.escrutinioId,
+          userId: meta.userId,
+          mesaId: meta.mesaId,
+          gps: meta.gps,
+          deviceId: meta.deviceId,
         };
 
+        // Log para auditoría
         AuditClient.log({
           event: 'vote_decrement',
           userId: meta.userId,
@@ -142,78 +149,145 @@ export const useVoteStore = create<State & Actions>()(
           clientBatchId,
         });
 
+        // Actualizar estado inmediatamente (conteo instantáneo)
         set({
           counts: { ...counts, [candidateId]: newCount },
-          batch: [...batch, delta],
-          batchIndicator: { ...get().batchIndicator, [candidateId]: true },
+          pendingVotes: [...pendingVotes, delta],
           context: { gps: meta.gps, deviceId: meta.deviceId },
-          lastError: undefined,
         });
 
-        scheduleFlush(meta.escrutinioId);
+        // Iniciar sincronización silenciosa si no está activa
+        startSilentSync();
       },
 
-      flush: async (escrutinioId: string) => {
-        const { batch } = get();
-        if (batch.length === 0) return;
+      syncPendingVotes: async () => {
+        const { pendingVotes, context } = get();
+        if (pendingVotes.length === 0) return;
 
-        const auditEvents = AuditClient.drain();
-        const payload: VoteBatchPayload = {
-          escrutinioId,
-          votes: batch,
-          audit: auditEvents,
-          gps: get().context?.gps,
-          deviceId: get().context?.deviceId,
-        };
+        // Agrupar votos por escrutinio
+        const votesByEscrutinio = pendingVotes.reduce((acc, vote) => {
+          if (!acc[vote.escrutinioId]) {
+            acc[vote.escrutinioId] = [];
+          }
+          acc[vote.escrutinioId].push(vote);
+          return acc;
+        }, {} as Record<string, VoteDelta[]>);
 
-        const parsed = VoteBatchSchema.safeParse(payload);
-        if (!parsed.success) {
-          set({ lastError: 'Error de validación en lote de votos' });
-          // restore audit events so they are not lost
-          AuditClient.restore(auditEvents as any);
-          return;
+        // Sincronizar cada escrutinio
+        for (const [escrutinioId, votes] of Object.entries(votesByEscrutinio)) {
+          await syncVotesForEscrutinio(escrutinioId, votes, context);
         }
+      },
 
+      loadFromServer: async (escrutinioId: string) => {
         try {
-          set({ pending: true });
-          await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/votes`, payload);
-          set({ batch: [], lastFlushedAt: Date.now(), pending: false, batchIndicator: {} });
-        } catch (error: any) {
-          // rollback visual: revert deltas
-          get().reconcileFailure(batch);
-          set({ lastError: error?.response?.data?.error || 'Error al enviar votos', pending: false });
-          // restore audit + batch so it can retry later
-          AuditClient.restore(auditEvents as any);
-          notifyError('No se pudieron sincronizar los votos. Reintentaremos en breve.');
+          const response = await axios.get(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/votes`);
+          if (response.data?.success && response.data.data) {
+            const serverCounts = response.data.data.reduce((acc: Record<string, number>, vote: any) => {
+              acc[vote.candidateId] = vote.count;
+              return acc;
+            }, {});
+            set({ counts: serverCounts });
+          }
+        } catch (error) {
+          console.warn('No se pudieron cargar votos del servidor:', error);
         }
       },
 
-      reconcileFailure: (deltas) => {
-        const current = { ...get().counts };
-        for (const d of deltas) {
-          current[d.candidateId] = Math.max(0, (current[d.candidateId] || 0) - d.delta);
-        }
-        set({ counts: current });
-      },
-
-      clear: () => set({ counts: {}, batch: [], pending: false, lastError: undefined, batchIndicator: {} }),
+      clear: () => set({ 
+        counts: {}, 
+        pendingVotes: [], 
+        lastSyncAt: undefined,
+        context: undefined 
+      }),
     }),
     {
-      name: 'vote-store-v1',
-      partialize: (state) => ({ counts: state.counts, batch: state.batch }),
+      name: 'vote-store-v2',
+      partialize: (state) => ({ 
+        counts: state.counts, 
+        pendingVotes: state.pendingVotes,
+        lastSyncAt: state.lastSyncAt,
+        context: state.context
+      }),
     }
   )
 );
 
-function scheduleFlush(escrutinioId: string) {
-  const { batch } = useVoteStore.getState();
-  if (batch.length >= MAX_EVENTS) {
-    useVoteStore.getState().flush(escrutinioId);
+// Función para sincronizar votos de un escrutinio específico
+async function syncVotesForEscrutinio(
+  escrutinioId: string, 
+  votes: VoteDelta[], 
+  context?: { gps?: { latitude: number; longitude: number; accuracy?: number }; deviceId?: string }
+) {
+  const auditEvents = AuditClient.drain();
+  const payload = {
+    escrutinioId,
+    votes: votes.map(v => ({
+      candidateId: v.candidateId,
+      delta: v.delta,
+      timestamp: v.timestamp,
+      clientBatchId: v.clientBatchId,
+    })),
+    audit: auditEvents,
+    gps: context?.gps,
+    deviceId: context?.deviceId,
+  };
+
+  const parsed = VotePayloadSchema.safeParse(payload);
+  if (!parsed.success) {
+    console.warn('Error de validación en votos:', parsed.error);
+    AuditClient.restore(auditEvents as any);
     return;
   }
-  if (idleTimer) clearTimeout(idleTimer);
-  idleTimer = setTimeout(() => {
-    useVoteStore.getState().flush(escrutinioId);
-  }, IDLE_MS);
+
+  let retries = 0;
+  while (retries < MAX_RETRIES) {
+    try {
+      await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/votes`, payload);
+      
+      // Éxito: remover votos sincronizados del estado
+      const { pendingVotes } = useVoteStore.getState();
+      const syncedVoteIds = new Set(votes.map(v => v.clientBatchId));
+      const remainingVotes = pendingVotes.filter(v => !syncedVoteIds.has(v.clientBatchId));
+      
+      useVoteStore.setState({ 
+        pendingVotes: remainingVotes,
+        lastSyncAt: Date.now()
+      });
+      
+      return; // Éxito, salir del loop de reintentos
+    } catch (error: any) {
+      retries++;
+      console.warn(`Error sincronizando votos (intento ${retries}/${MAX_RETRIES}):`, error);
+      
+      if (retries < MAX_RETRIES) {
+        // Esperar antes del siguiente intento
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS * retries));
+      } else {
+        // Fallo final: restaurar eventos de auditoría para reintento posterior
+        AuditClient.restore(auditEvents as any);
+        console.error('Falló la sincronización de votos después de todos los reintentos');
+      }
+    }
+  }
+}
+
+// Función para iniciar sincronización silenciosa
+function startSilentSync() {
+  if (syncTimer) return; // Ya está activa
+  
+  syncTimer = setInterval(async () => {
+    const { pendingVotes } = useVoteStore.getState();
+    if (pendingVotes.length === 0) {
+      // No hay votos pendientes, detener timer
+      if (syncTimer) {
+        clearInterval(syncTimer);
+        syncTimer = null;
+      }
+      return;
+    }
+    
+    await useVoteStore.getState().syncPendingVotes();
+  }, SYNC_INTERVAL_MS);
 }
 

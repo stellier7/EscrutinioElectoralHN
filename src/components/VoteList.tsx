@@ -21,12 +21,10 @@ type Props = {
 };
 
 export function VoteList({ escrutinioId, candidates, userId, mesaId, gps, deviceId }: Props) {
-  const { counts, increment, decrement, pending, batchIndicator } = useVoteStore((s) => ({
+  const { counts, increment, decrement } = useVoteStore((s) => ({
     counts: s.counts,
     increment: s.increment,
     decrement: s.decrement,
-    pending: s.pending,
-    batchIndicator: s.batchIndicator,
   }));
 
   return (
@@ -40,7 +38,7 @@ export function VoteList({ escrutinioId, candidates, userId, mesaId, gps, device
           partyColor={c.partyColor}
           number={c.number}
           count={counts[c.id] || 0}
-          isPending={!!batchIndicator[c.id] || pending}
+          isPending={false} // Sin indicadores de pending - conteo instantáneo
           onIncrement={() =>
             increment(c.id, { escrutinioId, userId, mesaId, gps: gps || undefined, deviceId })
           }
