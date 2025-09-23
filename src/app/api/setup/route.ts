@@ -21,29 +21,43 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     
     // Create enum types first
     try {
-      await prisma.$executeRaw`CREATE TYPE "UserRole" AS ENUM ('VOLUNTEER', 'ORGANIZATION_MEMBER', 'ADMIN', 'AUDITOR')`;
+      await prisma.$executeRaw`CREATE TYPE "UserRole" AS ENUM ('OBSERVER', 'VOLUNTEER', 'ADMIN')`;
     } catch (e) {
       console.log('UserRole enum already exists');
     }
     
     try {
-      await prisma.$executeRaw`CREATE TYPE "ElectionLevel" AS ENUM ('PRESIDENTE', 'DIPUTADO', 'ALCALDE', 'CORREGIDOR')`;
+      await prisma.$executeRaw`CREATE TYPE "ElectionLevel" AS ENUM ('PRESIDENTIAL', 'LEGISLATIVE', 'MUNICIPAL')`;
     } catch (e) {
       console.log('ElectionLevel enum already exists');
     }
     
     try {
-      await prisma.$executeRaw`CREATE TYPE "AuditLogAction" AS ENUM ('LOGIN', 'LOGOUT', 'REGISTER', 'ESCRUTINIO_START', 'ESCRUTINIO_COMPLETE', 'VOTE_UPDATE', 'TRANSMISSION')`;
+      await prisma.$executeRaw`CREATE TYPE "AuditLogAction" AS ENUM ('LOGIN', 'LOGOUT', 'START_ESCRUTINIO', 'SUBMIT_RESULTS', 'UPLOAD_EVIDENCE', 'CORRECTION', 'TRANSMISSION', 'VIEW_RESULTS', 'USER_APPROVED', 'USER_REJECTED', 'USER_SUSPENDED')`;
     } catch (e) {
       console.log('AuditLogAction enum already exists');
     }
     
     try {
-      await prisma.$executeRaw`CREATE TYPE "TransmissionStatus" AS ENUM ('PENDING', 'TRANSMITTED', 'FAILED')`;
+      await prisma.$executeRaw`CREATE TYPE "TransmissionStatus" AS ENUM ('PENDING', 'IN_PROGRESS', 'COMPLETED', 'FAILED')`;
     } catch (e) {
       console.log('TransmissionStatus enum already exists');
     }
     
+    // Create UserStatus enum
+    try {
+      await prisma.$executeRaw`CREATE TYPE "UserStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED', 'SUSPENDED')`;
+    } catch (e) {
+      console.log('UserStatus enum already exists');
+    }
+
+    // Create PapeletaStatus enum
+    try {
+      await prisma.$executeRaw`CREATE TYPE "PapeletaStatus" AS ENUM ('OPEN', 'CLOSED', 'ANULADA')`;
+    } catch (e) {
+      console.log('PapeletaStatus enum already exists');
+    }
+
     // Create tables
     try {
       await prisma.$executeRaw`
@@ -53,7 +67,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           "password" TEXT NOT NULL,
           "name" TEXT NOT NULL,
           "role" "UserRole" NOT NULL DEFAULT 'VOLUNTEER',
+          "status" "UserStatus" NOT NULL DEFAULT 'PENDING',
           "deviceId" TEXT,
+          "phone" TEXT,
+          "organization" TEXT,
+          "notes" TEXT,
+          "approvedAt" TIMESTAMP(3),
+          "approvedBy" TEXT,
+          "rejectedAt" TIMESTAMP(3),
+          "rejectedBy" TEXT,
+          "rejectionReason" TEXT,
           "isActive" BOOLEAN NOT NULL DEFAULT true,
           "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
           "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -69,8 +92,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         CREATE TABLE "elections" (
           "id" TEXT NOT NULL,
           "name" TEXT NOT NULL,
-          "level" "ElectionLevel" NOT NULL,
-          "date" TIMESTAMP(3) NOT NULL,
+          "description" TEXT,
+          "startDate" TIMESTAMP(3) NOT NULL,
+          "endDate" TIMESTAMP(3) NOT NULL,
           "isActive" BOOLEAN NOT NULL DEFAULT true,
           "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
           "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -86,8 +110,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         CREATE TABLE "candidates" (
           "id" TEXT NOT NULL,
           "name" TEXT NOT NULL,
-          "party" TEXT,
+          "party" TEXT NOT NULL,
+          "number" INTEGER NOT NULL,
           "electionId" TEXT NOT NULL,
+          "electionLevel" "ElectionLevel" NOT NULL,
+          "isActive" BOOLEAN NOT NULL DEFAULT true,
           "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
           "updatedAt" TIMESTAMP(3) NOT NULL,
           CONSTRAINT "candidates_pkey" PRIMARY KEY ("id")
@@ -97,17 +124,70 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       console.log('Candidates table already exists');
     }
     
+    // Create Mesa table first
+    try {
+      await prisma.$executeRaw`
+        CREATE TABLE "mesas" (
+          "id" TEXT NOT NULL,
+          "number" TEXT NOT NULL,
+          "location" TEXT NOT NULL,
+          "address" TEXT,
+          "department" TEXT NOT NULL,
+          "municipality" TEXT,
+          "area" TEXT,
+          "electoralLoad" INTEGER,
+          "latitude" DOUBLE PRECISION,
+          "longitude" DOUBLE PRECISION,
+          "isActive" BOOLEAN NOT NULL DEFAULT true,
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" TIMESTAMP(3) NOT NULL,
+          CONSTRAINT "mesas_pkey" PRIMARY KEY ("id")
+        )
+      `;
+    } catch (e) {
+      console.log('Mesas table already exists');
+    }
+
+    // Create Department table
+    try {
+      await prisma.$executeRaw`
+        CREATE TABLE "departments" (
+          "id" TEXT NOT NULL,
+          "name" TEXT NOT NULL,
+          "code" INTEGER,
+          "diputados" INTEGER NOT NULL DEFAULT 0,
+          "isActive" BOOLEAN NOT NULL DEFAULT true,
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" TIMESTAMP(3) NOT NULL,
+          CONSTRAINT "departments_pkey" PRIMARY KEY ("id")
+        )
+      `;
+    } catch (e) {
+      console.log('Departments table already exists');
+    }
+
     try {
       await prisma.$executeRaw`
         CREATE TABLE "escrutinios" (
           "id" TEXT NOT NULL,
           "userId" TEXT NOT NULL,
           "electionId" TEXT NOT NULL,
-          "mesa" TEXT NOT NULL,
-          "latitude" DOUBLE PRECISION,
-          "longitude" DOUBLE PRECISION,
-          "accuracy" DOUBLE PRECISION,
+          "mesaId" TEXT NOT NULL,
+          "electionLevel" "ElectionLevel" NOT NULL,
+          "latitude" DOUBLE PRECISION NOT NULL,
+          "longitude" DOUBLE PRECISION NOT NULL,
+          "locationAccuracy" DOUBLE PRECISION,
           "status" "TransmissionStatus" NOT NULL DEFAULT 'PENDING',
+          "isCompleted" BOOLEAN NOT NULL DEFAULT false,
+          "startedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "completedAt" TIMESTAMP(3),
+          "transmittedAt" TIMESTAMP(3),
+          "actaImageUrl" TEXT,
+          "actaImageHash" TEXT,
+          "validationHash" TEXT,
+          "encryptedData" TEXT,
+          "priority" INTEGER NOT NULL DEFAULT 0,
+          "queuePosition" INTEGER,
           "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
           "updatedAt" TIMESTAMP(3) NOT NULL,
           CONSTRAINT "escrutinios_pkey" PRIMARY KEY ("id")
@@ -123,7 +203,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           "id" TEXT NOT NULL,
           "escrutinioId" TEXT NOT NULL,
           "candidateId" TEXT NOT NULL,
-          "count" INTEGER NOT NULL,
+          "count" INTEGER NOT NULL DEFAULT 0,
           "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
           "updatedAt" TIMESTAMP(3) NOT NULL,
           CONSTRAINT "votes_pkey" PRIMARY KEY ("id")
@@ -132,23 +212,123 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     } catch (e) {
       console.log('Votes table already exists');
     }
+
+    // Create Correction table
+    try {
+      await prisma.$executeRaw`
+        CREATE TABLE "corrections" (
+          "id" TEXT NOT NULL,
+          "escrutinioId" TEXT NOT NULL,
+          "candidateId" TEXT NOT NULL,
+          "oldValue" INTEGER NOT NULL,
+          "newValue" INTEGER NOT NULL,
+          "reason" TEXT,
+          "timestamp" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "corrections_pkey" PRIMARY KEY ("id")
+        )
+      `;
+    } catch (e) {
+      console.log('Corrections table already exists');
+    }
     
     try {
       await prisma.$executeRaw`
         CREATE TABLE "audit_logs" (
           "id" TEXT NOT NULL,
+          "userId" TEXT,
           "action" "AuditLogAction" NOT NULL,
           "description" TEXT NOT NULL,
-          "userId" TEXT,
           "metadata" JSONB,
           "ipAddress" TEXT,
           "userAgent" TEXT,
-          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "timestamp" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
           CONSTRAINT "audit_logs_pkey" PRIMARY KEY ("id")
         )
       `;
     } catch (e) {
       console.log('Audit logs table already exists');
+    }
+
+    // Create Papeleta table
+    try {
+      await prisma.$executeRaw`
+        CREATE TABLE "papeletas" (
+          "id" TEXT NOT NULL,
+          "escrutinioId" TEXT NOT NULL,
+          "userId" TEXT NOT NULL,
+          "status" "PapeletaStatus" NOT NULL DEFAULT 'OPEN',
+          "votesBuffer" JSONB NOT NULL DEFAULT '[]',
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" TIMESTAMP(3) NOT NULL,
+          "closedAt" TIMESTAMP(3),
+          "anuladaAt" TIMESTAMP(3),
+          "anuladaReason" TEXT,
+          CONSTRAINT "papeletas_pkey" PRIMARY KEY ("id")
+        )
+      `;
+    } catch (e) {
+      console.log('Papeletas table already exists');
+    }
+
+    // Create SystemConfig table
+    try {
+      await prisma.$executeRaw`
+        CREATE TABLE "system_config" (
+          "id" TEXT NOT NULL,
+          "key" TEXT NOT NULL,
+          "value" TEXT NOT NULL,
+          "description" TEXT,
+          "isActive" BOOLEAN NOT NULL DEFAULT true,
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" TIMESTAMP(3) NOT NULL,
+          CONSTRAINT "system_config_pkey" PRIMARY KEY ("id")
+        )
+      `;
+    } catch (e) {
+      console.log('SystemConfig table already exists');
+    }
+
+    // Create OfflineQueue table
+    try {
+      await prisma.$executeRaw`
+        CREATE TABLE "offline_queue" (
+          "id" TEXT NOT NULL,
+          "userId" TEXT NOT NULL,
+          "action" TEXT NOT NULL,
+          "data" JSONB NOT NULL,
+          "priority" INTEGER NOT NULL DEFAULT 0,
+          "retryCount" INTEGER NOT NULL DEFAULT 0,
+          "maxRetries" INTEGER NOT NULL DEFAULT 3,
+          "status" TEXT NOT NULL DEFAULT 'pending',
+          "error" TEXT,
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" TIMESTAMP(3) NOT NULL,
+          "processedAt" TIMESTAMP(3),
+          CONSTRAINT "offline_queue_pkey" PRIMARY KEY ("id")
+        )
+      `;
+    } catch (e) {
+      console.log('OfflineQueue table already exists');
+    }
+
+    // Create UserRateLimit table
+    try {
+      await prisma.$executeRaw`
+        CREATE TABLE "user_rate_limits" (
+          "id" TEXT NOT NULL,
+          "userId" TEXT NOT NULL,
+          "requests" INTEGER NOT NULL DEFAULT 0,
+          "windowStart" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "lastRequest" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "isBlocked" BOOLEAN NOT NULL DEFAULT false,
+          "blockedUntil" TIMESTAMP(3),
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" TIMESTAMP(3) NOT NULL,
+          CONSTRAINT "user_rate_limits_pkey" PRIMARY KEY ("id")
+        )
+      `;
+    } catch (e) {
+      console.log('UserRateLimit table already exists');
     }
     
     // Seed data
@@ -165,6 +345,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         password: adminPassword,
         name: 'Administrador del Sistema',
         role: 'ADMIN',
+        status: 'APPROVED',
         deviceId: null,
         isActive: true,
       },
@@ -180,7 +361,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         email: 'auditor@escrutinio.com',
         password: auditorPassword,
         name: 'Auditor del Sistema',
-        role: 'ORGANIZATION_MEMBER',
+        role: 'OBSERVER',
+        status: 'APPROVED',
         deviceId: null,
         isActive: true,
       },
