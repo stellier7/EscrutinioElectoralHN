@@ -10,13 +10,17 @@ type Props = {
 };
 
 export function VoteFooter({ escrutinioId, ballotsUsed, onContinue }: Props) {
-  const { counts, flush, pending } = useVoteStore((s) => ({ counts: s.counts, flush: s.flush, pending: s.pending }));
+  const { counts, syncPendingVotes } = useVoteStore((s) => ({ 
+    counts: s.counts, 
+    syncPendingVotes: s.syncPendingVotes 
+  }));
 
   const total = useMemo(() => Object.values(counts).reduce((a, b) => a + (b || 0), 0), [counts]);
   const isOver = ballotsUsed !== undefined && total > ballotsUsed;
 
   const handleContinue = async () => {
-    await flush(escrutinioId);
+    // Sincronizar votos pendientes antes de continuar
+    await syncPendingVotes();
     onContinue();
   };
 
@@ -35,8 +39,7 @@ export function VoteFooter({ escrutinioId, ballotsUsed, onContinue }: Props) {
             variant={isOver ? 'secondary' : 'primary'}
             size="lg"
             onClick={handleContinue}
-            disabled={total === 0 || isOver || pending}
-            loading={pending}
+            disabled={total === 0 || isOver}
           >
             Continuar a Evidencia
           </Button>
