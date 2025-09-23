@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { AuthUtils } from '@/lib/auth';
+import { SimpleRateLimiter } from '@/lib/rate-limiter';
 
 export const runtime = 'nodejs';
 
@@ -21,6 +22,19 @@ export async function POST(request: Request) {
     const payload = AuthUtils.verifyToken(token);
     if (!payload) {
       return NextResponse.json({ success: false, error: 'Token inválido' }, { status: 401 });
+    }
+
+    // Rate limiting por rol de usuario
+    const rateLimitResult = SimpleRateLimiter.checkLimit(payload.userId, payload.role);
+    if (!rateLimitResult.allowed) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Límite de requests excedido. Intenta de nuevo más tarde.',
+        rateLimitInfo: {
+          remaining: rateLimitResult.remaining,
+          resetTime: rateLimitResult.resetTime
+        }
+      }, { status: 429 });
     }
 
     const json = await request.json();

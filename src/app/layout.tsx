@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '../components/AuthProvider';
 import { GlobalToast } from '@/components/ui/Toast';
+import { OfflineStatus } from '@/components/OfflineStatus';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -42,6 +43,7 @@ export default function RootLayout({
           </div>
           <div id="modal-root" />
           <GlobalToast />
+          <OfflineStatus />
         </AuthProvider>
       </body>
     </html>

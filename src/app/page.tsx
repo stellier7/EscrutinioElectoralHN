@@ -69,28 +69,40 @@ export default function HomePage() {
 
     try {
       if (isLogin) {
-        await login({
+        const response = await login({
           email: formData.email,
           password: formData.password,
         });
+        
+        // Solo redirigir si el usuario está aprobado
+        if (response.user.status === 'APPROVED') {
+          router.push('/dashboard');
+        } else {
+          setErrors({ general: '✅ Inicio de sesión exitoso. Tu cuenta está pendiente de aprobación por un administrador. Recibirás una notificación cuando sea aprobada.' });
+        }
       } else {
-        await register({
+        const response = await register({
           email: formData.email,
           password: formData.password,
           name: formData.name,
           role: formData.role as any,
         });
+        
+        // Solo redirigir si el usuario está aprobado
+        if (response.user.status === 'APPROVED') {
+          router.push('/dashboard');
+        } else {
+          setErrors({ general: '🎉 ¡Registro exitoso! Te has registrado como ' + (formData.role === 'OBSERVER' ? 'Observador' : 'Voluntario') + '. Tu cuenta está pendiente de aprobación por un administrador.' });
+        }
       }
-      
-      router.push('/dashboard');
     } catch (error: any) {
       setErrors({ general: error.message });
     }
   };
 
   const roleOptions = [
+    { value: 'OBSERVER', label: 'Observador' },
     { value: 'VOLUNTEER', label: 'Voluntario' },
-    { value: 'ORGANIZATION_MEMBER', label: 'Miembro de Organización' },
   ];
 
   return (
@@ -169,10 +181,12 @@ export default function HomePage() {
                   </div>
                   <div className="ml-2">
                     <h3 className="text-xs font-medium text-blue-800">
-                      Primer Usuario del Sistema
+                      Información Importante
                     </h3>
                     <div className="mt-1 text-xs text-blue-700">
-                      <p>El primer usuario será designado como <strong>Administrador</strong> con acceso completo.</p>
+                      <p>• <strong>Observador:</strong> Personal entrenado con prioridad alta</p>
+                      <p>• <strong>Voluntario:</strong> Ciudadanos generales con prioridad baja</p>
+                      <p>• Tu cuenta será revisada por un administrador antes de ser activada</p>
                     </div>
                   </div>
                 </div>

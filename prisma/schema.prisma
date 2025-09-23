@@ -11,9 +11,16 @@ datasource db {
 }
 
 enum UserRole {
-  VOLUNTEER
-  ORGANIZATION_MEMBER
-  ADMIN
+  OBSERVER        // Observadores entrenados (prioridad alta)
+  VOLUNTEER       // Voluntarios generales (prioridad baja)
+  ADMIN           // Administradores del sistema
+}
+
+enum UserStatus {
+  PENDING         // Esperando aprobación
+  APPROVED        // Aprobado y activo
+  REJECTED        // Rechazado
+  SUSPENDED       // Suspendido temporalmente
 }
 
 enum ElectionLevel {
@@ -38,6 +45,9 @@ enum AuditLogAction {
   CORRECTION
   TRANSMISSION
   VIEW_RESULTS
+  USER_APPROVED
+  USER_REJECTED
+  USER_SUSPENDED
 }
 
 enum PapeletaStatus {
@@ -47,19 +57,41 @@ enum PapeletaStatus {
 }
 
 model User {
-  id              String    @id @default(cuid())
-  email           String    @unique
+  id              String      @id @default(cuid())
+  email           String      @unique
   password        String
   name            String
-  role            UserRole  @default(VOLUNTEER)
-  deviceId        String?   @unique // Un dispositivo por usuario
-  isActive        Boolean   @default(true)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  role            UserRole    @default(VOLUNTEER)
+  status          UserStatus  @default(PENDING)
+  deviceId        String?     @unique // Un dispositivo por usuario
+  
+  // Información adicional para aprobación
+  phone           String?
+  organization    String?
+  notes           String?     // Notas del admin sobre el usuario
+  
+  // Metadatos de aprobación
+  approvedAt      DateTime?
+  approvedBy      String?     // ID del admin que aprobó
+  rejectedAt      DateTime?
+  rejectedBy      String?     // ID del admin que rechazó
+  rejectionReason String?
+  
+  isActive        Boolean     @default(true)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
   
   // Relaciones
   escrutinios     Escrutinio[]
   auditLogs       AuditLog[]
+  offlineQueue    OfflineQueue[]
+  rateLimit       UserRateLimit?
+  
+  // Relaciones auto-referenciales para aprobación
+  approvedByUser  User?       @relation("UserApproval", fields: [approvedBy], references: [id])
+  rejectedByUser  User?       @relation("UserRejection", fields: [rejectedBy], references: [id])
+  approvedUsers   User[]      @relation("UserApproval")
+  rejectedUsers   User[]      @relation("UserRejection")
   
   @@map("users")
 }
@@ -162,6 +194,10 @@ model Escrutinio {
   validationHash  String?
   encryptedData   String?
   
+  // Sistema de prioridad y cola
+  priority        Int                @default(0) // 0 = normal, 1 = alta (observadores)
+  queuePosition   Int?               // Posición en cola si hay congestión
+  
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
   
@@ -254,4 +290,43 @@ model SystemConfig {
   updatedAt       DateTime  @updatedAt
   
   @@map("system_config")
+}
+
+// Nueva tabla para manejar cola de uploads offline
+model OfflineQueue {
+  id              String    @id @default(cuid())
+  userId          String
+  action          String    // 'upload_image', 'submit_votes', etc.
+  data            Json      // Datos a procesar cuando regrese conexión
+  priority        Int       @default(0) // 0 = normal, 1 = alta
+  retryCount      Int       @default(0)
+  maxRetries      Int       @default(3)
+  status          String    @default("pending") // pending, processing, completed, failed
+  error           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  processedAt     DateTime?
+  
+  // Relaciones
+  user            User      @relation(fields: [userId], references: [id])
+  
+  @@map("offline_queue")
+}
+
+// Nueva tabla para rate limiting por usuario
+model UserRateLimit {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  requests        Int       @default(0)
+  windowStart     DateTime  @default(now())
+  lastRequest     DateTime  @default(now())
+  isBlocked       Boolean   @default(false)
+  blockedUntil    DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relaciones
+  user            User      @relation(fields: [userId], references: [id])
+  
+  @@map("user_rate_limits")
 } 

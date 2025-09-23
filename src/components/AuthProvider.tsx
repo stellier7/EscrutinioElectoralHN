@@ -116,7 +116,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (response.data.success) {
         const authResponse: AuthResponse = response.data.data;
-        saveAuthData(authResponse);
+        // Solo guardar datos si el usuario está aprobado
+        if (authResponse.user.status === 'APPROVED') {
+          saveAuthData(authResponse);
+        }
         return authResponse;
       } else {
         throw new Error(response.data.error || 'Error en el login');
@@ -142,7 +145,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (response.data.success) {
         const authResponse: AuthResponse = response.data.data;
-        saveAuthData(authResponse);
+        // Solo guardar datos si el usuario está aprobado
+        if (authResponse.user.status === 'APPROVED') {
+          saveAuthData(authResponse);
+        }
         return authResponse;
       } else {
         throw new Error(response.data.error || 'Error en el registro');

@@ -5,6 +5,7 @@ import axios from 'axios';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../components/AuthProvider';
 import { useGeolocation } from '../../hooks/useGeolocation';
+import { useOfflineQueue } from '../../hooks/useOfflineQueue';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import SearchInput from '../../components/ui/SearchInput';
@@ -72,6 +73,9 @@ function EscrutinioPageContent() {
     getCurrentLocation, 
     showLocationInstructions 
   } = useGeolocation();
+
+  // Usar el hook de cola offline
+  const { addToQueue, isOnline, hasOfflineItems } = useOfflineQueue();
 
   // Manejar selección de JRV
   const handleJRVSelect = (result: JRVSearchResult) => {
@@ -243,6 +247,29 @@ function EscrutinioPageContent() {
     setIsSubmitting(true);
 
     try {
+      // Si estamos offline, guardar en cola
+      if (!isOnline) {
+        const offlineData = {
+          escrutinioId,
+          votes: voteStore.counts,
+          actaImage: actaImage ? {
+            name: actaImage.name,
+            type: actaImage.type,
+            size: actaImage.size,
+          } : null,
+          gps: { latitude: location.lat, longitude: location.lng, accuracy: location.accuracy },
+          mesaNumber: selectedMesa,
+          electionLevel: selectedLevel,
+        };
+
+        addToQueue('submit_escrutinio', offlineData);
+        alert('Escrutinio guardado para enviar cuando regrese la conexión');
+        voteStore.clear();
+        router.push('/resultados');
+        return;
+      }
+
+      // Si estamos online, proceder normalmente
       await uploadEvidenceIfNeeded();
       // Marcar escrutinio como completado para que aparezca en resultados
       if (escrutinioId) {
@@ -260,7 +287,26 @@ function EscrutinioPageContent() {
       voteStore.clear();
       router.push('/resultados');
     } catch (error) {
-      alert('Error al enviar el escrutinio');
+      // Si falla el envío online, intentar guardar offline
+      if (isOnline) {
+        const offlineData = {
+          escrutinioId,
+          votes: voteStore.counts,
+          actaImage: actaImage ? {
+            name: actaImage.name,
+            type: actaImage.type,
+            size: actaImage.size,
+          } : null,
+          gps: { latitude: location.lat, longitude: location.lng, accuracy: location.accuracy },
+          mesaNumber: selectedMesa,
+          electionLevel: selectedLevel,
+        };
+
+        addToQueue('submit_escrutinio', offlineData);
+        alert('Error de conexión. Escrutinio guardado para enviar más tarde.');
+      } else {
+        alert('Error al enviar el escrutinio');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -585,6 +631,40 @@ function EscrutinioPageContent() {
           </div>
         )}
       </div>
+
+      {/* Componente de estado offline */}
+      {(hasOfflineItems || !isOnline) && (
+        <div className="fixed bottom-4 left-4 right-4 z-50 md:left-auto md:right-4 md:max-w-sm">
+          {!isOnline ? (
+            <div className="bg-red-500 text-white p-4 rounded-lg shadow-lg">
+              <div className="flex items-center">
+                <div className="w-3 h-3 bg-red-200 rounded-full mr-3 animate-pulse"></div>
+                <div className="flex-1">
+                  <p className="font-semibold">Sin conexión a internet</p>
+                  <p className="text-sm opacity-90">
+                    {hasOfflineItems 
+                      ? `${hasOfflineItems} escrutinios guardados para cuando regrese la conexión`
+                      : 'Tus datos se guardarán automáticamente'
+                    }
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : hasOfflineItems ? (
+            <div className="bg-yellow-500 text-white p-4 rounded-lg shadow-lg">
+              <div className="flex items-center">
+                <div className="w-3 h-3 bg-yellow-200 rounded-full mr-3"></div>
+                <div className="flex-1">
+                  <p className="font-semibold">Escrutinios pendientes</p>
+                  <p className="text-sm opacity-90">
+                    {hasOfflineItems} escrutinios guardados para sincronizar
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      )}
     </div>
   );
 }

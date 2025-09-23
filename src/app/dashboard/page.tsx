@@ -17,7 +17,9 @@ import {
   CheckCircle,
   AlertCircle,
   Menu,
-  X
+  X,
+  Crown,
+  Clock
 } from 'lucide-react';
 
 interface DashboardStats {
@@ -76,6 +78,69 @@ export default function DashboardPage() {
   const handleLogout = async () => {
     await logout();
     router.push('/');
+  };
+
+  // Función para obtener el color del estado
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'APPROVED': return 'text-green-600 bg-green-50 border-green-200';
+      case 'PENDING': return 'text-yellow-600 bg-yellow-50 border-yellow-200';
+      case 'REJECTED': return 'text-red-600 bg-red-50 border-red-200';
+      case 'SUSPENDED': return 'text-gray-600 bg-gray-50 border-gray-200';
+      default: return 'text-gray-600 bg-gray-50 border-gray-200';
+    }
+  };
+
+  // Función para obtener el icono del estado
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'APPROVED': return <CheckCircle className="h-4 w-4" />;
+      case 'PENDING': return <Clock className="h-4 w-4" />;
+      case 'REJECTED': return <AlertCircle className="h-4 w-4" />;
+      case 'SUSPENDED': return <AlertCircle className="h-4 w-4" />;
+      default: return <Clock className="h-4 w-4" />;
+    }
+  };
+
+  // Función para obtener el texto del estado
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'APPROVED': return 'Aprobado';
+      case 'PENDING': return 'Pendiente';
+      case 'REJECTED': return 'Rechazado';
+      case 'SUSPENDED': return 'Suspendido';
+      default: return 'Desconocido';
+    }
+  };
+
+  // Función para obtener el color del rol
+  const getRoleColor = (role: string) => {
+    switch (role) {
+      case 'OBSERVER': return 'text-blue-600 bg-blue-50 border-blue-200';
+      case 'VOLUNTEER': return 'text-purple-600 bg-purple-50 border-purple-200';
+      case 'ADMIN': return 'text-red-600 bg-red-50 border-red-200';
+      default: return 'text-gray-600 bg-gray-50 border-gray-200';
+    }
+  };
+
+  // Función para obtener el icono del rol
+  const getRoleIcon = (role: string) => {
+    switch (role) {
+      case 'OBSERVER': return <User className="h-4 w-4" />;
+      case 'VOLUNTEER': return <User className="h-4 w-4" />;
+      case 'ADMIN': return <Crown className="h-4 w-4" />;
+      default: return <User className="h-4 w-4" />;
+    }
+  };
+
+  // Función para obtener el texto del rol
+  const getRoleText = (role: string) => {
+    switch (role) {
+      case 'OBSERVER': return 'Observador';
+      case 'VOLUNTEER': return 'Voluntario';
+      case 'ADMIN': return 'Administrador';
+      default: return 'Usuario';
+    }
   };
 
   if (isLoading) {
@@ -309,10 +374,22 @@ export default function DashboardPage() {
             </div>
             
             <div className="flex items-center space-x-3">
-              <div className="flex items-center space-x-2">
-                <User className="h-4 w-4 text-gray-400" />
-                <span className="text-sm text-gray-700">{user.name}</span>
+              {/* Status Indicator */}
+              <div className={`flex items-center gap-2 px-3 py-1 rounded-full border text-sm font-medium ${getStatusColor(user.status)}`}>
+                {getStatusIcon(user.status)}
+                {getStatusText(user.status)}
               </div>
+              {user.role === 'ADMIN' && (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => router.push('/admin')}
+                  className="hidden sm:flex"
+                >
+                  <Crown className="h-4 w-4 mr-1" />
+                  Admin
+                </Button>
+              )}
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                 className="p-2 rounded-lg hover:bg-gray-100 touch-target"
@@ -340,10 +417,26 @@ export default function DashboardPage() {
             </div>
             
             <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <User className="h-5 w-5 text-gray-400" />
-                <span className="text-sm text-gray-700">{user.name}</span>
+              {/* Status Indicator */}
+              <div className={`flex items-center gap-2 px-3 py-1 rounded-full border text-sm font-medium ${getStatusColor(user.status)}`}>
+                {getStatusIcon(user.status)}
+                {getStatusText(user.status)}
               </div>
+              {/* Role Indicator */}
+              <div className={`flex items-center gap-2 px-3 py-1 rounded-full border text-sm font-medium ${getRoleColor(user.role)}`}>
+                {getRoleIcon(user.role)}
+                {getRoleText(user.role)}
+              </div>
+              {user.role === 'ADMIN' && (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => router.push('/admin')}
+                >
+                  <Crown className="h-4 w-4 mr-2" />
+                  Admin
+                </Button>
+              )}
               <Button
                 variant="secondary"
                 size="sm"
@@ -392,6 +485,18 @@ export default function DashboardPage() {
                     </button>
                   );
                 })}
+                {user.role === 'ADMIN' && (
+                  <button
+                    onClick={() => {
+                      router.push('/admin');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors text-purple-600 hover:text-purple-700 hover:bg-purple-50 touch-target"
+                  >
+                    <Crown className="h-5 w-5 mr-3" />
+                    Panel de Administración
+                  </button>
+                )}
                 <div className="pt-4 border-t">
                   <Button
                     variant="secondary"
@@ -428,6 +533,15 @@ export default function DashboardPage() {
                   </button>
                 );
               })}
+              {user.role === 'ADMIN' && (
+                <button
+                  onClick={() => router.push('/admin')}
+                  className="w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors text-purple-600 hover:text-purple-700 hover:bg-purple-50 border border-purple-200"
+                >
+                  <Crown className="h-5 w-5 mr-3" />
+                  Panel de Administración
+                </button>
+              )}
             </nav>
           </div>
         </div>
@@ -435,6 +549,62 @@ export default function DashboardPage() {
         {/* Main Content */}
         <div className="flex-1 p-4 lg:p-8">
           <div className="max-w-2xl mx-auto">
+            {/* Status Card */}
+            <div className="bg-white overflow-hidden shadow rounded-lg mb-6">
+              <div className="px-4 py-5 sm:p-6">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <div className={`p-3 rounded-full ${getStatusColor(user.status)}`}>
+                      {getStatusIcon(user.status)}
+                    </div>
+                  </div>
+                  <div className="ml-5 w-0 flex-1">
+                    <dl>
+                      <dt className="text-sm font-medium text-gray-500 truncate">
+                        Estado de tu cuenta
+                      </dt>
+                      <dd className="text-lg font-medium text-gray-900">
+                        {getStatusText(user.status)}
+                      </dd>
+                    </dl>
+                  </div>
+                </div>
+                {user.status === 'PENDING' && (
+                  <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
+                    <div className="flex">
+                      <div className="flex-shrink-0">
+                        <Clock className="h-5 w-5 text-yellow-400" />
+                      </div>
+                      <div className="ml-3">
+                        <h3 className="text-sm font-medium text-yellow-800">
+                          Cuenta pendiente de aprobación
+                        </h3>
+                        <div className="mt-2 text-sm text-yellow-700">
+                          <p>Tu cuenta está siendo revisada por un administrador. Recibirás una notificación cuando sea aprobada.</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {user.status === 'APPROVED' && (
+                  <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-md">
+                    <div className="flex">
+                      <div className="flex-shrink-0">
+                        <CheckCircle className="h-5 w-5 text-green-400" />
+                      </div>
+                      <div className="ml-3">
+                        <h3 className="text-sm font-medium text-green-800">
+                          Cuenta aprobada
+                        </h3>
+                        <div className="mt-2 text-sm text-green-700">
+                          <p>Tu cuenta ha sido aprobada. Puedes acceder a todas las funcionalidades del sistema.</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
             {renderContent()}
           </div>
         </div>

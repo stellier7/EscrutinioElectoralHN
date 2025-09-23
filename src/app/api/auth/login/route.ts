@@ -44,8 +44,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           password: true,
           name: true,
           role: true,
+          status: true,
           deviceId: true,
           isActive: true,
+          rejectionReason: true,
         },
       });
     } catch (dbError) {
@@ -82,6 +84,46 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       } as ApiResponse, { status: 401 });
     }
 
+    // Verificar estado del usuario
+    if (user.status === 'PENDING') {
+      try {
+        await AuditLogger.logLogin(user.id, email, false, request);
+      } catch (auditError) {
+        console.error('Audit logging error:', auditError);
+      }
+      return NextResponse.json({
+        success: false,
+        error: 'Tu cuenta está pendiente de aprobación. Un administrador revisará tu solicitud pronto.',
+        requiresApproval: true,
+      } as ApiResponse, { status: 403 });
+    }
+
+    if (user.status === 'REJECTED') {
+      try {
+        await AuditLogger.logLogin(user.id, email, false, request);
+      } catch (auditError) {
+        console.error('Audit logging error:', auditError);
+      }
+      return NextResponse.json({
+        success: false,
+        error: `Tu cuenta ha sido rechazada. ${user.rejectionReason ? `Razón: ${user.rejectionReason}` : ''}`,
+        isRejected: true,
+      } as ApiResponse, { status: 403 });
+    }
+
+    if (user.status === 'SUSPENDED') {
+      try {
+        await AuditLogger.logLogin(user.id, email, false, request);
+      } catch (auditError) {
+        console.error('Audit logging error:', auditError);
+      }
+      return NextResponse.json({
+        success: false,
+        error: 'Tu cuenta ha sido suspendida temporalmente. Contacta al administrador.',
+        isSuspended: true,
+      } as ApiResponse, { status: 403 });
+    }
+
     // No device association required
 
     // Generate JWT token
@@ -112,6 +154,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         email: user.email,
         name: user.name,
         role: user.role,
+        status: user.status,
         deviceId: null,
         isActive: user.isActive,
         createdAt: new Date(),

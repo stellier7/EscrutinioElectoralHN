@@ -9,7 +9,10 @@ export type {
   Correction,
   AuditLog,
   SystemConfig,
+  OfflineQueue,
+  UserRateLimit,
   UserRole,
+  UserStatus,
   ElectionLevel,
   TransmissionStatus,
   AuditLogAction,
@@ -21,6 +24,9 @@ export interface ApiResponse<T = any> {
   data?: T;
   message?: string;
   error?: string;
+  requiresApproval?: boolean;
+  isRejected?: boolean;
+  isSuspended?: boolean;
 }
 
 // Authentication types
@@ -33,7 +39,9 @@ export interface RegisterRequest {
   email: string;
   password: string;
   name: string;
-  role: 'VOLUNTEER' | 'ORGANIZATION_MEMBER' | 'ADMIN';
+  role: 'OBSERVER' | 'VOLUNTEER';
+  phone?: string;
+  organization?: string;
 }
 
 export interface AuthResponse {
@@ -230,4 +238,60 @@ export interface AppConfig {
   maxLoginAttempts: number;
   geolocationAccuracy: number;
   auditRetentionDays: number;
+}
+
+// Admin system types
+export interface UserApprovalRequest {
+  userId: string;
+  action: 'APPROVE' | 'REJECT' | 'SUSPEND';
+  notes?: string;
+  rejectionReason?: string;
+}
+
+export interface UserListFilters {
+  status?: 'PENDING' | 'APPROVED' | 'REJECTED' | 'SUSPENDED';
+  role?: 'OBSERVER' | 'VOLUNTEER' | 'ADMIN';
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface UserListResponse {
+  users: any[]; // Using any for now to avoid import issues
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+// Offline queue types
+export interface OfflineQueueItem {
+  id: string;
+  action: string;
+  data: any;
+  priority: number;
+  retryCount: number;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  createdAt: string;
+}
+
+export interface OfflineQueueStatus {
+  pending: number;
+  processing: number;
+  completed: number;
+  failed: number;
+  isOnline: boolean;
+}
+
+// Rate limiting types
+export interface RateLimitConfig {
+  requests: number;
+  window: number; // in milliseconds
+}
+
+export interface RateLimitStatus {
+  requests: number;
+  windowStart: string;
+  isBlocked: boolean;
+  blockedUntil?: string;
 } 

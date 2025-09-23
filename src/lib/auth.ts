@@ -7,6 +7,7 @@ export interface JWTPayload {
   userId: string;
   email: string;
   role: string;
+  status: string;
 }
 
 export class AuthUtils {
@@ -23,6 +24,7 @@ export class AuthUtils {
       userId: user.id,
       email: user.email,
       role: user.role,
+      status: user.status,
     };
 
     return jwt.sign(payload, env.JWT_SECRET, {
@@ -68,4 +70,7 @@ export class AuthUtils {
   static generateSessionToken(): string {
     return Math.random().toString(36).substr(2) + Date.now().toString(36);
   }
-} 
+}
+
+// Re-export auth options
+export { authOptions } from './auth-options'; 
