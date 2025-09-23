@@ -140,13 +140,13 @@ export class DatabaseOptimizer {
     let valid = 0;
     let expired = 0;
 
-    for (const [key, value] of this.cache.entries()) {
+    this.cache.forEach((value, key) => {
       if (now < value.expires) {
         valid++;
       } else {
         expired++;
       }
-    }
+    });
 
     return {
       total: this.cache.size,
