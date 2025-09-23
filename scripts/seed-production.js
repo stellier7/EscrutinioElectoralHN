@@ -92,7 +92,7 @@ async function seedProduction() {
         update: {},
         create: {
           id: 'candidate-3',
-          name: 'N. Avila',
+          name: 'N. Ávila',
           party: 'PINU-SD',
           number: 3,
           electionLevel: 'PRESIDENTIAL',

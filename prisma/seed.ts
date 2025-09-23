@@ -62,7 +62,7 @@ async function main() {
   const candidates = [
     { name: 'Mario Rivera', party: 'PDC', number: 1, level: 'PRESIDENTIAL' },
     { name: 'Rixi Moncada', party: 'LIBRE', number: 2, level: 'PRESIDENTIAL' },
-    { name: 'N. Avila', party: 'PINU-SD', number: 3, level: 'PRESIDENTIAL' },
+    { name: 'N. Ávila', party: 'PINU-SD', number: 3, level: 'PRESIDENTIAL' },
     { name: 'Salvador Nasralla', party: 'PLH', number: 4, level: 'PRESIDENTIAL' },
     { name: 'Nasry Asfura', party: 'PNH', number: 5, level: 'PRESIDENTIAL' },
   ];
