@@ -47,6 +47,7 @@ interface JRVInfo {
 interface DiputadosData {
   jrv: JRVInfo;
   parties: Party[];
+  diputados: number;
 }
 
 interface PartyCounts {
@@ -182,7 +183,8 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
 
           const data = {
             jrv: jrvData,
-            parties: parties
+            parties: parties,
+            diputados: jrvData.diputados
           };
           
           setDiputadosData(data);

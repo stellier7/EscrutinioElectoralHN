@@ -1,7 +1,7 @@
 "use client";
 import React from 'react';
 import { AlertCircle, X, CheckCircle } from 'lucide-react';
-import { Button } from './Button';
+import Button from './Button';
 
 interface VoteLimitAlertProps {
   isVisible: boolean;
