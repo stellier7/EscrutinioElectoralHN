@@ -16,9 +16,10 @@ type Props = {
   onIncrement: () => void;
   onDecrement: () => void;
   isPending?: boolean; // pending batch indicator
+  disabled?: boolean; // disable voting buttons
 };
 
-export function VoteCard({ id, name, party, partyColor = '#e5e7eb', number, count, onIncrement, onDecrement, isPending }: Props) {
+export function VoteCard({ id, name, party, partyColor = '#e5e7eb', number, count, onIncrement, onDecrement, isPending, disabled = false }: Props) {
   const [animate, setAnimate] = useState(false);
   const pressTimer = useRef<number | null>(null);
   
@@ -27,6 +28,7 @@ export function VoteCard({ id, name, party, partyColor = '#e5e7eb', number, coun
   const effectivePartyColor = partyColor !== '#e5e7eb' ? partyColor : partyConfig.color;
 
   const handleClick = useCallback(() => {
+    if (disabled) return;
     onIncrement();
     setAnimate(true);
   }, [onIncrement]);
@@ -38,6 +40,7 @@ export function VoteCard({ id, name, party, partyColor = '#e5e7eb', number, coun
   }, [animate]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (disabled) return;
     if (e.key === 'Enter' || e.key === ' ') {
       if (e.shiftKey) {
         onDecrement();
@@ -50,6 +53,7 @@ export function VoteCard({ id, name, party, partyColor = '#e5e7eb', number, coun
   };
 
   const startLongPress = () => {
+    if (disabled) return;
     if (pressTimer.current) window.clearTimeout(pressTimer.current);
     pressTimer.current = window.setTimeout(() => {
       onDecrement();
@@ -75,11 +79,13 @@ export function VoteCard({ id, name, party, partyColor = '#e5e7eb', number, coun
       onTouchEnd={cancelLongPress}
       onMouseDown={startLongPress}
       onMouseUp={cancelLongPress}
+      disabled={disabled}
       className={clsx(
         'w-full flex items-center rounded-lg border shadow-sm focus:outline-none focus:ring-2 transition-transform',
         'active:scale-[0.98] touch-manipulation select-none',
         animate && 'scale-[1.02]',
-        'min-h-[70px]' // Altura mínima para mejor toque
+        'min-h-[70px]', // Altura mínima para mejor toque
+        disabled && 'opacity-50 cursor-not-allowed'
       )}
       style={{ 
         backgroundColor: effectivePartyColor,
@@ -114,8 +120,13 @@ export function VoteCard({ id, name, party, partyColor = '#e5e7eb', number, coun
             <button
               type="button"
               aria-label={`Restar 1 a ${name}`}
-              onClick={(e) => { e.stopPropagation(); onDecrement(); }}
-              className="px-3 py-2 text-sm rounded border bg-white/20 active:bg-white/30 touch-manipulation select-none min-h-[32px] min-w-[32px] text-white border-white/30 hover:bg-white/30"
+              onClick={(e) => { 
+                if (disabled) return;
+                e.stopPropagation(); 
+                onDecrement(); 
+              }}
+              disabled={disabled}
+              className="px-3 py-2 text-sm rounded border bg-white/20 active:bg-white/30 touch-manipulation select-none min-h-[32px] min-w-[32px] text-white border-white/30 hover:bg-white/30 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               –
             </button>

@@ -43,6 +43,10 @@ export default function PresidencialEscrutinio({
   const [actaImage, setActaImage] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
+  
+  // Estados para la lógica de pasos
+  const [isEscrutinioClosed, setIsEscrutinioClosed] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const handleActaUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -50,6 +54,46 @@ export default function PresidencialEscrutinio({
       setActaImage(file);
     }
   }, []);
+
+  // Función para cerrar/editar escrutinio
+  const handleToggleEscrutinio = () => {
+    setIsEscrutinioClosed(!isEscrutinioClosed);
+  };
+
+  // Función para enviar resultados
+  const handleSendResults = async () => {
+    if (!actaImage) {
+      alert('Por favor sube una foto del acta antes de enviar los resultados');
+      return;
+    }
+
+    setIsCompleting(true);
+    
+    try {
+      // Aquí se implementaría la lógica de envío real
+      // Por ahora simulamos el envío
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      setIsCompleting(false);
+      setShowSuccessModal(true);
+    } catch (error) {
+      console.error('Error enviando resultados:', error);
+      setIsCompleting(false);
+      alert('Error al enviar los resultados. Intenta de nuevo.');
+    }
+  };
+
+  // Función para revisar escrutinio (mantiene la vista congelada)
+  const handleReviewEscrutinio = () => {
+    setShowSuccessModal(false);
+    // Mantener isEscrutinioClosed = true para vista congelada
+  };
+
+  // Función para volver a la pantalla principal
+  const handleGoBack = () => {
+    // Aquí se implementaría la navegación de vuelta
+    window.location.href = '/';
+  };
 
   const getTotalVotes = () => {
     return Object.values(counts).reduce((sum, count) => sum + count, 0);
@@ -98,6 +142,25 @@ export default function PresidencialEscrutinio({
             </p>
           </div>
           
+          {/* Botón Cerrar/Editar Escrutinio */}
+          <div className="mb-6">
+            <button
+              onClick={handleToggleEscrutinio}
+              className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+                isEscrutinioClosed
+                  ? 'bg-orange-600 hover:bg-orange-700 text-white'
+                  : 'bg-red-600 hover:bg-red-700 text-white'
+              }`}
+            >
+              {isEscrutinioClosed ? 'Editar Escrutinio' : 'Cerrar Escrutinio'}
+            </button>
+            {isEscrutinioClosed && (
+              <p className="mt-2 text-sm text-gray-600">
+                El escrutinio está cerrado. Los votos no se pueden modificar.
+              </p>
+            )}
+          </div>
+
           {/* Lista de Candidatos */}
           <div className="space-y-3 mb-8">
             {candidates.map((c) => (
@@ -110,11 +173,12 @@ export default function PresidencialEscrutinio({
                 number={c.number}
                 count={counts[c.id] || 0}
                 isPending={false} // Sin indicadores de pending - conteo instantáneo
+                disabled={isEscrutinioClosed} // Deshabilitar cuando el escrutinio esté cerrado
                 onIncrement={() =>
-                  increment(c.id, { escrutinioId, userId, mesaId, gps: gps || undefined, deviceId })
+                  !isEscrutinioClosed && increment(c.id, { escrutinioId, userId, mesaId, gps: gps || undefined, deviceId })
                 }
                 onDecrement={() =>
-                  decrement(c.id, { escrutinioId, userId, mesaId, gps: gps || undefined, deviceId })
+                  !isEscrutinioClosed && decrement(c.id, { escrutinioId, userId, mesaId, gps: gps || undefined, deviceId })
                 }
               />
             ))}
@@ -163,7 +227,8 @@ export default function PresidencialEscrutinio({
                   type="file"
                   accept="image/*"
                   onChange={handleActaUpload}
-                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  disabled={isEscrutinioClosed}
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 {actaImage && (
                   <div className="flex items-center gap-2 text-sm text-green-600">
@@ -174,39 +239,71 @@ export default function PresidencialEscrutinio({
               </div>
             </div>
 
-            {/* Finalizar Escrutinio */}
-            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-              <h3 className="text-lg font-semibold text-blue-900 mb-3 flex items-center gap-2">
-                <Upload className="h-5 w-5" />
-                Finalizar Escrutinio
-              </h3>
-              <p className="text-sm text-blue-700 mb-4">
-                Una vez que hayas completado el conteo de todos los votos, sube la foto del acta y finaliza el escrutinio.
-              </p>
-              <button
-                onClick={() => {
-                  // Esta función se implementará cuando se integre con el flujo principal
-                  console.log('Finalizar escrutinio presidencial');
-                }}
-                disabled={!actaImage || isCompleting || isUploading}
-                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-              >
-                {isCompleting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Finalizando...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="h-4 w-4" />
-                    Finalizar Escrutinio
-                  </>
-                )}
-              </button>
-            </div>
+            {/* Botón Enviar Resultados - Solo aparece cuando hay foto */}
+            {actaImage && (
+              <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                <h3 className="text-lg font-semibold text-green-900 mb-3 flex items-center gap-2">
+                  <Upload className="h-5 w-5" />
+                  Enviar Resultados
+                </h3>
+                <p className="text-sm text-green-700 mb-4">
+                  La foto del acta está lista. Puedes enviar los resultados del escrutinio.
+                </p>
+                <button
+                  onClick={handleSendResults}
+                  disabled={isCompleting || isUploading}
+                  className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                >
+                  {isCompleting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Enviando...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4" />
+                      Enviar Resultados
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
+
+      {/* Modal de Confirmación de Envío */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <div className="text-center">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+                <CheckCircle className="h-6 w-6 text-green-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                ¡Envío exitoso!
+              </h3>
+              <p className="text-sm text-gray-600 mb-6">
+                Los resultados del escrutinio han sido enviados correctamente.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  onClick={handleReviewEscrutinio}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                >
+                  Revisar Escrutinio
+                </button>
+                <button
+                  onClick={handleGoBack}
+                  className="flex-1 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium"
+                >
+                  Volver
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
