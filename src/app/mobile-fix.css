@@ -63,4 +63,23 @@
     padding: 0 !important;
     overflow-x: hidden !important;
   }
+  
+  /* Centrar mejor el contenido en el paso 1 (configuración) */
+  .max-w-4xl.mx-auto {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+  
+  /* Asegurar que los botones de nivel estén bien centrados */
+  .grid.grid-cols-1.sm\\:grid-cols-2 {
+    gap: 12px !important;
+  }
+  
+  /* Centrar mejor el input de JRV */
+  .space-y-4 > div {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
 }
