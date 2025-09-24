@@ -49,10 +49,10 @@ export async function POST(request: Request, { params }: { params: { id: string 
       data: {
         userId: payload.userId,
         action: 'REOPEN_ESCRUTINIO',
-        description: `Escrutinio reabierto para edición en JRV ${existing.mesa.numero}`,
+        description: `Escrutinio reabierto para edición en JRV ${existing.mesa.number}`,
         metadata: {
           escrutinioId,
-          mesaNumber: existing.mesa.numero,
+          mesaNumber: existing.mesa.number,
           electionLevel: existing.electionLevel,
           voteSnapshotBeforeReopen: voteSnapshot,
           timestamp: new Date().toISOString(),

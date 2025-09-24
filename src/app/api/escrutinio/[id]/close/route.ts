@@ -36,10 +36,10 @@ export async function POST(request: Request, { params }: { params: { id: string 
       data: {
         userId: payload.userId,
         action: 'CLOSE_ESCRUTINIO',
-        description: `Escrutinio cerrado para JRV ${existing.mesa.numero}`,
+        description: `Escrutinio cerrado para JRV ${existing.mesa.number}`,
         metadata: {
           escrutinioId,
-          mesaNumber: existing.mesa.numero,
+          mesaNumber: existing.mesa.number,
           electionLevel: existing.electionLevel,
           timestamp: new Date().toISOString(),
         },
