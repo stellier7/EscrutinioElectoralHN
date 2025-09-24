@@ -402,7 +402,7 @@ function EscrutinioPageContent() {
   }, [escrutinioState.selectedMesa, escrutinioState.selectedLevel, voteStore, saveState]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50" style={{ fontSize: "16px" }}>
       {/* Header - Mobile optimized */}
       <header className="bg-white shadow-sm border-b">
         <div className={`${escrutinioState.currentStep === 2 ? "max-w-full mx-0 px-4" : "max-w-4xl mx-auto px-4 sm:px-6 lg:px-8"}`}>
@@ -462,7 +462,7 @@ function EscrutinioPageContent() {
         </div>
       </header>
 
-      <div className={`${escrutinioState.currentStep === 2 ? "fixed inset-0 bg-white overflow-auto" : "max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 lg:py-8"}`}>
+      <div className={`${escrutinioState.currentStep === 2 ? "mobile-container bg-white" : "max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 lg:py-8"}`}>
         {/* Progress Steps - Mobile optimized */}
         <div className={`${escrutinioState.currentStep === 2 ? "mb-0 px-0 pt-2 pb-1 bg-white border-b border-gray-200" : "mb-6 lg:mb-8"}`}>
           <div className="flex items-center justify-center space-x-2 lg:space-x-4">
@@ -510,7 +510,7 @@ function EscrutinioPageContent() {
 
         {/* Step 1: Configuration */}
         {escrutinioState.currentStep === 1 && (
-          <div className="bg-white p-0 sm:p-6 rounded-none sm:rounded-lg shadow-none sm:shadow-sm border-0 sm:border min-h-full sm:min-h-0 w-full">
+          <div className="bg-white p-0 sm:p-6 rounded-none sm:rounded-lg shadow-none sm:shadow-sm border-0 sm:border min-h-full sm:min-h-0 w-full mobile-full-width">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900">Configuración del Escrutinio</h2>
             </div>
@@ -576,7 +576,7 @@ function EscrutinioPageContent() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Mesa Electoral (JRV)
                 </label>
-                <SearchInput
+                <SearchInput style={{ fontSize: "16px" }}
                   value={escrutinioState.selectedMesa}
                   onChange={handleJRVChange}
                   onSelect={handleJRVSelect}

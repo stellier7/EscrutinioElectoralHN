@@ -159,7 +159,7 @@ export default function SearchInput({
             'w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md',
             'focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent',
             'disabled:bg-gray-50 disabled:text-gray-500',
-            'text-sm'
+            'text-base'
           )}
         />
         {value && (
