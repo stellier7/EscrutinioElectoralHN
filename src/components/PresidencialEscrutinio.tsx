@@ -187,8 +187,8 @@ export default function PresidencialEscrutinio({
       </header>
 
       {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-4 lg:py-8">
-        <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border">
+      <div className="p-0 sm:p-4 lg:p-8">
+        <div className="bg-white p-0 sm:p-6 rounded-none sm:rounded-lg shadow-none sm:shadow-sm border-0 sm:border">
           <div className="mb-4">
             <h2 className="text-lg font-semibold text-gray-900">
               Conteo de Votos Presidenciales
