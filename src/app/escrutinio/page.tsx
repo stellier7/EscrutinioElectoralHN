@@ -748,12 +748,6 @@ function EscrutinioPageContent() {
           </div>
         )}
 
-        {escrutinioState.currentStep === 2 && escrutinioState.selectedLevel !== 'LEGISLATIVE' && escrutinioState.escrutinioId && (
-          <VoteFooter
-            escrutinioId={escrutinioState.escrutinioId}
-            onContinue={() => saveState({ currentStep: 3 })}
-          />
-        )}
 
         {/* Step 3: Evidence Upload */}
         {escrutinioState.currentStep === 3 && (
