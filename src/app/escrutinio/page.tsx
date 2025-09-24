@@ -103,6 +103,20 @@ function EscrutinioPageContent() {
     });
   };
 
+  // Manejar selección de nivel electoral (automáticamente obtiene GPS y va al conteo)
+  const handleLevelSelect = async (level: 'PRESIDENTIAL' | 'LEGISLATIVE') => {
+    if (!escrutinioState.selectedMesa) {
+      alert('Por favor selecciona una JRV primero');
+      return;
+    }
+
+    // Guardar el nivel seleccionado
+    saveState({ selectedLevel: level });
+
+    // Automáticamente obtener GPS y continuar
+    await handleGetLocation();
+  };
+
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   useEffect(() => {
     const load = async () => {
@@ -486,84 +500,50 @@ function EscrutinioPageContent() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-3">
                   Nivel Electoral
                 </label>
-                <select 
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  value={escrutinioState.selectedLevel}
-                  onChange={(e) => saveState({ selectedLevel: e.target.value })}
-                >
-                  <option value="">Seleccionar nivel...</option>
-                  <option value="PRESIDENTIAL">Presidencial</option>
-                  <option value="LEGISLATIVE">Legislativo</option>
-                </select>
-              </div>
-
-              <div className="pt-4">
-                <Button
-                  variant="primary"
-                  size="lg"
-                  onClick={() => {
-                    console.log('🚀 Botón GPS presionado:', {
-                      selectedMesa: escrutinioState.selectedMesa,
-                      selectedLevel: escrutinioState.selectedLevel,
-                      currentStep: escrutinioState.currentStep,
-                      escrutinioId: escrutinioState.escrutinioId
-                    });
-                    handleGetLocation();
-                  }}
-                  disabled={!escrutinioState.selectedMesa || !escrutinioState.selectedLevel || isLoading || isStarting}
-                  loading={isLoading || isStarting}
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                      <span className="hidden sm:inline">Obteniendo ubicación...</span>
-                      <span className="sm:hidden">Obteniendo GPS...</span>
-                    </>
-                  ) : (
-                    <>
-                      <MapPin className="h-5 w-5 mr-2" />
-                      <span className="hidden sm:inline">Obtener GPS y Continuar</span>
-                      <span className="sm:hidden">Obtener GPS y Continuar</span>
-                    </>
-                  )}
-                </Button>
-                
-                {/* Mobile-specific instructions */}
-                <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <div className="flex items-start">
-                    <MapPin className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                    <div className="ml-2">
-                      <p className="text-xs text-blue-800 font-medium">Consejos para móviles:</p>
-                      <ul className="text-xs text-blue-700 mt-1 space-y-1">
-                        <li>• Asegúrate de tener GPS habilitado</li>
-                        <li>• Permite acceso a ubicación cuando se solicite</li>
-                        <li>• Si falla, intenta salir al exterior</li>
-                      </ul>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <button
+                    onClick={() => handleLevelSelect('PRESIDENTIAL')}
+                    disabled={isLoading || isStarting}
+                    className={`px-6 py-4 rounded-lg border-2 font-medium transition-all duration-200 ${
+                      escrutinioState.selectedLevel === 'PRESIDENTIAL'
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 bg-white text-gray-700 hover:border-blue-300 hover:bg-blue-50'
+                    } ${(isLoading || isStarting) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    <div className="flex items-center justify-center">
+                      {isLoading && escrutinioState.selectedLevel === 'PRESIDENTIAL' && (
+                        <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                      )}
+                      <span>Presidencial</span>
                     </div>
-                  </div>
+                  </button>
+                  
+                  <button
+                    onClick={() => handleLevelSelect('LEGISLATIVE')}
+                    disabled={isLoading || isStarting}
+                    className={`px-6 py-4 rounded-lg border-2 font-medium transition-all duration-200 ${
+                      escrutinioState.selectedLevel === 'LEGISLATIVE'
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 bg-white text-gray-700 hover:border-blue-300 hover:bg-blue-50'
+                    } ${(isLoading || isStarting) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    <div className="flex items-center justify-center">
+                      {isLoading && escrutinioState.selectedLevel === 'LEGISLATIVE' && (
+                        <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                      )}
+                      <span>Legislativo</span>
+                    </div>
+                  </button>
                 </div>
                 
-                {/* Permission status indicator */}
-                {permissionStatus === 'denied' && (
-                  <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <div className="flex items-start">
-                      <Settings className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
-                      <div className="ml-2">
-                        <p className="text-xs text-yellow-800 font-medium">Permisos de ubicación denegados</p>
-                        <button
-                          onClick={() => setShowInstructions(!showInstructions)}
-                          className="text-xs text-yellow-700 underline mt-1"
-                        >
-                          Ver instrucciones para habilitar
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                <p className="mt-3 text-sm text-gray-600 text-center">
+                  Al seleccionar un nivel, estarás brindando tu ubicación para agregarla al escrutinio
+                </p>
               </div>
+
 
               {error && (
                 <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-md">
