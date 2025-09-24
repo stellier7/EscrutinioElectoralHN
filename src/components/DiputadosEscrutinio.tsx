@@ -775,7 +775,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
       </header>
 
       {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-4 lg:py-8">
+      <div className="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-4 lg:py-8 pb-20 sm:pb-8">
         <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border">
           <div className="mb-4">
             <h2 className="text-lg font-semibold text-gray-900">
