@@ -162,6 +162,7 @@ export default function DashboardPage() {
   const menuItems = [
     { id: 'overview', label: 'Resumen', icon: BarChart3 },
     { id: 'escrutinio', label: 'Nuevo Escrutinio', icon: Vote },
+    { id: 'review', label: 'Revisar Escrutinios', icon: CheckCircle },
     // Solo admins pueden ver estas secciones
     ...(user?.role === 'ADMIN' ? [
       { id: 'results', label: 'Resultados', icon: CheckCircle },
@@ -217,6 +218,66 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Botones de Acción Rápida */}
+      <div className="grid grid-cols-2 gap-3">
+        <Button 
+          variant="primary" 
+          size="lg"
+          onClick={() => router.push('/escrutinio')}
+          className="w-full"
+        >
+          <Vote className="h-4 w-4 mr-2" />
+          Nuevo Escrutinio
+        </Button>
+        <Button 
+          variant="secondary" 
+          size="lg"
+          onClick={() => setActiveTab('review')}
+          className="w-full"
+        >
+          <CheckCircle className="h-4 w-4 mr-2" />
+          Revisar Escrutinios
+        </Button>
+      </div>
+
+      {/* Mostrar escrutinios completados recientes (para todos los usuarios) */}
+      {stats?.recentActivity && stats.recentActivity.length > 0 && (
+        <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-lg font-semibold text-gray-900">Escrutinios Recientes</h3>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setActiveTab('review')}
+              className="text-xs text-blue-600 hover:text-blue-700"
+            >
+              Ver todos
+            </Button>
+          </div>
+          <div className="space-y-2">
+            {stats.recentActivity.slice(0, 3).map((activity) => (
+              <div key={activity.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-3 w-3 text-green-600" />
+                  <div>
+                    <p className="text-xs font-medium text-gray-900">{activity.mesaNumber}</p>
+                    <p className="text-xs text-gray-500">{activity.electionLevel}</p>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => router.push(`/revisar/${activity.id}`)}
+                  className="text-xs text-blue-600 hover:text-blue-700"
+                >
+                  Ver
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Solo admins pueden ver la actividad reciente */}
       {user.role === 'ADMIN' && (
@@ -349,12 +410,75 @@ export default function DashboardPage() {
     </div>
   );
 
+  const renderReview = () => (
+    <div className="space-y-4">
+      <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
+        <h3 className="text-lg font-semibold text-gray-900 mb-3">Mis Escrutinios Completados</h3>
+        {statsLoading ? (
+          <div className="text-center py-6 text-gray-500">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto"></div>
+            <p className="text-sm mt-2">Cargando escrutinios...</p>
+          </div>
+        ) : stats?.recentActivity && stats.recentActivity.length > 0 ? (
+          <div className="space-y-3">
+            {stats.recentActivity.map((activity) => (
+              <div key={activity.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{activity.mesaNumber}</p>
+                    <p className="text-xs text-gray-600">{activity.mesaName}</p>
+                    <p className="text-xs text-gray-500">{activity.department}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="text-right">
+                    <p className="text-xs text-gray-500">
+                      {new Date(activity.completedAt).toLocaleDateString()}
+                    </p>
+                    <p className="text-xs text-green-600 font-medium">{activity.electionLevel}</p>
+                  </div>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => router.push(`/revisar/${activity.id}`)}
+                    className="text-xs"
+                  >
+                    Revisar
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-6 text-gray-500">
+            <Vote className="h-10 w-10 mx-auto mb-3 text-gray-300" />
+            <p className="text-sm">No has completado ningún escrutinio aún</p>
+            <p className="text-xs text-gray-400 mb-4">Comienza un nuevo escrutinio para ver tu actividad aquí</p>
+            <Button 
+              variant="primary" 
+              size="lg"
+              onClick={() => router.push('/escrutinio')}
+            >
+              <Vote className="h-4 w-4 mr-2" />
+              Nuevo Escrutinio
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   const renderContent = () => {
     switch (activeTab) {
       case 'overview':
         return renderOverview();
       case 'escrutinio':
         return renderNewEscrutinio();
+      case 'review':
+        return renderReview();
       case 'results':
         return (
           <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
