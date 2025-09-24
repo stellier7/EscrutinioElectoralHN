@@ -576,7 +576,7 @@ function EscrutinioPageContent() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Mesa Electoral (JRV)
                 </label>
-                <SearchInput style={{ fontSize: "16px" }}
+                <SearchInput
                   value={escrutinioState.selectedMesa}
                   onChange={handleJRVChange}
                   onSelect={handleJRVSelect}
