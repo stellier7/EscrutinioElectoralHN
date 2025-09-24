@@ -95,6 +95,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
   // Estados para alerta de límite de marcas
   const [showVoteLimitAlert, setShowVoteLimitAlert] = useState(false);
   const [isClosingPapeleta, setIsClosingPapeleta] = useState(false);
+  const [papeletaNumber, setPapeletaNumber] = useState(1);
 
   // Hook para manejar papeletas
   const { 
@@ -295,23 +296,6 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     setExpandedParty(null);
   }, []);
 
-  // Handle vote limit alert
-  const handleCloseVoteLimitAlert = useCallback(() => {
-    setShowVoteLimitAlert(false);
-  }, []);
-
-  const handleClosePapeletaFromAlert = useCallback(async () => {
-    if (!userId) return;
-    
-    setIsClosingPapeleta(true);
-    try {
-      await handleClosePapeleta();
-      setShowVoteLimitAlert(false);
-    } finally {
-      setIsClosingPapeleta(false);
-    }
-  }, [userId, handleClosePapeleta]);
-
   // Handle close papeleta
   const handleClosePapeleta = useCallback(async () => {
     if (!userId) return;
@@ -348,6 +332,9 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
       setPartyCounts(newPartyCounts);
       setExpandedParty(null);
       
+      // Incrementar número de papeleta
+      setPapeletaNumber(prev => prev + 1);
+      
       // Iniciar nueva papeleta
       if (escrutinioId) {
         startPapeleta(escrutinioId, userId);
@@ -364,12 +351,32 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
       // Solo limpiar el grid actual, mantener marcas aplicadas
       setExpandedParty(null);
       
+      // Incrementar número de papeleta
+      setPapeletaNumber(prev => prev + 1);
+      
       // Iniciar nueva papeleta
       if (escrutinioId) {
         startPapeleta(escrutinioId, userId);
       }
     }
   }, [userId, anularPapeleta, escrutinioId, startPapeleta]);
+
+  // Handle vote limit alert
+  const handleCloseVoteLimitAlert = useCallback(() => {
+    setShowVoteLimitAlert(false);
+  }, []);
+
+  const handleClosePapeletaFromAlert = useCallback(async () => {
+    if (!userId) return;
+    
+    setIsClosingPapeleta(true);
+    try {
+      await handleClosePapeleta();
+      setShowVoteLimitAlert(false);
+    } finally {
+      setIsClosingPapeleta(false);
+    }
+  }, [userId, handleClosePapeleta]);
 
   // Get party by ID
   const getParty = (partyId: string) => diputadosData?.parties.find(p => p.id === partyId);
@@ -634,7 +641,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <FileText className="h-5 w-5 text-blue-600" />
-                <span className="text-sm font-medium text-blue-900">Papeleta Abierta</span>
+                <span className="text-sm font-medium text-blue-900">Papeleta número: {papeletaNumber}</span>
               </div>
               <span className="text-sm text-blue-700">
                 {papeleta.votesBuffer.length} marca{papeleta.votesBuffer.length !== 1 ? 's' : ''}
@@ -731,7 +738,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
               {papeleta.status === 'OPEN' && (
                 <div className="flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
                   <FileText className="h-4 w-4" />
-                  Papeleta Abierta
+                  Papeleta #{papeletaNumber}
                 </div>
               )}
             </div>
