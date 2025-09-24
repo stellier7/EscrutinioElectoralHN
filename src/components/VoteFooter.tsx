@@ -25,7 +25,7 @@ export function VoteFooter({ escrutinioId, ballotsUsed, onContinue }: Props) {
   };
 
   return (
-    <div className="sticky bottom-0 left-0 right-0 bg-white border-t p-3">
+    <div className="sticky bottom-0 left-0 right-0 bg-white border-t p-2 sm:p-3 shadow-lg sm:shadow-none">
       <div className="max-w-4xl mx-auto flex items-center justify-between">
         <div>
           <div className="text-sm text-gray-600">Total de votos</div>

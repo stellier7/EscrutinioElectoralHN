@@ -84,7 +84,7 @@ export function VoteCard({ id, name, party, partyColor = '#e5e7eb', number, coun
         'w-full flex items-center rounded-lg border shadow-sm focus:outline-none focus:ring-2 transition-transform',
         'active:scale-[0.98] touch-manipulation select-none',
         animate && 'scale-[1.02]',
-        'min-h-[70px]', // Altura mínima para mejor toque
+        'min-h-[90px] sm:min-h-[70px]', // Altura mínima para mejor toque
         disabled && 'opacity-50 cursor-not-allowed'
       )}
       style={{ 
