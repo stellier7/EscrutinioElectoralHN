@@ -462,9 +462,9 @@ function EscrutinioPageContent() {
         </div>
       </header>
 
-      <div className={`${escrutinioState.currentStep === 2 ? "px-0 py-0 min-h-screen bg-white w-full" : "max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 lg:py-8"}`}>
+      <div className={`${escrutinioState.currentStep === 2 ? "fixed inset-0 bg-white overflow-auto" : "max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 lg:py-8"}`}>
         {/* Progress Steps - Mobile optimized */}
-        <div className={`${escrutinioState.currentStep === 2 ? "mb-1 px-4 pt-2 bg-white border-b border-gray-200" : "mb-6 lg:mb-8"}`}>
+        <div className={`${escrutinioState.currentStep === 2 ? "mb-0 px-0 pt-2 pb-1 bg-white border-b border-gray-200" : "mb-6 lg:mb-8"}`}>
           <div className="flex items-center justify-center space-x-2 lg:space-x-4">
             <div className={`flex items-center ${escrutinioState.currentStep >= 1 ? 'text-primary-600' : 'text-gray-400'}`}>
               <div className={`w-6 h-6 lg:w-8 lg:h-8 rounded-full flex items-center justify-center border-2 text-xs lg:text-sm ${

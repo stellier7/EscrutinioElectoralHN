@@ -28,7 +28,7 @@ export function VoteList({ escrutinioId, candidates, userId, mesaId, gps, device
   }));
 
   return (
-    <div className="space-y-2 sm:space-y-3 px-0 sm:px-0">
+    <div className="space-y-0 sm:space-y-3 px-0 sm:px-0">
       {candidates.map((c) => (
         <VoteCard
           key={c.id}

@@ -95,7 +95,7 @@ export function VoteCard({ id, name, party, partyColor = '#e5e7eb', number, coun
       }}
       data-testid={`vote-card-${id}`}
     >
-      <div className="flex-1 p-2 sm:p-4 text-left">
+      <div className="flex-1 p-1 sm:p-4 text-left">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             {/* Logo del partido */}
