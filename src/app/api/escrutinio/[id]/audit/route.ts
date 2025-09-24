@@ -20,13 +20,8 @@ export async function GET(request: Request, { params }: { params: { id: string }
     if (!escrutinio) return NextResponse.json({ success: false, error: 'Escrutinio no encontrado' }, { status: 404 });
 
     // Obtener logs de auditoría relacionados con este escrutinio
-    const auditLogs = await prisma.auditLog.findMany({
-      where: {
-        details: {
-          path: ['escrutinioId'],
-          equals: escrutinioId,
-        },
-      },
+    // Como details es un campo JSON, necesitamos obtener todos los logs y filtrar
+    const allAuditLogs = await prisma.auditLog.findMany({
       include: {
         user: {
           select: {
@@ -42,7 +37,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
     });
 
     // Filtrar logs que contengan el escrutinioId en los detalles
-    const filteredLogs = auditLogs.filter(log => {
+    const filteredLogs = allAuditLogs.filter(log => {
       const details = log.details as any;
       return details?.escrutinioId === escrutinioId;
     });
