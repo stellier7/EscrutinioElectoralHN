@@ -96,6 +96,12 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
   const [showVoteLimitAlert, setShowVoteLimitAlert] = useState(false);
   const [isClosingPapeleta, setIsClosingPapeleta] = useState(false);
   const [papeletaNumber, setPapeletaNumber] = useState(1);
+  
+  // Estados para control de escrutinio
+  const [escrutinioStatus, setEscrutinioStatus] = useState<'COMPLETED' | 'CLOSED'>('COMPLETED');
+  const [isEscrutinioClosed, setIsEscrutinioClosed] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+  const [isReopening, setIsReopening] = useState(false);
 
   // Hook para manejar papeletas
   const { 
@@ -243,6 +249,11 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
       setError('No hay papeleta abierta');
       return;
     }
+    
+    if (isEscrutinioClosed) {
+      setError('El escrutinio está cerrado. No se pueden hacer cambios.');
+      return;
+    }
 
     // Get click position for animation
     const rect = event.currentTarget.getBoundingClientRect();
@@ -297,7 +308,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     setTimeout(() => {
       setAnimation(prev => ({ ...prev, show: false }));
     }, 200);
-  }, [userId, papeleta.status, addVoteToBuffer, removeVoteFromBuffer, isCasillaSelected, diputadosData?.diputados, isVoteLimitReached]);
+  }, [userId, papeleta.status, addVoteToBuffer, removeVoteFromBuffer, isCasillaSelected, diputadosData?.diputados, isVoteLimitReached, isEscrutinioClosed]);
 
   // Handle back button
   const handleBack = useCallback(() => {
@@ -479,7 +490,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
       // Subir foto si existe
       await uploadEvidenceIfNeeded();
       
-      // Cerrar escrutinio
+      // Finalizar escrutinio definitivamente
       await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/complete`);
       
       // Mostrar mensaje de éxito
@@ -494,6 +505,44 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
       setIsCompleting(false);
     }
   }, [escrutinioId, actaImage, uploadEvidenceIfNeeded]);
+
+  // Función para cerrar escrutinio (pausar)
+  const handleCloseEscrutinio = useCallback(async () => {
+    if (!escrutinioId) {
+      setError('No hay escrutinio activo');
+      return;
+    }
+    setIsClosing(true);
+    try {
+      await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/close`);
+      setEscrutinioStatus('CLOSED');
+      setIsEscrutinioClosed(true);
+    } catch (error: any) {
+      console.error('Error cerrando escrutinio:', error);
+      setError(error?.response?.data?.error || 'Error cerrando escrutinio');
+    } finally {
+      setIsClosing(false);
+    }
+  }, [escrutinioId]);
+
+  // Función para reabrir escrutinio (editar)
+  const handleReopenEscrutinio = useCallback(async () => {
+    if (!escrutinioId) {
+      setError('No hay escrutinio activo');
+      return;
+    }
+    setIsReopening(true);
+    try {
+      await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/reopen`);
+      setEscrutinioStatus('COMPLETED');
+      setIsEscrutinioClosed(false);
+    } catch (error: any) {
+      console.error('Error reabriendo escrutinio:', error);
+      setError(error?.response?.data?.error || 'Error reabriendo escrutinio');
+    } finally {
+      setIsReopening(false);
+    }
+  }, [escrutinioId]);
 
   // Render party cards (initial view)
   const renderPartyCards = () => {
@@ -873,32 +922,91 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
                 </div>
               </div>
 
-              {/* Cerrar Escrutinio */}
+              {/* Control de Escrutinio */}
               <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
                 <h3 className="text-lg font-semibold text-blue-900 mb-3 flex items-center gap-2">
                   <Upload className="h-5 w-5" />
-                  Finalizar Escrutinio
+                  Control de Escrutinio
                 </h3>
-                <p className="text-sm text-blue-700 mb-4">
-                  Una vez que hayas completado el conteo de todas las papeletas, sube la foto del acta y finaliza el escrutinio.
-                </p>
-                <button
-                  onClick={handleCompleteEscrutinio}
-                  disabled={isCompleting || isUploading}
-                  className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-                >
-                  {isCompleting ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Finalizando...
-                    </>
-                  ) : (
-                    <>
-                      <Check className="h-4 w-4" />
-                      Finalizar Escrutinio
-                    </>
-                  )}
-                </button>
+                
+                {/* Estado: En progreso - Mostrar botón Cerrar Escrutinio */}
+                {escrutinioStatus === 'COMPLETED' && !isEscrutinioClosed && (
+                  <>
+                    <p className="text-sm text-blue-700 mb-4">
+                      Una vez que hayas completado el conteo de todas las papeletas, puedes cerrar el escrutinio para pausar las ediciones.
+                    </p>
+                    <button
+                      onClick={handleCloseEscrutinio}
+                      disabled={isClosing}
+                      className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                    >
+                      {isClosing ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Cerrando...
+                        </>
+                      ) : (
+                        <>
+                          <AlertCircle className="h-4 w-4" />
+                          Cerrar Escrutinio
+                        </>
+                      )}
+                    </button>
+                  </>
+                )}
+
+                {/* Estado: Cerrado - Mostrar opciones para Finalizar o Editar */}
+                {escrutinioStatus === 'CLOSED' && (
+                  <>
+                    <div className="bg-orange-100 border border-orange-300 rounded-lg p-3 mb-4">
+                      <div className="flex items-center gap-2 text-orange-800">
+                        <AlertCircle className="h-4 w-4" />
+                        <span className="font-medium">Escrutinio Cerrado</span>
+                      </div>
+                      <p className="text-sm text-orange-700 mt-1">
+                        Este escrutinio está pausado. Los votos están congelados. Puedes finalizar definitivamente o reabrir para editar.
+                      </p>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <button
+                        onClick={handleCompleteEscrutinio}
+                        disabled={isCompleting || isUploading}
+                        className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                      >
+                        {isCompleting ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Finalizando...
+                          </>
+                        ) : (
+                          <>
+                            <Check className="h-4 w-4" />
+                            Finalizar Escrutinio
+                          </>
+                        )}
+                      </button>
+                      
+                      <button
+                        onClick={handleReopenEscrutinio}
+                        disabled={isReopening}
+                        className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                      >
+                        {isReopening ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Reabriendo...
+                          </>
+                        ) : (
+                          <>
+                            <FileText className="h-4 w-4" />
+                            Editar Escrutinio
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           )}

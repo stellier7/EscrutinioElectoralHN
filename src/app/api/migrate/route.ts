@@ -52,7 +52,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
     
     try {
-      await prisma.$executeRaw`CREATE TYPE "TransmissionStatus" AS ENUM ('PENDING', 'IN_PROGRESS', 'COMPLETED', 'FAILED')`;
+      await prisma.$executeRaw`CREATE TYPE "TransmissionStatus" AS ENUM ('PENDING', 'IN_PROGRESS', 'COMPLETED', 'CLOSED', 'FAILED')`;
     } catch (e) {
       console.log('TransmissionStatus enum already exists');
     }

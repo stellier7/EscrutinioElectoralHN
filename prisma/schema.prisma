@@ -33,6 +33,7 @@ enum TransmissionStatus {
   PENDING
   IN_PROGRESS
   COMPLETED
+  CLOSED
   FAILED
 }
 
@@ -48,6 +49,9 @@ enum AuditLogAction {
   USER_APPROVED
   USER_REJECTED
   USER_SUSPENDED
+  CLOSE_ESCRUTINIO
+  EDIT_ESCRUTINIO
+  REOPEN_ESCRUTINIO
 }
 
 enum PapeletaStatus {
