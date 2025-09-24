@@ -114,6 +114,14 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     getTotalVotesInBuffer
   } = usePapeleta();
 
+  // Inicializar papeleta automáticamente cuando se carga el componente
+  useEffect(() => {
+    if (escrutinioId && userId && papeleta.status === null) {
+      console.log('🔄 Inicializando papeleta automáticamente...');
+      startPapeleta(escrutinioId, userId);
+    }
+  }, [escrutinioId, userId, papeleta.status, startPapeleta]);
+
   // Cargar datos de diputados según la JRV
   useEffect(() => {
     const loadDiputadosData = async () => {
@@ -778,7 +786,33 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
             </p>
           </div>
           
-          {expandedParty ? renderGrid() : renderPartyCards()}
+          {papeleta.status === 'OPEN' ? (
+            expandedParty ? renderGrid() : renderPartyCards()
+          ) : (
+            <div className="text-center py-8">
+              <AlertCircle className="h-12 w-12 text-amber-500 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No hay papeleta abierta</h3>
+              <p className="text-gray-600 mb-4">
+                {papeleta.status === null ? 'Inicializando papeleta...' : 'Necesitas abrir una nueva papeleta para comenzar el conteo.'}
+              </p>
+              {papeleta.status !== null && (
+                <button
+                  onClick={() => startPapeleta(escrutinioId!, userId!)}
+                  disabled={isLoading}
+                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors font-medium"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2 inline" />
+                      Abriendo...
+                    </>
+                  ) : (
+                    'Abrir Nueva Papeleta'
+                  )}
+                </button>
+              )}
+            </div>
+          )}
           
           {/* Sección de Foto y Cierre de Escrutinio */}
           {!expandedParty && (

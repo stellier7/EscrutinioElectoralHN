@@ -33,29 +33,42 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     const { email, password }: LoginRequest = validationResult.data;
 
-    // Find user by email with better error handling
+    // Find user by email with better error handling and retry logic
     let user;
-    try {
-      user = await prisma.user.findUnique({
-        where: { email },
-        select: {
-          id: true,
-          email: true,
-          password: true,
-          name: true,
-          role: true,
-          status: true,
-          deviceId: true,
-          isActive: true,
-          rejectionReason: true,
-        },
-      });
-    } catch (dbError) {
-      console.error('Database error during login:', dbError);
-      return NextResponse.json({
-        success: false,
-        error: 'Error de conexión con la base de datos',
-      } as ApiResponse, { status: 500 });
+    let retryCount = 0;
+    const maxRetries = 3;
+    
+    while (retryCount < maxRetries) {
+      try {
+        user = await prisma.user.findUnique({
+          where: { email },
+          select: {
+            id: true,
+            email: true,
+            password: true,
+            name: true,
+            role: true,
+            status: true,
+            deviceId: true,
+            isActive: true,
+            rejectionReason: true,
+          },
+        });
+        break; // Si la consulta es exitosa, salir del loop
+      } catch (dbError) {
+        retryCount++;
+        console.error(`Database error during login (attempt ${retryCount}/${maxRetries}):`, dbError);
+        
+        if (retryCount >= maxRetries) {
+          return NextResponse.json({
+            success: false,
+            error: 'Error de conexión con la base de datos. Por favor, intenta de nuevo en unos momentos.',
+          } as ApiResponse, { status: 503 }); // 503 Service Unavailable
+        }
+        
+        // Esperar antes del siguiente intento
+        await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+      }
     }
 
     if (!user || !user.isActive) {
@@ -172,9 +185,27 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   } catch (error) {
     console.error('Login error:', error);
+    
+    // Determinar el tipo de error y responder apropiadamente
+    if (error instanceof Error) {
+      if (error.message.includes('connection') || error.message.includes('timeout')) {
+        return NextResponse.json({
+          success: false,
+          error: 'Error de conexión con la base de datos. Por favor, intenta de nuevo en unos momentos.',
+        } as ApiResponse, { status: 503 });
+      }
+      
+      if (error.message.includes('ECONNREFUSED') || error.message.includes('ENOTFOUND')) {
+        return NextResponse.json({
+          success: false,
+          error: 'Servicio temporalmente no disponible. Por favor, intenta de nuevo más tarde.',
+        } as ApiResponse, { status: 503 });
+      }
+    }
+    
     return NextResponse.json({
       success: false,
-      error: 'Error interno del servidor',
+      error: 'Error interno del servidor. Por favor, intenta de nuevo.',
     } as ApiResponse, { status: 500 });
   }
 } 

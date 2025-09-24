@@ -71,6 +71,7 @@ function EscrutinioPageContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
   const [showRecoveryDialog, setShowRecoveryDialog] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
   
   const voteStore = useVoteStore();
   
@@ -160,7 +161,7 @@ function EscrutinioPageContent() {
         // Guardar el estado del escrutinio iniciado
         saveState({
           escrutinioId: resp.data.data.escrutinioId,
-          currentStep: 2,
+          currentStep: 2, // Ir al paso de conteo después de obtener GPS
           location: result,
         });
       } else {
@@ -310,6 +311,40 @@ function EscrutinioPageContent() {
 
   const totalVotes = Object.keys(voteStore.counts).reduce((sum, k) => sum + (voteStore.counts[k] || 0), 0);
 
+  // Mostrar diálogo de recuperación si hay datos persistentes pero no escrutinio activo
+  useEffect(() => {
+    if (canRecoverEscrutinio && !hasActiveEscrutinio && escrutinioState.currentStep === 1) {
+      setShowRecoveryDialog(true);
+    }
+  }, [canRecoverEscrutinio, hasActiveEscrutinio, escrutinioState.currentStep]);
+
+  // Limpiar votos cuando cambie el JRV o el nivel
+  useEffect(() => {
+    if (escrutinioState.selectedMesa && escrutinioState.selectedLevel) {
+      // Crear una clave única para este JRV y nivel
+      const currentKey = `${escrutinioState.selectedMesa}-${escrutinioState.selectedLevel}`;
+      const lastKey = localStorage.getItem('last-escrutinio-key');
+      
+      console.log('🔍 Verificando cambio de JRV/nivel:', { 
+        currentKey, 
+        lastKey, 
+        currentStep: escrutinioState.currentStep,
+        escrutinioId: escrutinioState.escrutinioId 
+      });
+      
+      // Si cambió el JRV o nivel, limpiar los votos
+      if (lastKey && lastKey !== currentKey) {
+        console.log('🔄 JRV o nivel cambió, limpiando votos:', { lastKey, currentKey });
+        voteStore.clear();
+        // También limpiar el escrutinioId para forzar nuevo escrutinio
+        saveState({ escrutinioId: null, currentStep: 1 });
+      }
+      
+      // Guardar la clave actual
+      localStorage.setItem('last-escrutinio-key', currentKey);
+    }
+  }, [escrutinioState.selectedMesa, escrutinioState.selectedLevel, voteStore, saveState]);
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header - Mobile optimized */}
@@ -332,9 +367,30 @@ function EscrutinioPageContent() {
             </div>
             
             <div className="flex items-center space-x-2">
-              {(escrutinioState.selectedMesa || escrutinioState.selectedLevel) && (
+              {hasActiveEscrutinio && (
                 <button
-                  onClick={startNewEscrutinio}
+                  onClick={() => setShowCancelDialog(true)}
+                  className="px-3 py-1 text-xs bg-red-100 text-red-700 rounded-full hover:bg-red-200 transition-colors"
+                  title="Cancelar escrutinio actual"
+                >
+                  Cancelar Escrutinio
+                </button>
+              )}
+              {(escrutinioState.selectedMesa || escrutinioState.selectedLevel) && !hasActiveEscrutinio && (
+                <button
+                  onClick={() => {
+                    // Limpiar estado y ir al paso 1 (configuración)
+                    clearState();
+                    // Limpiar también el store de votos y la clave del último escrutinio
+                    if (typeof window !== 'undefined') {
+                      import('@/store/voteStore').then(({ useVoteStore }) => {
+                        useVoteStore.getState().clear();
+                      });
+                      localStorage.removeItem('last-escrutinio-key');
+                    }
+                    // Ir al paso 1 para configurar nuevo escrutinio
+                    saveState({ currentStep: 1 });
+                  }}
                   className="px-3 py-1 text-xs bg-red-100 text-red-700 rounded-full hover:bg-red-200 transition-colors"
                   title="Iniciar nuevo escrutinio"
                 >
@@ -448,7 +504,15 @@ function EscrutinioPageContent() {
                 <Button
                   variant="primary"
                   size="lg"
-                  onClick={handleGetLocation}
+                  onClick={() => {
+                    console.log('🚀 Botón GPS presionado:', {
+                      selectedMesa: escrutinioState.selectedMesa,
+                      selectedLevel: escrutinioState.selectedLevel,
+                      currentStep: escrutinioState.currentStep,
+                      escrutinioId: escrutinioState.escrutinioId
+                    });
+                    handleGetLocation();
+                  }}
                   disabled={!escrutinioState.selectedMesa || !escrutinioState.selectedLevel || isLoading || isStarting}
                   loading={isLoading || isStarting}
                 >
@@ -461,7 +525,7 @@ function EscrutinioPageContent() {
                   ) : (
                     <>
                       <MapPin className="h-5 w-5 mr-2" />
-                      <span className="hidden sm:inline">Obtener Ubicación y Continuar</span>
+                      <span className="hidden sm:inline">Obtener GPS y Continuar</span>
                       <span className="sm:hidden">Obtener GPS y Continuar</span>
                     </>
                   )}
@@ -707,6 +771,101 @@ function EscrutinioPageContent() {
               </div>
             </div>
           ) : null}
+        </div>
+      )}
+
+      {/* Diálogo de Recuperación de Escrutinio */}
+      {showRecoveryDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center mb-4">
+                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                  <CheckCircle className="h-6 w-6 text-blue-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Escrutinio Anterior Encontrado
+                </h3>
+              </div>
+              <p className="text-gray-600 mb-6">
+                Se encontró un escrutinio previo para la JRV <strong>{escrutinioState.selectedMesaInfo?.jrv || escrutinioState.selectedMesa}</strong> 
+                ({escrutinioState.selectedLevel === 'PRESIDENTIAL' ? 'Presidencial' : 'Legislativo'}). 
+                ¿Qué deseas hacer?
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  onClick={() => {
+                    setShowRecoveryDialog(false);
+                    // Continuar con el escrutinio existente
+                    if (escrutinioState.currentStep === 1) {
+                      saveState({ currentStep: 2 });
+                    }
+                  }}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                >
+                  Regresar al Escrutinio
+                </button>
+                <button
+                  onClick={() => {
+                    setShowRecoveryDialog(false);
+                    // Limpiar estado y ir al paso 1 (configuración)
+                    clearState();
+                    // Limpiar también el store de votos y la clave del último escrutinio
+                    if (typeof window !== 'undefined') {
+                      import('@/store/voteStore').then(({ useVoteStore }) => {
+                        useVoteStore.getState().clear();
+                      });
+                      localStorage.removeItem('last-escrutinio-key');
+                    }
+                    // Ir al paso 1 para configurar nuevo escrutinio
+                    saveState({ currentStep: 1 });
+                  }}
+                  className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+                >
+                  Nuevo Escrutinio
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Diálogo de Confirmación de Cancelación */}
+      {showCancelDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center mb-4">
+                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center mr-3">
+                  <AlertCircle className="h-6 w-6 text-red-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  ¿Cancelar Escrutinio?
+                </h3>
+              </div>
+              <p className="text-gray-600 mb-6">
+                ¿Estás seguro de que deseas cancelar el escrutinio actual? 
+                Se perderán todos los votos registrados y tendrás que empezar de nuevo.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  onClick={() => {
+                    setShowCancelDialog(false);
+                    startNewEscrutinio();
+                  }}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+                >
+                  Sí, Cancelar
+                </button>
+                <button
+                  onClick={() => setShowCancelDialog(false)}
+                  className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+                >
+                  No, Continuar
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

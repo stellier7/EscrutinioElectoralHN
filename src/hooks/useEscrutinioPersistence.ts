@@ -44,9 +44,15 @@ export function useEscrutinioPersistence() {
   const saveState = useCallback((newState: Partial<EscrutinioState>) => {
     const updatedState = { ...escrutinioState, ...newState };
     
-    // Guardar en localStorage
+    // Guardar en localStorage solo lo esencial
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedState));
+      const essentialData = {
+        escrutinioId: updatedState.escrutinioId,
+        actaImage: updatedState.actaImage,
+        isEscrutinioFinished: updatedState.isEscrutinioFinished,
+        // No guardar: selectedMesa, selectedLevel, currentStep, location
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(essentialData));
     } catch (error) {
       console.warn('Error saving escrutinio state to localStorage:', error);
     }
@@ -80,14 +86,28 @@ export function useEscrutinioPersistence() {
       location: null,
     };
 
-    // Cargar desde localStorage
+    console.log('🔍 Cargando estado inicial:', state);
+
+    // Cargar desde localStorage solo lo esencial
     try {
       const savedState = localStorage.getItem(STORAGE_KEY);
       if (savedState) {
         const parsed = JSON.parse(savedState);
-        // No cargar actaImage desde localStorage (File objects no se serializan bien)
-        const { actaImage, ...rest } = parsed;
-        state = { ...state, ...rest };
+        console.log('📦 Datos encontrados en localStorage:', JSON.stringify(parsed, null, 2));
+        
+        // Solo cargar lo esencial: escrutinioId y actaImage
+        // No cargar JRV, nivel, paso - estos deben ser temporales
+        if (parsed.escrutinioId) {
+          state.escrutinioId = parsed.escrutinioId;
+        }
+        if (parsed.actaImage) {
+          state.actaImage = parsed.actaImage;
+        }
+        if (parsed.isEscrutinioFinished) {
+          state.isEscrutinioFinished = parsed.isEscrutinioFinished;
+        }
+        
+        console.log('🔄 Estado después de cargar localStorage:', JSON.stringify(state, null, 2));
       }
     } catch (error) {
       console.warn('Error loading escrutinio state from localStorage:', error);
@@ -98,20 +118,29 @@ export function useEscrutinioPersistence() {
     const levelFromUrl = searchParams.get('level');
     const escrutinioIdFromUrl = searchParams.get('escrutinioId');
 
+    console.log('🌐 Parámetros de URL:', JSON.stringify({ jrvFromUrl, levelFromUrl, escrutinioIdFromUrl }, null, 2));
+
+    // Solo cargar datos de URL si hay parámetros específicos
     if (jrvFromUrl && levelFromUrl) {
       state.selectedMesa = jrvFromUrl;
       state.selectedLevel = levelFromUrl;
       
       // Solo saltar al paso 2 si también tenemos un escrutinioId (escritinio activo)
       if (escrutinioIdFromUrl && state.currentStep === 1) {
+        console.log('⏭️ Saltando al paso 2 porque hay escrutinioId en URL');
         state.currentStep = 2; // Saltar al paso de conteo
       }
+    } else {
+      // Si no hay parámetros de URL, siempre empezar en paso 1
+      console.log('🏁 No hay parámetros de URL, empezando en paso 1');
+      state.currentStep = 1;
     }
 
     if (escrutinioIdFromUrl) {
       state.escrutinioId = escrutinioIdFromUrl;
     }
 
+    console.log('✅ Estado final cargado:', JSON.stringify(state, null, 2));
     return state;
   }, [searchParams]);
 
@@ -141,6 +170,15 @@ export function useEscrutinioPersistence() {
   // Función para iniciar nuevo escrutinio (limpiar todo)
   const startNewEscrutinio = useCallback(() => {
     clearState();
+    // También limpiar el store de votos y la clave del último escrutinio
+    if (typeof window !== 'undefined') {
+      // Importar dinámicamente el store para evitar problemas de SSR
+      import('@/store/voteStore').then(({ useVoteStore }) => {
+        useVoteStore.getState().clear();
+      });
+      // Limpiar la clave del último escrutinio
+      localStorage.removeItem('last-escrutinio-key');
+    }
   }, [clearState]);
 
   // Cargar estado al inicializar
