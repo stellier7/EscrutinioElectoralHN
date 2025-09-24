@@ -13,6 +13,7 @@ import SearchInput from '../../components/ui/SearchInput';
 import BackButton from '../../components/ui/BackButton';
 import VoteList from '@/components/VoteList';
 import DiputadosEscrutinio from '@/components/DiputadosEscrutinio';
+import PresidencialEscrutinio from '@/components/PresidencialEscrutinio';
 import VoteFooter from '@/components/VoteFooter';
 import { useVoteStore } from '@/store/voteStore';
 import { getPartyConfig } from '@/lib/party-config';
@@ -541,30 +542,40 @@ function EscrutinioPageContent() {
                 escrutinioId={escrutinioState.escrutinioId || undefined}
                 userId={user?.id}
               />
+            ) : escrutinioState.escrutinioId ? (
+              <PresidencialEscrutinio
+                candidates={filteredCandidates.map((c) => ({
+                  id: c.id,
+                  name: c.name,
+                  party: mapPartyToDisplayName(c.party),
+                  number: c.number,
+                  partyColor: getPartyColor(c.party),
+                }))}
+                escrutinioId={escrutinioState.escrutinioId}
+                userId={user?.id}
+                mesaId={escrutinioState.selectedMesa}
+                jrvNumber={escrutinioState.selectedMesa}
+                department={escrutinioState.selectedMesaInfo?.department}
+                gps={escrutinioState.location ? { latitude: escrutinioState.location.lat, longitude: escrutinioState.location.lng, accuracy: escrutinioState.location.accuracy || 0 } : null}
+                deviceId={typeof window !== 'undefined' ? localStorage.getItem('device-id') || undefined : undefined}
+              />
             ) : (
-              <div className="space-y-4">
-                <VoteList
-                  escrutinioId={escrutinioState.escrutinioId || 'escrutinio-temp'}
-                  candidates={filteredCandidates.map((c) => ({
-                    id: c.id,
-                    name: c.name,
-                    party: mapPartyToDisplayName(c.party),
-                    number: c.number,
-                    partyColor: getPartyColor(c.party),
-                  }))}
-                  userId={user?.id}
-                  mesaId={escrutinioState.selectedMesa}
-                  gps={escrutinioState.location ? { latitude: escrutinioState.location.lat, longitude: escrutinioState.location.lng, accuracy: escrutinioState.location.accuracy || 0 } : null}
-                  deviceId={typeof window !== 'undefined' ? localStorage.getItem('device-id') || undefined : undefined}
-                />
+              <div className="bg-white p-6 rounded-lg shadow-sm border">
+                <div className="text-center py-8">
+                  <AlertCircle className="h-12 w-12 text-amber-500 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Iniciando Escrutinio</h3>
+                  <p className="text-gray-600">
+                    Necesitas iniciar el escrutinio desde el paso 1 para comenzar el conteo.
+                  </p>
+                </div>
               </div>
             )}
           </div>
         )}
 
-        {escrutinioState.currentStep === 2 && escrutinioState.selectedLevel !== 'LEGISLATIVE' && (
+        {escrutinioState.currentStep === 2 && escrutinioState.selectedLevel !== 'LEGISLATIVE' && escrutinioState.escrutinioId && (
           <VoteFooter
-            escrutinioId={escrutinioState.escrutinioId || 'escrutinio-temp'}
+            escrutinioId={escrutinioState.escrutinioId}
             onContinue={() => saveState({ currentStep: 3 })}
           />
         )}
