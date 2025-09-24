@@ -38,9 +38,17 @@ export async function POST(request: Request) {
     }
 
     const json = await request.json();
+    console.log('🔍 [START API] Request body recibido:', JSON.stringify(json, null, 2));
+    
     const parsed = BodySchema.safeParse(json);
     if (!parsed.success) {
-      return NextResponse.json({ success: false, error: 'Payload inválido' }, { status: 400 });
+      console.error('❌ [START API] Error de validación:', JSON.stringify(parsed.error, null, 2));
+      console.error('❌ [START API] Datos que fallaron:', JSON.stringify(json, null, 2));
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Payload inválido',
+        details: parsed.error.errors 
+      }, { status: 400 });
     }
     const { mesaNumber, electionLevel, gps } = parsed.data;
 

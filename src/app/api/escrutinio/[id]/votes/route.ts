@@ -110,9 +110,17 @@ export async function POST(request: Request, { params }: { params: { id: string 
     }
 
     const body = await request.json();
+    console.log('🔍 [VOTES API] Request body recibido:', JSON.stringify(body, null, 2));
+    
     const parsed = BodySchema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json({ success: false, error: 'Payload inválido' }, { status: 400 });
+      console.error('❌ [VOTES API] Error de validación:', JSON.stringify(parsed.error, null, 2));
+      console.error('❌ [VOTES API] Datos que fallaron:', JSON.stringify(body, null, 2));
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Payload inválido',
+        details: parsed.error.errors 
+      }, { status: 400 });
     }
 
     const { escrutinioId, votes } = parsed.data;

@@ -79,6 +79,7 @@ export const useVoteStore = create<State & Actions>()(
       setCounts: (counts) => set({ counts }),
 
       increment: (candidateId, meta) => {
+        console.log('🔍 [VOTE STORE] Increment llamado con:', { candidateId, meta });
         const { counts, pendingVotes } = get();
         const newCount = (counts[candidateId] || 0) + 1;
         const clientBatchId = AuditClient.createBatchId();
@@ -93,6 +94,7 @@ export const useVoteStore = create<State & Actions>()(
           gps: meta.gps,
           deviceId: meta.deviceId,
         };
+        console.log('🔍 [VOTE STORE] Delta creado:', delta);
 
         // Log para auditoría
         AuditClient.log({
@@ -120,6 +122,7 @@ export const useVoteStore = create<State & Actions>()(
       },
 
       decrement: (candidateId, meta) => {
+        console.log('🔍 [VOTE STORE] Decrement llamado con:', { candidateId, meta });
         const { counts, pendingVotes } = get();
         const newCount = Math.max(0, (counts[candidateId] || 0) - 1);
         const clientBatchId = AuditClient.createBatchId();
@@ -134,6 +137,7 @@ export const useVoteStore = create<State & Actions>()(
           gps: meta.gps,
           deviceId: meta.deviceId,
         };
+        console.log('🔍 [VOTE STORE] Delta creado:', delta);
 
         // Log para auditoría
         AuditClient.log({
@@ -233,9 +237,12 @@ async function syncVotesForEscrutinio(
     deviceId: context?.deviceId,
   };
 
+  console.log('🔍 [VOTE STORE] Payload a enviar:', JSON.stringify(payload, null, 2));
+  
   const parsed = VotePayloadSchema.safeParse(payload);
   if (!parsed.success) {
-    console.warn('Error de validación en votos:', parsed.error);
+    console.error('❌ [VOTE STORE] Error de validación en votos:', JSON.stringify(parsed.error, null, 2));
+    console.error('❌ [VOTE STORE] Payload que falló:', JSON.stringify(payload, null, 2));
     AuditClient.restore(auditEvents as any);
     return;
   }
@@ -243,7 +250,11 @@ async function syncVotesForEscrutinio(
   let retries = 0;
   while (retries < MAX_RETRIES) {
     try {
-      await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/votes`, payload);
+      console.log('📤 [VOTE STORE] Enviando petición a:', `/api/escrutinio/${encodeURIComponent(escrutinioId)}/votes`);
+      console.log('📤 [VOTE STORE] Payload final:', JSON.stringify(payload, null, 2));
+      
+      const response = await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/votes`, payload);
+      console.log('✅ [VOTE STORE] Respuesta del servidor:', response.data);
       
       // Éxito: remover votos sincronizados del estado
       const { pendingVotes } = useVoteStore.getState();
@@ -258,7 +269,11 @@ async function syncVotesForEscrutinio(
       return; // Éxito, salir del loop de reintentos
     } catch (error: any) {
       retries++;
-      console.warn(`Error sincronizando votos (intento ${retries}/${MAX_RETRIES}):`, error);
+      console.error(`❌ [VOTE STORE] Error sincronizando votos (intento ${retries}/${MAX_RETRIES}):`, error);
+      if (error.response) {
+        console.error('❌ [VOTE STORE] Respuesta del servidor:', error.response.data);
+        console.error('❌ [VOTE STORE] Status:', error.response.status);
+      }
       
       if (retries < MAX_RETRIES) {
         // Esperar antes del siguiente intento
