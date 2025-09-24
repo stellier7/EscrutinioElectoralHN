@@ -798,10 +798,10 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
               {papeleta.status !== null && (
                 <button
                   onClick={() => startPapeleta(escrutinioId!, userId!)}
-                  disabled={isLoading}
+                  disabled={loading}
                   className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors font-medium"
                 >
-                  {isLoading ? (
+                  {loading ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin mr-2 inline" />
                       Abriendo...
