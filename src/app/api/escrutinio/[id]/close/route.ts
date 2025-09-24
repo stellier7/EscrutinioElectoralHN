@@ -33,6 +33,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       data: {
         userId: payload.userId,
         action: 'CLOSE_ESCRUTINIO',
+        description: `Escrutinio cerrado para JRV ${existing.mesaNumber}`,
         metadata: {
           escrutinioId,
           mesaNumber: existing.mesaNumber,

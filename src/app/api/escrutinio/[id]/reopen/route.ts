@@ -46,6 +46,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       data: {
         userId: payload.userId,
         action: 'REOPEN_ESCRUTINIO',
+        description: `Escrutinio reabierto para edición en JRV ${existing.mesaNumber}`,
         metadata: {
           escrutinioId,
           mesaNumber: existing.mesaNumber,
