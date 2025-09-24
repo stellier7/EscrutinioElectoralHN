@@ -103,27 +103,27 @@ function EscrutinioPageContent() {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   useEffect(() => {
     const load = async () => {
-      if (!selectedLevel) { setCandidates([]); return; }
+      if (!escrutinioState.selectedLevel) { setCandidates([]); return; }
       try {
-        const resp = await axios.get('/api/candidates', { params: { level: selectedLevel } });
+        const resp = await axios.get('/api/candidates', { params: { level: escrutinioState.selectedLevel } });
         if (resp.data?.success) setCandidates(resp.data.data);
       } catch {}
     };
     load();
-  }, [selectedLevel]);
+  }, [escrutinioState.selectedLevel]);
 
   // Cargar votos existentes cuando se establece el escrutinioId
   useEffect(() => {
     const loadExistingVotes = async () => {
-      if (!escrutinioId) return;
+      if (!escrutinioState.escrutinioId) return;
       try {
-        await voteStore.loadFromServer(escrutinioId);
+        await voteStore.loadFromServer(escrutinioState.escrutinioId);
       } catch (error) {
         console.warn('No se pudieron cargar votos existentes:', error);
       }
     };
     loadExistingVotes();
-  }, [escrutinioId, voteStore]);
+  }, [escrutinioState.escrutinioId, voteStore]);
 
   // Map party acronyms to display names using party config
   const mapPartyToDisplayName = (party: string): string => {
@@ -393,16 +393,16 @@ function EscrutinioPageContent() {
                   placeholder="Escribir número de JRV (ej: 00001)"
                   disabled={isStarting}
                 />
-                {selectedMesaInfo && (
+                {escrutinioState.selectedMesaInfo && (
                   <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-md">
                     <div className="flex items-center">
                       <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
                       <div>
                         <div className="text-sm font-medium text-green-800">
-                          {selectedMesaInfo.label}
+                          {escrutinioState.selectedMesaInfo?.label}
                         </div>
                         <div className="text-xs text-green-600">
-                          {selectedMesaInfo.department}
+                          {escrutinioState.selectedMesaInfo?.department}
                         </div>
                       </div>
                     </div>
@@ -416,8 +416,8 @@ function EscrutinioPageContent() {
                 </label>
                 <select 
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  value={selectedLevel}
-                  onChange={(e) => setSelectedLevel(e.target.value)}
+                  value={escrutinioState.selectedLevel}
+                  onChange={(e) => saveState({ selectedLevel: e.target.value })}
                 >
                   <option value="">Seleccionar nivel...</option>
                   <option value="PRESIDENTIAL">Presidencial</option>
@@ -430,7 +430,7 @@ function EscrutinioPageContent() {
                   variant="primary"
                   size="lg"
                   onClick={handleGetLocation}
-                  disabled={!selectedMesa || !selectedLevel || isLoading || isStarting}
+                  disabled={!escrutinioState.selectedMesa || !escrutinioState.selectedLevel || isLoading || isStarting}
                   loading={isLoading || isStarting}
                 >
                   {isLoading ? (
@@ -517,34 +517,34 @@ function EscrutinioPageContent() {
         )}
 
         {/* Step 2: Vote Counting */}
-        {currentStep === 2 && (
+        {escrutinioState.currentStep === 2 && (
           <div className="bg-white p-6 rounded-lg shadow-sm border">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Conteo de Votos</h2>
             
-            {location && (
+            {escrutinioState.location && (
               <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-md">
                 <div className="flex items-center">
                   <CheckCircle className="h-5 w-5 text-green-600" />
                   <div className="ml-3">
                     <p className="text-sm font-medium text-green-800">Ubicación verificada</p>
                     <p className="text-sm text-green-700">
-                      Lat: {location.lat.toFixed(6)}, Lng: {location.lng.toFixed(6)}
+                      Lat: {escrutinioState.location.lat.toFixed(6)}, Lng: {escrutinioState.location.lng.toFixed(6)}
                     </p>
                   </div>
                 </div>
               </div>
             )}
             {/* Show different UI based on election level */}
-            {selectedLevel === 'LEGISLATIVE' ? (
+            {escrutinioState.selectedLevel === 'LEGISLATIVE' ? (
               <DiputadosEscrutinio 
-                jrvNumber={selectedMesa} 
-                escrutinioId={escrutinioId || undefined}
+                jrvNumber={escrutinioState.selectedMesa} 
+                escrutinioId={escrutinioState.escrutinioId || undefined}
                 userId={user?.id}
               />
             ) : (
               <div className="space-y-4">
                 <VoteList
-                  escrutinioId={escrutinioId || 'escrutinio-temp'}
+                  escrutinioId={escrutinioState.escrutinioId || 'escrutinio-temp'}
                   candidates={filteredCandidates.map((c) => ({
                     id: c.id,
                     name: c.name,
@@ -553,8 +553,8 @@ function EscrutinioPageContent() {
                     partyColor: getPartyColor(c.party),
                   }))}
                   userId={user?.id}
-                  mesaId={selectedMesa}
-                  gps={location ? { latitude: location.lat, longitude: location.lng, accuracy: location.accuracy } : null}
+                  mesaId={escrutinioState.selectedMesa}
+                  gps={escrutinioState.location ? { latitude: escrutinioState.location.lat, longitude: escrutinioState.location.lng, accuracy: escrutinioState.location.accuracy } : null}
                   deviceId={typeof window !== 'undefined' ? localStorage.getItem('device-id') || undefined : undefined}
                 />
               </div>
@@ -562,15 +562,15 @@ function EscrutinioPageContent() {
           </div>
         )}
 
-        {currentStep === 2 && selectedLevel !== 'LEGISLATIVE' && (
+        {escrutinioState.currentStep === 2 && escrutinioState.selectedLevel !== 'LEGISLATIVE' && (
           <VoteFooter
-            escrutinioId={escrutinioId || 'escrutinio-temp'}
-            onContinue={() => setCurrentStep(3)}
+            escrutinioId={escrutinioState.escrutinioId || 'escrutinio-temp'}
+            onContinue={() => saveState({ currentStep: 3 })}
           />
         )}
 
         {/* Step 3: Evidence Upload */}
-        {currentStep === 3 && (
+        {escrutinioState.currentStep === 3 && (
           <div className="bg-white p-6 rounded-lg shadow-sm border">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Carga de Evidencia</h2>
             
@@ -587,9 +587,9 @@ function EscrutinioPageContent() {
                     onChange={handleActaUpload}
                     className="hidden"
                     id="acta-upload"
-                    disabled={isEscrutinioFinished}
+                    disabled={escrutinioState.isEscrutinioFinished}
                   />
-                  <label htmlFor="acta-upload" className={`cursor-pointer ${isEscrutinioFinished ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                  <label htmlFor="acta-upload" className={`cursor-pointer ${escrutinioState.isEscrutinioFinished ? 'opacity-50 cursor-not-allowed' : ''}`}>
                     <span className="text-primary-600 hover:text-primary-500 font-medium">
                       Seleccionar imagen
                     </span>
@@ -599,12 +599,12 @@ function EscrutinioPageContent() {
                     PNG, JPG hasta 10MB
                   </p>
                 </div>
-                {actaImage && (
+                {escrutinioState.actaImage && (
                   <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-md">
                     <div className="flex items-center">
                       <CheckCircle className="h-5 w-5 text-green-600" />
                       <span className="ml-2 text-sm text-green-800">
-                        {actaImage.name} seleccionada
+                        {escrutinioState.actaImage.name} seleccionada
                       </span>
                     </div>
                   </div>
@@ -612,12 +612,12 @@ function EscrutinioPageContent() {
               </div>
 
               <div className="pt-4 space-y-3">
-                {!isEscrutinioFinished ? (
+                {!escrutinioState.isEscrutinioFinished ? (
                   <Button
                     variant="primary"
                     size="lg"
                     onClick={handleFinishEscrutinio}
-                    disabled={!actaImage}
+                    disabled={!escrutinioState.actaImage}
                   >
                     Fin de Escrutinio
                   </Button>
