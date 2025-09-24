@@ -247,7 +247,7 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-lg font-semibold text-gray-900">Escrutinios Recientes</h3>
             <Button
-              variant="ghost"
+              variant="secondary"
               size="sm"
               onClick={() => setActiveTab('review')}
               className="text-xs text-blue-600 hover:text-blue-700"
@@ -266,7 +266,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <Button
-                  variant="ghost"
+                  variant="secondary"
                   size="sm"
                   onClick={() => router.push(`/revisar/${activity.id}`)}
                   className="text-xs text-blue-600 hover:text-blue-700"
