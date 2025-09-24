@@ -46,7 +46,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       data: {
         userId: payload.userId,
         action: 'REOPEN_ESCRUTINIO',
-        details: {
+        metadata: {
           escrutinioId,
           mesaNumber: existing.mesaNumber,
           electionLevel: existing.electionLevel,

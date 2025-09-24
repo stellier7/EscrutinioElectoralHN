@@ -32,14 +32,14 @@ export async function GET(request: Request, { params }: { params: { id: string }
         },
       },
       orderBy: {
-        createdAt: 'desc',
+        timestamp: 'desc',
       },
     });
 
-    // Filtrar logs que contengan el escrutinioId en los detalles
+    // Filtrar logs que contengan el escrutinioId en los metadata
     const filteredLogs = allAuditLogs.filter(log => {
-      const details = log.details as any;
-      return details?.escrutinioId === escrutinioId;
+      const metadata = log.metadata as any;
+      return metadata?.escrutinioId === escrutinioId;
     });
 
     return NextResponse.json({
@@ -47,8 +47,8 @@ export async function GET(request: Request, { params }: { params: { id: string }
       auditLogs: filteredLogs.map(log => ({
         id: log.id,
         action: log.action,
-        details: log.details,
-        createdAt: log.createdAt,
+        metadata: log.metadata,
+        timestamp: log.timestamp,
         user: log.user,
         ipAddress: log.ipAddress,
       })),
