@@ -64,6 +64,7 @@ function EscrutinioPageContent() {
   const [actaImage, setActaImage] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
+  const [isEscrutinioFinished, setIsEscrutinioFinished] = useState(false);
   
   // Usar el hook de geolocalización
   const { 
@@ -208,6 +209,14 @@ function EscrutinioPageContent() {
       const hash = await computeSHA256Hex(actaImage);
       await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/evidence`, { publicUrl: dataUrl, hash });
     } catch {}
+  };
+
+  const handleFinishEscrutinio = () => {
+    setIsEscrutinioFinished(true);
+  };
+
+  const handleEditEscrutinio = () => {
+    setIsEscrutinioFinished(false);
   };
 
   const handleSubmit = async () => {
@@ -565,8 +574,9 @@ function EscrutinioPageContent() {
                     onChange={handleActaUpload}
                     className="hidden"
                     id="acta-upload"
+                    disabled={isEscrutinioFinished}
                   />
-                  <label htmlFor="acta-upload" className="cursor-pointer">
+                  <label htmlFor="acta-upload" className={`cursor-pointer ${isEscrutinioFinished ? 'opacity-50 cursor-not-allowed' : ''}`}>
                     <span className="text-primary-600 hover:text-primary-500 font-medium">
                       Seleccionar imagen
                     </span>
@@ -588,16 +598,36 @@ function EscrutinioPageContent() {
                 )}
               </div>
 
-              <div className="pt-4">
-                <Button
-                  variant="primary"
-                  size="lg"
-                  onClick={handleSubmit}
-                  disabled={!actaImage || isSubmitting}
-                  loading={isSubmitting}
-                >
-                  {isSubmitting ? 'Enviando...' : 'Enviar Escrutinio'}
-                </Button>
+              <div className="pt-4 space-y-3">
+                {!isEscrutinioFinished ? (
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    onClick={handleFinishEscrutinio}
+                    disabled={!actaImage}
+                  >
+                    Fin de Escrutinio
+                  </Button>
+                ) : (
+                  <div className="space-y-3">
+                    <Button
+                      variant="primary"
+                      size="lg"
+                      onClick={handleSubmit}
+                      disabled={isSubmitting}
+                      loading={isSubmitting}
+                    >
+                      {isSubmitting ? 'Enviando...' : 'Mandar Escrutinio'}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={handleEditEscrutinio}
+                    >
+                      Editar
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           </div>

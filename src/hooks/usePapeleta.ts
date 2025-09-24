@@ -19,13 +19,15 @@ export interface UsePapeletaReturn {
   isLoading: boolean;
   error: string | null;
   startPapeleta: (escrutinioId: string, userId: string) => Promise<boolean>;
-  addVoteToBuffer: (partyId: string, casillaNumber: number, userId: string) => Promise<boolean>;
+  addVoteToBuffer: (partyId: string, casillaNumber: number, userId: string, voteLimit?: number) => Promise<boolean>;
   removeVoteFromBuffer: (partyId: string, casillaNumber: number) => void;
   closePapeleta: (userId: string) => Promise<boolean>;
   anularPapeleta: (userId: string, reason?: string) => Promise<boolean>;
   resetPapeleta: () => void;
   isCasillaSelected: (partyId: string, casillaNumber: number) => boolean;
   getCasillaVoteCount: (partyId: string, casillaNumber: number) => number;
+  isVoteLimitReached: (voteLimit: number) => boolean;
+  getTotalVotesInBuffer: () => number;
 }
 
 export function usePapeleta(): UsePapeletaReturn {
@@ -69,9 +71,15 @@ export function usePapeleta(): UsePapeletaReturn {
     }
   }, []);
 
-  const addVoteToBuffer = useCallback(async (partyId: string, casillaNumber: number, userId: string): Promise<boolean> => {
+  const addVoteToBuffer = useCallback(async (partyId: string, casillaNumber: number, userId: string, voteLimit?: number): Promise<boolean> => {
     if (!papeleta.id || papeleta.status !== 'OPEN') {
       setError('No hay papeleta abierta');
+      return false;
+    }
+
+    // Verificar límite de marcas si se proporciona
+    if (voteLimit && papeleta.votesBuffer.length >= voteLimit) {
+      setError(`Límite de marcas alcanzado (${voteLimit}). Debe cerrar la papeleta para continuar.`);
       return false;
     }
 
@@ -98,17 +106,17 @@ export function usePapeleta(): UsePapeletaReturn {
         }));
         return true;
       } else {
-        setError(response.data?.error || 'Error al agregar voto');
+        setError(response.data?.error || 'Error al agregar marca');
         return false;
       }
     } catch (err: any) {
-      console.error('Error adding vote to papeleta:', err);
-      setError(err?.response?.data?.error || 'Error al agregar voto');
+      console.error('Error adding mark to papeleta:', err);
+      setError(err?.response?.data?.error || 'Error al agregar marca');
       return false;
     } finally {
       setIsLoading(false);
     }
-  }, [papeleta.id, papeleta.status]);
+  }, [papeleta.id, papeleta.status, papeleta.votesBuffer.length]);
 
   const closePapeleta = useCallback(async (userId: string): Promise<boolean> => {
     if (!papeleta.id || papeleta.status !== 'OPEN') {
@@ -208,6 +216,14 @@ export function usePapeleta(): UsePapeletaReturn {
     setError(null);
   }, []);
 
+  const isVoteLimitReached = useCallback((voteLimit: number): boolean => {
+    return papeleta.votesBuffer.length >= voteLimit;
+  }, [papeleta.votesBuffer.length]);
+
+  const getTotalVotesInBuffer = useCallback((): number => {
+    return papeleta.votesBuffer.length;
+  }, [papeleta.votesBuffer.length]);
+
   return {
     papeleta,
     isLoading,
@@ -219,6 +235,8 @@ export function usePapeleta(): UsePapeletaReturn {
     anularPapeleta,
     resetPapeleta,
     isCasillaSelected,
-    getCasillaVoteCount
+    getCasillaVoteCount,
+    isVoteLimitReached,
+    getTotalVotesInBuffer
   };
 }

@@ -4,6 +4,7 @@ import { ArrowLeft, Loader2, AlertCircle, Check, X, FileText, Camera, Upload } f
 import clsx from 'clsx';
 import axios from 'axios';
 import { usePapeleta } from '@/hooks/usePapeleta';
+import { VoteLimitAlert } from './ui/VoteLimitAlert';
 
 // Utility function to generate block-based slot ranges for legislative elections
 // Input: parties[] (fixed order array), S = seatCount (number of diputados)
@@ -89,6 +90,10 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
   const [actaImage, setActaImage] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
+  
+  // Estados para alerta de límite de marcas
+  const [showVoteLimitAlert, setShowVoteLimitAlert] = useState(false);
+  const [isClosingPapeleta, setIsClosingPapeleta] = useState(false);
 
   // Hook para manejar papeletas
   const { 
@@ -102,7 +107,9 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     anularPapeleta, 
     resetPapeleta,
     isCasillaSelected,
-    getCasillaVoteCount
+    getCasillaVoteCount,
+    isVoteLimitReached,
+    getTotalVotesInBuffer
   } = usePapeleta();
 
   // Cargar datos de diputados según la JRV
@@ -247,8 +254,16 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
         partyId
       });
     } else {
-      // Seleccionar - agregar al buffer
-      const success = await addVoteToBuffer(partyId, slotNumber, userId);
+      // Verificar límite de marcas antes de agregar
+      const voteLimit = diputadosData?.diputados || 0;
+      if (voteLimit > 0 && isVoteLimitReached(voteLimit)) {
+        // Mostrar alerta de límite alcanzado
+        setShowVoteLimitAlert(true);
+        return;
+      }
+
+      // Seleccionar - agregar al buffer con límite
+      const success = await addVoteToBuffer(partyId, slotNumber, userId, voteLimit);
       
       if (success) {
         // No actualizar partyCounts aquí - el hook ya maneja el buffer
@@ -259,6 +274,11 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
           y,
           partyId
         });
+
+        // Verificar si se alcanzó el límite después de agregar la marca
+        if (voteLimit > 0 && isVoteLimitReached(voteLimit)) {
+          setShowVoteLimitAlert(true);
+        }
       }
     }
 
@@ -266,12 +286,29 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     setTimeout(() => {
       setAnimation(prev => ({ ...prev, show: false }));
     }, 200);
-  }, [userId, papeleta.status, addVoteToBuffer, removeVoteFromBuffer, isCasillaSelected]);
+  }, [userId, papeleta.status, addVoteToBuffer, removeVoteFromBuffer, isCasillaSelected, diputadosData?.diputados, isVoteLimitReached]);
 
   // Handle back button
   const handleBack = useCallback(() => {
     setExpandedParty(null);
   }, []);
+
+  // Handle vote limit alert
+  const handleCloseVoteLimitAlert = useCallback(() => {
+    setShowVoteLimitAlert(false);
+  }, []);
+
+  const handleClosePapeletaFromAlert = useCallback(async () => {
+    if (!userId) return;
+    
+    setIsClosingPapeleta(true);
+    try {
+      await handleClosePapeleta();
+      setShowVoteLimitAlert(false);
+    } finally {
+      setIsClosingPapeleta(false);
+    }
+  }, [userId, handleClosePapeleta]);
 
   // Handle close papeleta
   const handleClosePapeleta = useCallback(async () => {
@@ -279,11 +316,11 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     
     const success = await closePapeleta(userId);
     if (success) {
-      // Aplicar votos del buffer a los votos aplicados (conteo general)
+      // Aplicar marcas del buffer a las marcas aplicadas (conteo general)
       const newAppliedVotes = { ...appliedVotes };
       const newPartyCounts = { ...partyCounts };
       
-      // Procesar cada voto del buffer
+      // Procesar cada marca del buffer
       papeleta.votesBuffer.forEach((vote) => {
         const { partyId, casillaNumber } = vote;
         
@@ -322,7 +359,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     
     const success = await anularPapeleta(userId, 'Anulada por usuario');
     if (success) {
-      // Solo limpiar el grid actual, mantener votos aplicados
+      // Solo limpiar el grid actual, mantener marcas aplicadas
       setExpandedParty(null);
       
       // Iniciar nueva papeleta
@@ -538,7 +575,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
                   borderColor: party.color,
                   backgroundColor: isSelected 
                     ? `${party.color}25`  // Solo color para selección actual (papeleta abierta)
-                    : 'transparent',      // Votos aplicados vuelven a blanco
+                    : 'transparent',      // Marcas aplicadas vuelven a blanco
                   color: isSelected ? party.color : '#374151',
                   '--tw-ring-color': party.color,
                   borderWidth: isSelected ? '3px' : '2px' // Borde más grueso para seleccionadas
@@ -577,11 +614,11 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
         <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-6 text-xs text-gray-600">
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 rounded border-2 border-dashed" style={{ borderColor: party.color }}></div>
-            <span>Sin votos</span>
+            <span>Sin marcas</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 rounded border-2 border-solid" style={{ borderColor: party.color }}></div>
-            <span>Con votos (numerito)</span>
+            <span>Con marcas (numerito)</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 rounded border-2 border-solid" style={{ borderColor: party.color, backgroundColor: `${party.color}25` }}></div>
@@ -598,7 +635,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
                 <span className="text-sm font-medium text-blue-900">Papeleta Abierta</span>
               </div>
               <span className="text-sm text-blue-700">
-                {papeleta.votesBuffer.length} voto{papeleta.votesBuffer.length !== 1 ? 's' : ''}
+                {papeleta.votesBuffer.length} marca{papeleta.votesBuffer.length !== 1 ? 's' : ''}
               </span>
             </div>
             
@@ -800,6 +837,16 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
           </div>
         </div>
       )}
+
+      {/* Vote Limit Alert */}
+      <VoteLimitAlert
+        isVisible={showVoteLimitAlert}
+        currentVotes={getTotalVotesInBuffer()}
+        voteLimit={diputadosData?.diputados || 0}
+        onClose={handleCloseVoteLimitAlert}
+        onClosePapeleta={handleClosePapeletaFromAlert}
+        isClosingPapeleta={isClosingPapeleta}
+      />
     </div>
   );
 }
