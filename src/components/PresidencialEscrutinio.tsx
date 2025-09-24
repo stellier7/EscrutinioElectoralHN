@@ -67,19 +67,75 @@ export default function PresidencialEscrutinio({
       return;
     }
 
+    if (!escrutinioId) {
+      alert('Error: No se encontró el ID del escrutinio');
+      return;
+    }
+
     setIsCompleting(true);
     
     try {
-      // Aquí se implementaría la lógica de envío real
-      // Por ahora simulamos el envío
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Obtener URL de presign para subir la foto
+      const presignResponse = await fetch('/api/upload/presign', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
+        },
+        body: JSON.stringify({
+          escrutinioId,
+          fileName: actaImage.name,
+          contentType: actaImage.type || 'image/jpeg',
+        }),
+      });
+
+      if (!presignResponse.ok) {
+        throw new Error('Error obteniendo URL de subida');
+      }
+
+      const presignData = await presignResponse.json();
+      
+      if (!presignData.success) {
+        throw new Error(presignData.error || 'Error en la respuesta del servidor');
+      }
+
+      const { uploadUrl, publicUrl } = presignData.data;
+      
+      // Subir la foto usando la URL presign
+      const uploadResponse = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': actaImage.type || 'image/jpeg',
+        },
+        body: actaImage,
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error('Error al subir la foto del acta');
+      }
+      
+      // Marcar el escrutinio como completado
+      const completeResponse = await fetch(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/complete`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          gps: gps || null,
+          actaUrl: publicUrl,
+        }),
+      });
+
+      if (!completeResponse.ok) {
+        throw new Error('Error al completar el escrutinio');
+      }
       
       setIsCompleting(false);
       setShowSuccessModal(true);
     } catch (error) {
       console.error('Error enviando resultados:', error);
       setIsCompleting(false);
-      alert('Error al enviar los resultados. Intenta de nuevo.');
+      alert(`Error al enviar los resultados: ${error instanceof Error ? error.message : 'Error desconocido'}`);
     }
   };
 

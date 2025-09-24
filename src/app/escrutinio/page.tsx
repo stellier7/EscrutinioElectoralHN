@@ -617,7 +617,7 @@ function EscrutinioPageContent() {
                 userId={user?.id}
                 mesaId={escrutinioState.selectedMesa}
                 jrvNumber={escrutinioState.selectedMesa}
-                department={escrutinioState.selectedMesaInfo?.department}
+                department={escrutinioState.selectedMesaInfo?.department || 'N/A'}
                 gps={escrutinioState.location ? { latitude: escrutinioState.location.lat, longitude: escrutinioState.location.lng, accuracy: escrutinioState.location.accuracy || 0 } : null}
                 deviceId={typeof window !== 'undefined' ? localStorage.getItem('device-id') || undefined : undefined}
               />
