@@ -61,6 +61,7 @@ function EscrutinioPageContent() {
     escrutinioState, 
     saveState, 
     clearState, 
+    startNewEscrutinio,
     hasActiveEscrutinio, 
     canRecoverEscrutinio 
   } = useEscrutinioPersistence();
@@ -331,6 +332,15 @@ function EscrutinioPageContent() {
             </div>
             
             <div className="flex items-center space-x-2">
+              {(escrutinioState.selectedMesa || escrutinioState.selectedLevel) && (
+                <button
+                  onClick={startNewEscrutinio}
+                  className="px-3 py-1 text-xs bg-red-100 text-red-700 rounded-full hover:bg-red-200 transition-colors"
+                  title="Iniciar nuevo escrutinio"
+                >
+                  Nuevo Escrutinio
+                </button>
+              )}
               <MapPin className="h-4 w-4 lg:h-5 lg:w-5 text-gray-400" />
               <span className="text-xs lg:text-sm text-gray-700 hidden sm:block">
                 {user?.name}
@@ -380,7 +390,15 @@ function EscrutinioPageContent() {
         {/* Step 1: Configuration */}
         {escrutinioState.currentStep === 1 && (
           <div className="bg-white p-6 rounded-lg shadow-sm border">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Configuración del Escrutinio</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">Configuración del Escrutinio</h2>
+              {canRecoverEscrutinio && (
+                <div className="flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+                  <CheckCircle className="h-4 w-4" />
+                  <span>Datos previos cargados</span>
+                </div>
+              )}
+            </div>
             
             <div className="space-y-4">
               <div>

@@ -102,8 +102,8 @@ export function useEscrutinioPersistence() {
       state.selectedMesa = jrvFromUrl;
       state.selectedLevel = levelFromUrl;
       
-      // Si tenemos JRV y nivel en URL, probablemente estamos en un escrutinio activo
-      if (state.currentStep === 1) {
+      // Solo saltar al paso 2 si también tenemos un escrutinioId (escritinio activo)
+      if (escrutinioIdFromUrl && state.currentStep === 1) {
         state.currentStep = 2; // Saltar al paso de conteo
       }
     }
@@ -138,6 +138,11 @@ export function useEscrutinioPersistence() {
     router.replace('/escrutinio', { scroll: false });
   }, [router]);
 
+  // Función para iniciar nuevo escrutinio (limpiar todo)
+  const startNewEscrutinio = useCallback(() => {
+    clearState();
+  }, [clearState]);
+
   // Cargar estado al inicializar
   useEffect(() => {
     const loadedState = loadState();
@@ -158,6 +163,7 @@ export function useEscrutinioPersistence() {
     escrutinioState,
     saveState,
     clearState,
+    startNewEscrutinio,
     hasActiveEscrutinio: hasActiveEscrutinio(),
     canRecoverEscrutinio: canRecoverEscrutinio(),
   };
