@@ -176,11 +176,20 @@ function EscrutinioPageContent() {
       setIsStarting(true);
       setGpsSuccess(false);
       
-      const resp = await axios.post('/api/escrutinio/start', {
+      const payload = {
         mesaNumber: escrutinioState.selectedMesa,
         electionLevel: escrutinioState.selectedLevel,
-        gps: { latitude: result.lat, longitude: result.lng, accuracy: result.accuracy },
-      });
+        gps: { 
+          latitude: result.lat, 
+          longitude: result.lng, 
+          accuracy: result.accuracy || 0 
+        },
+      };
+      
+      console.log('🔍 [ESCRUTINIO] Enviando payload a /api/escrutinio/start:', JSON.stringify(payload, null, 2));
+      console.log('🔍 [ESCRUTINIO] GPS result:', result);
+      
+      const resp = await axios.post('/api/escrutinio/start', payload);
       if (resp.data?.success && resp.data?.data?.escrutinioId) {
         // Reset any previous counts/batch when starting a brand new escrutinio
         voteStore.clear();
@@ -196,9 +205,15 @@ function EscrutinioPageContent() {
           location: result,
         });
       } else {
+        console.error('❌ [ESCRUTINIO] Respuesta del servidor no exitosa:', resp.data);
         alert(resp.data?.error || 'No se pudo iniciar el escrutinio');
       }
     } catch (e: any) {
+      console.error('❌ [ESCRUTINIO] Error obteniendo ubicación:', e);
+      if (e.response) {
+        console.error('❌ [ESCRUTINIO] Respuesta del servidor:', e.response.data);
+        console.error('❌ [ESCRUTINIO] Status:', e.response.status);
+      }
       alert(e?.response?.data?.error || 'Error al iniciar el escrutinio');
     } finally {
       setIsStarting(false);
