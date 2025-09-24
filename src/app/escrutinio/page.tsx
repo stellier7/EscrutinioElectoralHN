@@ -124,8 +124,8 @@ function EscrutinioPageContent() {
     // Guardar el nivel seleccionado
     saveState({ selectedLevel: level });
 
-    // Automáticamente obtener GPS y continuar
-    await handleGetLocation();
+    // Automáticamente obtener GPS y continuar con el nivel correcto
+    await handleGetLocation(level);
   };
 
   const [candidates, setCandidates] = useState<Candidate[]>([]);
@@ -169,16 +169,19 @@ function EscrutinioPageContent() {
     return getPartyConfig(party).color;
   };
 
-  const handleGetLocation = async () => {
+  const handleGetLocation = async (electionLevel?: string) => {
     const result = await getCurrentLocation();
     if (!result) return;
     try {
       setIsStarting(true);
       setGpsSuccess(false);
       
+      // Usar el nivel pasado como parámetro o el del estado
+      const level = electionLevel || escrutinioState.selectedLevel;
+      
       const payload = {
         mesaNumber: escrutinioState.selectedMesa,
-        electionLevel: escrutinioState.selectedLevel,
+        electionLevel: level,
         gps: { 
           latitude: result.lat, 
           longitude: result.lng, 
@@ -203,6 +206,7 @@ function EscrutinioPageContent() {
           escrutinioId: resp.data.data.escrutinioId,
           currentStep: 2, // Ir al paso de conteo después de obtener GPS
           location: result,
+          selectedLevel: level, // Asegurar que el nivel se guarde correctamente
         });
       } else {
         console.error('❌ [ESCRUTINIO] Respuesta del servidor no exitosa:', resp.data);
