@@ -19,7 +19,7 @@ interface EscrutinioState {
   location: {
     lat: number;
     lng: number;
-    accuracy: number;
+    accuracy?: number;
   } | null;
 }
 

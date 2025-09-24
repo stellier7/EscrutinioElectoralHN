@@ -251,7 +251,7 @@ function EscrutinioPageContent() {
             type: escrutinioState.actaImage.type,
             size: escrutinioState.actaImage.size,
           } : null,
-          gps: { latitude: escrutinioState.location!.lat, longitude: escrutinioState.location!.lng, accuracy: escrutinioState.location!.accuracy },
+          gps: { latitude: escrutinioState.location!.lat, longitude: escrutinioState.location!.lng, accuracy: escrutinioState.location!.accuracy || 0 },
           mesaNumber: escrutinioState.selectedMesa,
           electionLevel: escrutinioState.selectedLevel,
         };
@@ -269,7 +269,7 @@ function EscrutinioPageContent() {
       if (escrutinioState.escrutinioId) {
         try {
           await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioState.escrutinioId)}/complete`, {
-            gps: { latitude: escrutinioState.location!.lat, longitude: escrutinioState.location!.lng, accuracy: escrutinioState.location!.accuracy },
+            gps: { latitude: escrutinioState.location!.lat, longitude: escrutinioState.location!.lng, accuracy: escrutinioState.location!.accuracy || 0 },
           });
         } catch (e) {
           // Continuar aunque falle el marcado como completo
@@ -554,7 +554,7 @@ function EscrutinioPageContent() {
                   }))}
                   userId={user?.id}
                   mesaId={escrutinioState.selectedMesa}
-                  gps={escrutinioState.location ? { latitude: escrutinioState.location.lat, longitude: escrutinioState.location.lng, accuracy: escrutinioState.location.accuracy } : null}
+                  gps={escrutinioState.location ? { latitude: escrutinioState.location.lat, longitude: escrutinioState.location.lng, accuracy: escrutinioState.location.accuracy || 0 } : null}
                   deviceId={typeof window !== 'undefined' ? localStorage.getItem('device-id') || undefined : undefined}
                 />
               </div>
