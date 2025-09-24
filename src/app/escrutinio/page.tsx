@@ -788,7 +788,7 @@ function EscrutinioPageContent() {
                 </h3>
               </div>
               <p className="text-gray-600 mb-6">
-                Se encontró un escrutinio previo para la JRV <strong>{escrutinioState.selectedMesaInfo?.jrv || escrutinioState.selectedMesa}</strong> 
+                Se encontró un escrutinio previo para la JRV <strong>{escrutinioState.selectedMesaInfo?.label || escrutinioState.selectedMesa}</strong> 
                 ({escrutinioState.selectedLevel === 'PRESIDENTIAL' ? 'Presidencial' : 'Legislativo'}). 
                 ¿Qué deseas hacer?
               </p>
