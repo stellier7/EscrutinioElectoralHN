@@ -50,12 +50,15 @@ export async function GET(
     }
 
     // Verificar que el usuario tiene acceso al escrutinio
-    // (opcional: solo el usuario que lo creó o admins)
+    // Permitir acceso si es el creador, admin, o cualquier usuario autenticado (transparencia)
     if (escrutinio.userId !== payload.userId && payload.role !== 'ADMIN') {
-      return NextResponse.json(
-        { success: false, error: 'No tienes acceso a este escrutinio' },
-        { status: 403 }
-      );
+      // Por ahora permitimos que cualquier usuario autenticado vea cualquier escrutinio
+      // Esto es para transparencia electoral - todos pueden revisar escrutinios públicos
+      console.log('Usuario revisando escrutinio de otro usuario:', { 
+        viewerId: payload.userId, 
+        creatorId: escrutinio.userId,
+        escrutinioId 
+      });
     }
 
     // Procesar los datos de votos por candidato

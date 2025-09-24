@@ -158,12 +158,16 @@ export default function DashboardPage() {
     return null;
   }
 
+  // Opciones del menú basadas en el rol del usuario
   const menuItems = [
     { id: 'overview', label: 'Resumen', icon: BarChart3 },
     { id: 'escrutinio', label: 'Nuevo Escrutinio', icon: Vote },
-    { id: 'results', label: 'Resultados', icon: CheckCircle },
-    { id: 'evidence', label: 'Evidencia', icon: Camera },
-    { id: 'audit', label: 'Auditoría', icon: Shield },
+    // Solo admins pueden ver estas secciones
+    ...(user?.role === 'ADMIN' ? [
+      { id: 'results', label: 'Resultados', icon: CheckCircle },
+      { id: 'evidence', label: 'Evidencia', icon: Camera },
+      { id: 'audit', label: 'Auditoría', icon: Shield },
+    ] : []),
     { id: 'profile', label: 'Perfil', icon: User },
   ];
 
@@ -214,8 +218,10 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900 mb-3">Actividad Reciente</h3>
+      {/* Solo admins pueden ver la actividad reciente */}
+      {user.role === 'ADMIN' && (
+        <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900 mb-3">Actividad Reciente</h3>
         {statsLoading ? (
           <div className="text-center py-6 text-gray-500">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto"></div>
@@ -268,7 +274,7 @@ export default function DashboardPage() {
         ) : (
           <div className="text-center py-6 text-gray-500">
             <Vote className="h-10 w-10 mx-auto mb-3 text-gray-300" />
-            <p className="text-sm">No hay actividad reciente</p>
+            <p className="text-sm">No has completado ningún escrutinio aún</p>
             <p className="text-xs text-gray-400 mb-4">Comienza un nuevo escrutinio para ver tu actividad aquí</p>
             <Button 
               variant="primary" 
@@ -280,7 +286,30 @@ export default function DashboardPage() {
             </Button>
           </div>
         )}
-      </div>
+        </div>
+      )}
+
+      {/* Sección para Admins - Ver Todos los Escrutinios */}
+      {user.role === 'ADMIN' && (
+        <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+            <Crown className="h-5 w-5 text-purple-600" />
+            Todos los Escrutinios (Admin)
+          </h3>
+          <p className="text-sm text-gray-600 mb-4">
+            Como administrador, puedes revisar todos los escrutinios completados por todos los usuarios.
+          </p>
+          <Button 
+            variant="secondary" 
+            size="lg"
+            onClick={() => router.push('/admin')}
+            className="w-full"
+          >
+            <BarChart3 className="h-4 w-4 mr-2" />
+            Ver Panel de Administración
+          </Button>
+        </div>
+      )}
     </div>
   );
 
