@@ -39,34 +39,12 @@ export default function PresidencialEscrutinio({
     decrement: s.decrement,
   }));
 
-  // Estados para foto y finalización
-  const [actaImage, setActaImage] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
+  // Estados para finalización
   const [isCompleting, setIsCompleting] = useState(false);
-  
-  // Estados para la lógica de pasos
-  const [isEscrutinioClosed, setIsEscrutinioClosed] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
-  const handleActaUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setActaImage(file);
-    }
-  }, []);
-
-  // Función para cerrar/editar escrutinio
-  const handleToggleEscrutinio = () => {
-    setIsEscrutinioClosed(!isEscrutinioClosed);
-  };
-
-  // Función para enviar resultados
+  // Función para finalizar escrutinio
   const handleSendResults = async () => {
-    if (!actaImage) {
-      alert('Por favor sube una foto del acta antes de enviar los resultados');
-      return;
-    }
-
     if (!escrutinioId) {
       alert('Error: No se encontró el ID del escrutinio');
       return;
@@ -75,46 +53,7 @@ export default function PresidencialEscrutinio({
     setIsCompleting(true);
     
     try {
-      // Obtener URL de presign para subir la foto
-      const presignResponse = await fetch('/api/upload/presign', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
-        },
-        body: JSON.stringify({
-          escrutinioId,
-          fileName: actaImage.name,
-          contentType: actaImage.type || 'image/jpeg',
-        }),
-      });
-
-      if (!presignResponse.ok) {
-        throw new Error('Error obteniendo URL de subida');
-      }
-
-      const presignData = await presignResponse.json();
-      
-      if (!presignData.success) {
-        throw new Error(presignData.error || 'Error en la respuesta del servidor');
-      }
-
-      const { uploadUrl, publicUrl } = presignData.data;
-      
-      // Subir la foto usando la URL presign
-      const uploadResponse = await fetch(uploadUrl, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': actaImage.type || 'image/jpeg',
-        },
-        body: actaImage,
-      });
-
-      if (!uploadResponse.ok) {
-        throw new Error('Error al subir la foto del acta');
-      }
-      
-      // Marcar el escrutinio como completado
+      // Marcar el escrutinio como completado sin foto
       const completeResponse = await fetch(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/complete`, {
         method: 'POST',
         headers: {
@@ -122,7 +61,7 @@ export default function PresidencialEscrutinio({
         },
         body: JSON.stringify({
           gps: gps || null,
-          actaUrl: publicUrl,
+          actaUrl: null, // Sin foto del acta
         }),
       });
 
@@ -133,9 +72,9 @@ export default function PresidencialEscrutinio({
       setIsCompleting(false);
       setShowSuccessModal(true);
     } catch (error) {
-      console.error('Error enviando resultados:', error);
+      console.error('Error finalizando escrutinio:', error);
       setIsCompleting(false);
-      alert(`Error al enviar los resultados: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+      alert(`Error al finalizar el escrutinio: ${error instanceof Error ? error.message : 'Error desconocido'}`);
     }
   };
 
@@ -198,23 +137,25 @@ export default function PresidencialEscrutinio({
             </p>
           </div>
           
-          {/* Botón Cerrar/Editar Escrutinio */}
+          {/* Botón Finalizar Escrutinio */}
           <div className="mb-6">
             <button
-              onClick={handleToggleEscrutinio}
-              className={`w-full sm:w-auto px-6 py-3 rounded-lg font-medium transition-colors ${
-                isEscrutinioClosed
-                  ? 'bg-orange-600 hover:bg-orange-700 text-white'
-                  : 'bg-red-600 hover:bg-red-700 text-white'
-              }`}
+              onClick={handleSendResults}
+              disabled={isCompleting}
+              className="w-full sm:w-auto px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors disabled:cursor-not-allowed"
             >
-              {isEscrutinioClosed ? 'Editar Escrutinio' : 'Cerrar Escrutinio'}
+              {isCompleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin inline mr-2" />
+                  Finalizando...
+                </>
+              ) : (
+                <>
+                  <Upload className="h-4 w-4 inline mr-2" />
+                  Finalizar Escrutinio
+                </>
+              )}
             </button>
-            {isEscrutinioClosed && (
-              <p className="mt-2 text-sm text-gray-600">
-                El escrutinio está cerrado. Los votos no se pueden modificar.
-              </p>
-            )}
           </div>
 
           {/* Lista de Candidatos */}
@@ -270,61 +211,6 @@ export default function PresidencialEscrutinio({
             </div>
           )}
 
-          {/* Sección de Foto y Finalización */}
-          <div className="space-y-4">
-            {/* Subir Foto del Acta */}
-            <div className="bg-gray-50 p-4 rounded-lg border">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                <Camera className="h-5 w-5" />
-                Foto del Acta
-              </h3>
-              <div className="space-y-3">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleActaUpload}
-                  disabled={isEscrutinioClosed}
-                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                />
-                {actaImage && (
-                  <div className="flex items-center gap-2 text-sm text-green-600">
-                    <CheckCircle className="h-4 w-4" />
-                    <span>Foto seleccionada: {actaImage.name}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Botón Enviar Resultados - Solo aparece cuando hay foto */}
-            {actaImage && (
-              <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                <h3 className="text-lg font-semibold text-green-900 mb-3 flex items-center gap-2">
-                  <Upload className="h-5 w-5" />
-                  Enviar Resultados
-                </h3>
-                <p className="text-sm text-green-700 mb-4">
-                  La foto del acta está lista. Puedes enviar los resultados del escrutinio.
-                </p>
-                <button
-                  onClick={handleSendResults}
-                  disabled={isCompleting || isUploading}
-                  className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-                >
-                  {isCompleting ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Enviando...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="h-4 w-4" />
-                      Enviar Resultados
-                    </>
-                  )}
-                </button>
-              </div>
-            )}
-          </div>
         </div>
       </div>
 
