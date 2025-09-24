@@ -405,7 +405,7 @@ function EscrutinioPageContent() {
     <div className="min-h-screen bg-gray-50">
       {/* Header - Mobile optimized */}
       <header className="bg-white shadow-sm border-b">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className={`${escrutinioState.currentStep === 2 ? "max-w-full mx-0 px-4" : "max-w-4xl mx-auto px-4 sm:px-6 lg:px-8"}`}>
           <div className="flex justify-between items-center h-14 lg:h-16">
             <div className="flex items-center">
               <Button
@@ -462,7 +462,7 @@ function EscrutinioPageContent() {
         </div>
       </header>
 
-      <div className={`${escrutinioState.currentStep === 2 ? "px-0 py-0 min-h-screen bg-gray-50" : "max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 lg:py-8"}`}>
+      <div className={`${escrutinioState.currentStep === 2 ? "px-0 py-0 min-h-screen bg-white w-full" : "max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 lg:py-8"}`}>
         {/* Progress Steps - Mobile optimized */}
         <div className={`${escrutinioState.currentStep === 2 ? "mb-1 px-4 pt-2 bg-white border-b border-gray-200" : "mb-6 lg:mb-8"}`}>
           <div className="flex items-center justify-center space-x-2 lg:space-x-4">
@@ -510,7 +510,7 @@ function EscrutinioPageContent() {
 
         {/* Step 1: Configuration */}
         {escrutinioState.currentStep === 1 && (
-          <div className="bg-white p-0 sm:p-6 rounded-none sm:rounded-lg shadow-none sm:shadow-sm border-0 sm:border min-h-full sm:min-h-0">
+          <div className="bg-white p-0 sm:p-6 rounded-none sm:rounded-lg shadow-none sm:shadow-sm border-0 sm:border min-h-full sm:min-h-0 w-full">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900">Configuración del Escrutinio</h2>
             </div>
