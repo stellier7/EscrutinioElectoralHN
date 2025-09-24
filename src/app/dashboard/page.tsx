@@ -245,7 +245,7 @@ export default function DashboardPage() {
       {stats?.recentActivity && stats.recentActivity.length > 0 && (
         <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-lg font-semibold text-gray-900">Escrutinios Recientes</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Mis Escrutinios Recientes</h3>
             <Button
               variant="secondary"
               size="sm"
