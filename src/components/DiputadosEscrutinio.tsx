@@ -500,71 +500,34 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     if (!diputadosData) return null;
 
     return (
-      <div className="space-y-4">
-        {/* Papeleta Status and Controls - Show when papeleta is open */}
-        {papeleta.status === 'OPEN' && (
-          <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-blue-600" />
-                <span className="text-sm font-medium text-blue-900">Papeleta número: {papeletaNumber}</span>
-              </div>
-              <span className="text-sm text-blue-700">
-                {papeleta.votesBuffer.length} marca{papeleta.votesBuffer.length !== 1 ? 's' : ''}
-              </span>
-            </div>
-            
-            <div className="flex flex-col sm:flex-row gap-2">
-              <button
-                onClick={handleClosePapeleta}
-                disabled={papeletaLoading}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
-              >
-                <Check className="h-4 w-4" />
-                <span>Cerrar Papeleta</span>
-              </button>
-              <button
-                onClick={handleAnularPapeleta}
-                disabled={papeletaLoading}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
-              >
-                <X className="h-4 w-4" />
-                <span>Anular Papeleta</span>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Party Cards */}
-        <div className="space-y-3">
-          {diputadosData.parties.map((party) => (
-            <button
-              key={party.id}
-              onClick={() => handlePartyClick(party.id)}
-              className={clsx(
-                'w-full flex items-center rounded-lg border shadow-sm focus:outline-none focus:ring-2 transition-transform',
-                'active:scale-[0.98] touch-manipulation select-none',
-                'bg-white min-h-[60px]' // Altura mínima para mejor toque
-              )}
-              style={{ borderLeftWidth: 6, borderLeftColor: party.color }}
-            >
-              <div className="flex-1 p-3 sm:p-4 text-left">
-                <div className="flex items-center justify-between">
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm sm:text-base font-semibold text-gray-900 truncate">{party.fullName}</div>
-                    <div className="text-xs sm:text-sm text-gray-600">Casillas {party.slotRange}</div>
-                  </div>
-                  <div className="flex items-center gap-2 ml-3">
-                    <span className="text-xl sm:text-2xl font-bold tabular-nums" aria-live="polite">
-                      {getTotalPartyCount(party.id)}
-                    </span>
-                    <div className="text-sm text-gray-500">+</div>
-                  </div>
+      <div className="space-y-3">
+        {diputadosData.parties.map((party) => (
+          <button
+            key={party.id}
+            onClick={() => handlePartyClick(party.id)}
+            className={clsx(
+              'w-full flex items-center rounded-lg border shadow-sm focus:outline-none focus:ring-2 transition-transform',
+              'active:scale-[0.98] touch-manipulation select-none',
+              'bg-white min-h-[60px]' // Altura mínima para mejor toque
+            )}
+            style={{ borderLeftWidth: 6, borderLeftColor: party.color }}
+          >
+            <div className="flex-1 p-3 sm:p-4 text-left">
+              <div className="flex items-center justify-between">
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm sm:text-base font-semibold text-gray-900 truncate">{party.fullName}</div>
+                  <div className="text-xs sm:text-sm text-gray-600">Casillas {party.slotRange}</div>
+                </div>
+                <div className="flex items-center gap-2 ml-3">
+                  <span className="text-xl sm:text-2xl font-bold tabular-nums" aria-live="polite">
+                    {getTotalPartyCount(party.id)}
+                  </span>
+                  <div className="text-sm text-gray-500">+</div>
                 </div>
               </div>
-            </button>
-          ))}
-        </div>
+            </div>
+          </button>
+        ))}
       </div>
     );
   };
@@ -854,6 +817,40 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
           {/* Sección de Foto y Cierre de Escrutinio */}
           {!expandedParty && (
             <div className="mt-8 space-y-4">
+              {/* Papeleta Status and Controls - Show when papeleta is open */}
+              {papeleta.status === 'OPEN' && (
+                <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-5 w-5 text-blue-600" />
+                      <span className="text-sm font-medium text-blue-900">Papeleta número: {papeletaNumber}</span>
+                    </div>
+                    <span className="text-sm text-blue-700">
+                      {papeleta.votesBuffer.length} marca{papeleta.votesBuffer.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <button
+                      onClick={handleClosePapeleta}
+                      disabled={papeletaLoading}
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                    >
+                      <Check className="h-4 w-4" />
+                      <span>Cerrar Papeleta</span>
+                    </button>
+                    <button
+                      onClick={handleAnularPapeleta}
+                      disabled={papeletaLoading}
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                    >
+                      <X className="h-4 w-4" />
+                      <span>Anular Papeleta</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Subir Foto del Acta */}
               <div className="bg-gray-50 p-4 rounded-lg border">
                 <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
