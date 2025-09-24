@@ -9,6 +9,7 @@ interface VoteLimitAlertProps {
   voteLimit: number;
   onClose: () => void;
   onClosePapeleta: () => void;
+  onAnularPapeleta: () => void;
   isClosingPapeleta?: boolean;
 }
 
@@ -18,6 +19,7 @@ export function VoteLimitAlert({
   voteLimit,
   onClose,
   onClosePapeleta,
+  onAnularPapeleta,
   isClosingPapeleta = false
 }: VoteLimitAlertProps) {
   if (!isVisible) return null;
@@ -60,26 +62,38 @@ export function VoteLimitAlert({
           </p>
         </div>
 
-        <div className="flex space-x-3">
-          <Button
-            variant="primary"
-            size="md"
-            onClick={onClosePapeleta}
-            disabled={isClosingPapeleta}
-            loading={isClosingPapeleta}
-            className="flex-1"
-          >
-            {isClosingPapeleta ? 'Cerrando...' : 'Cerrar Papeleta'}
-          </Button>
+        <div className="flex flex-col space-y-3">
+          <div className="flex space-x-3">
+            <Button
+              variant="primary"
+              size="md"
+              onClick={onClosePapeleta}
+              disabled={isClosingPapeleta}
+              loading={isClosingPapeleta}
+              className="flex-1"
+            >
+              {isClosingPapeleta ? 'Cerrando...' : 'Cerrar Papeleta'}
+            </Button>
+            
+            <Button
+              variant="danger"
+              size="md"
+              onClick={onAnularPapeleta}
+              disabled={isClosingPapeleta}
+              className="flex-1"
+            >
+              Anular Papeleta
+            </Button>
+          </div>
           
           <Button
             variant="secondary"
             size="md"
             onClick={onClose}
             disabled={isClosingPapeleta}
-            className="flex-1"
+            className="w-full"
           >
-            Cancelar
+            Corregir
           </Button>
         </div>
       </div>

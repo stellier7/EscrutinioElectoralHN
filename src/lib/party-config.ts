@@ -28,7 +28,7 @@ export const PARTY_CONFIGS: Record<string, PartyConfig> = {
     id: 'PINU-SD',
     name: 'PINU-SD',
     shortName: 'PINU',
-    color: '#7c3aed', // Púrpura
+    color: '#ea580c', // Naranja
     logoUrl: '/logos/pinu-logo.svg',
     description: 'Partido Innovación y Unidad Social Demócrata'
   },

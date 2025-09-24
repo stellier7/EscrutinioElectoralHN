@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../components/AuthProvider';
 import { useGeolocation } from '../../hooks/useGeolocation';
 import { useOfflineQueue } from '../../hooks/useOfflineQueue';
+import { useEscrutinioPersistence } from '../../hooks/useEscrutinioPersistence';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import SearchInput from '../../components/ui/SearchInput';
@@ -54,17 +55,22 @@ function EscrutinioPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   
-  const [currentStep, setCurrentStep] = useState(1);
-  const [selectedMesa, setSelectedMesa] = useState('');
-  const [selectedMesaInfo, setSelectedMesaInfo] = useState<JRVSearchResult | null>(null);
-  const [selectedLevel, setSelectedLevel] = useState('');
-  const [escrutinioId, setEscrutinioId] = useState<string | null>(null);
+  // Hook de persistencia del escrutinio
+  const { 
+    escrutinioState, 
+    saveState, 
+    clearState, 
+    hasActiveEscrutinio, 
+    canRecoverEscrutinio 
+  } = useEscrutinioPersistence();
+
+  // Estados locales (no persistentes)
   const [isStarting, setIsStarting] = useState(false);
-  const voteStore = useVoteStore();
-  const [actaImage, setActaImage] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
-  const [isEscrutinioFinished, setIsEscrutinioFinished] = useState(false);
+  const [showRecoveryDialog, setShowRecoveryDialog] = useState(false);
+  
+  const voteStore = useVoteStore();
   
   // Usar el hook de geolocalización
   const { 
@@ -81,15 +87,17 @@ function EscrutinioPageContent() {
 
   // Manejar selección de JRV
   const handleJRVSelect = (result: JRVSearchResult) => {
-    setSelectedMesa(result.value);
-    setSelectedMesaInfo(result);
+    saveState({
+      selectedMesa: result.value,
+      selectedMesaInfo: result,
+    });
   };
 
   const handleJRVChange = (value: string) => {
-    setSelectedMesa(value);
-    if (!value) {
-      setSelectedMesaInfo(null);
-    }
+    saveState({
+      selectedMesa: value,
+      selectedMesaInfo: value ? escrutinioState.selectedMesaInfo : null,
+    });
   };
 
   const [candidates, setCandidates] = useState<Candidate[]>([]);
@@ -139,15 +147,20 @@ function EscrutinioPageContent() {
     try {
       setIsStarting(true);
       const resp = await axios.post('/api/escrutinio/start', {
-        mesaNumber: selectedMesa,
-        electionLevel: selectedLevel,
+        mesaNumber: escrutinioState.selectedMesa,
+        electionLevel: escrutinioState.selectedLevel,
         gps: { latitude: result.lat, longitude: result.lng, accuracy: result.accuracy },
       });
       if (resp.data?.success && resp.data?.data?.escrutinioId) {
         // Reset any previous counts/batch when starting a brand new escrutinio
         voteStore.clear();
-        setEscrutinioId(resp.data.data.escrutinioId);
-        setCurrentStep(2);
+        
+        // Guardar el estado del escrutinio iniciado
+        saveState({
+          escrutinioId: resp.data.data.escrutinioId,
+          currentStep: 2,
+          location: result,
+        });
       } else {
         alert(resp.data?.error || 'No se pudo iniciar el escrutinio');
       }
@@ -163,7 +176,7 @@ function EscrutinioPageContent() {
   const handleActaUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setActaImage(file);
+      saveState({ actaImage: file });
     }
   };
 
@@ -183,44 +196,44 @@ function EscrutinioPageContent() {
     });
 
   const uploadEvidenceIfNeeded = async (): Promise<void> => {
-    if (!actaImage || !escrutinioId) return;
+    if (!escrutinioState.actaImage || !escrutinioState.escrutinioId) return;
     try {
       const presign = await axios.post('/api/upload/presign', {
-        escrutinioId,
-        fileName: actaImage.name,
-        contentType: actaImage.type || 'image/jpeg',
+        escrutinioId: escrutinioState.escrutinioId,
+        fileName: escrutinioState.actaImage.name,
+        contentType: escrutinioState.actaImage.type || 'image/jpeg',
       });
       if (presign.data?.success) {
         const { uploadUrl, publicUrl } = presign.data.data as { uploadUrl: string; publicUrl: string };
         await fetch(uploadUrl, {
           method: 'PUT',
-          headers: { 'Content-Type': actaImage.type || 'image/jpeg' },
-          body: actaImage,
+          headers: { 'Content-Type': escrutinioState.actaImage.type || 'image/jpeg' },
+          body: escrutinioState.actaImage,
         });
-        const hash = await computeSHA256Hex(actaImage);
-        await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/evidence`, { publicUrl, hash });
+        const hash = await computeSHA256Hex(escrutinioState.actaImage);
+        await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioState.escrutinioId!)}/evidence`, { publicUrl, hash });
         return;
       }
     } catch {
       // fallback below
     }
     try {
-      const dataUrl = await toDataUrl(actaImage);
-      const hash = await computeSHA256Hex(actaImage);
-      await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/evidence`, { publicUrl: dataUrl, hash });
+      const dataUrl = await toDataUrl(escrutinioState.actaImage);
+      const hash = await computeSHA256Hex(escrutinioState.actaImage);
+      await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioState.escrutinioId!)}/evidence`, { publicUrl: dataUrl, hash });
     } catch {}
   };
 
   const handleFinishEscrutinio = () => {
-    setIsEscrutinioFinished(true);
+    saveState({ isEscrutinioFinished: true });
   };
 
   const handleEditEscrutinio = () => {
-    setIsEscrutinioFinished(false);
+    saveState({ isEscrutinioFinished: false });
   };
 
   const handleSubmit = async () => {
-    if (!location || !selectedMesa || !selectedLevel) {
+    if (!escrutinioState.location || !escrutinioState.selectedMesa || !escrutinioState.selectedLevel) {
       alert('Por favor completa todos los campos requeridos');
       return;
     }
@@ -231,16 +244,16 @@ function EscrutinioPageContent() {
       // Si estamos offline, guardar en cola
       if (!isOnline) {
         const offlineData = {
-          escrutinioId,
+          escrutinioId: escrutinioState.escrutinioId,
           votes: voteStore.counts,
-          actaImage: actaImage ? {
-            name: actaImage.name,
-            type: actaImage.type,
-            size: actaImage.size,
+          actaImage: escrutinioState.actaImage ? {
+            name: escrutinioState.actaImage.name,
+            type: escrutinioState.actaImage.type,
+            size: escrutinioState.actaImage.size,
           } : null,
-          gps: { latitude: location.lat, longitude: location.lng, accuracy: location.accuracy },
-          mesaNumber: selectedMesa,
-          electionLevel: selectedLevel,
+          gps: { latitude: escrutinioState.location!.lat, longitude: escrutinioState.location!.lng, accuracy: escrutinioState.location!.accuracy },
+          mesaNumber: escrutinioState.selectedMesa,
+          electionLevel: escrutinioState.selectedLevel,
         };
 
         addToQueue('submit_escrutinio', offlineData);
@@ -253,10 +266,10 @@ function EscrutinioPageContent() {
       // Si estamos online, proceder normalmente
       await uploadEvidenceIfNeeded();
       // Marcar escrutinio como completado para que aparezca en resultados
-      if (escrutinioId) {
+      if (escrutinioState.escrutinioId) {
         try {
-          await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/complete`, {
-            gps: { latitude: location.lat, longitude: location.lng, accuracy: location.accuracy },
+          await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioState.escrutinioId)}/complete`, {
+            gps: { latitude: escrutinioState.location!.lat, longitude: escrutinioState.location!.lng, accuracy: escrutinioState.location!.accuracy },
           });
         } catch (e) {
           // Continuar aunque falle el marcado como completo

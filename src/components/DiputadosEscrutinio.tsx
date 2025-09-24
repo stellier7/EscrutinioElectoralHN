@@ -155,7 +155,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
               id: 'pinu-sd',
               name: 'PINU',
               fullName: 'PINU',
-              color: '#7c3aed'
+              color: '#ea580c'
             },
             {
               id: 'liberal',
@@ -377,6 +377,18 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
       setIsClosingPapeleta(false);
     }
   }, [userId, handleClosePapeleta]);
+
+  const handleAnularPapeletaFromAlert = useCallback(async () => {
+    if (!userId) return;
+    
+    setIsClosingPapeleta(true);
+    try {
+      await handleAnularPapeleta();
+      setShowVoteLimitAlert(false);
+    } finally {
+      setIsClosingPapeleta(false);
+    }
+  }, [userId, handleAnularPapeleta]);
 
   // Get party by ID
   const getParty = (partyId: string) => diputadosData?.parties.find(p => p.id === partyId);
@@ -854,6 +866,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
         voteLimit={diputadosData?.diputados || 0}
         onClose={handleCloseVoteLimitAlert}
         onClosePapeleta={handleClosePapeletaFromAlert}
+        onAnularPapeleta={handleAnularPapeletaFromAlert}
         isClosingPapeleta={isClosingPapeleta}
       />
     </div>
