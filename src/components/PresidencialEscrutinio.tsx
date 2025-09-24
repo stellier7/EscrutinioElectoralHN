@@ -3,6 +3,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { Loader2, AlertCircle, CheckCircle, FileText, Camera, Upload } from 'lucide-react';
 import VoteCard from '@/components/VoteCard';
 import { useVoteStore } from '@/store/voteStore';
+import axios from 'axios';
 
 export type VoteListItem = {
   id: string;
@@ -58,49 +59,27 @@ export default function PresidencialEscrutinio({
     
     try {
       // Obtener URL de presign para subir la foto
-      const presignResponse = await fetch('/api/upload/presign', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
-        },
-        body: JSON.stringify({
-          escrutinioId,
-          fileName: actaImage.name,
-          contentType: actaImage.type || 'image/jpeg',
-        }),
+      const presign = await axios.post('/api/upload/presign', {
+        escrutinioId,
+        fileName: actaImage.name,
+        contentType: actaImage.type || 'image/jpeg',
       });
-
-      if (!presignResponse.ok) {
-        throw new Error('Error obteniendo URL de subida');
-      }
-
-      const presignData = await presignResponse.json();
       
-      if (!presignData.success) {
-        throw new Error(presignData.error || 'Error en la respuesta del servidor');
+      if (presign.data?.success) {
+        const { uploadUrl, publicUrl } = presign.data.data as { uploadUrl: string; publicUrl: string };
+        await fetch(uploadUrl, {
+          method: 'PUT',
+          headers: { 'Content-Type': actaImage.type || 'image/jpeg' },
+          body: actaImage,
+        });
+        return publicUrl;
       }
-
-      const { uploadUrl, publicUrl } = presignData.data;
-      
-      // Subir la foto usando la URL presign
-      const uploadResponse = await fetch(uploadUrl, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': actaImage.type || 'image/jpeg',
-        },
-        body: actaImage,
-      });
-
-      if (!uploadResponse.ok) {
-        throw new Error('Error al subir la foto del acta');
-      }
-      
-      return publicUrl;
     } catch (error) {
       console.error('Error subiendo evidencia:', error);
       return null;
     }
+    
+    return null;
   };
 
   // Función para finalizar escrutinio
@@ -114,23 +93,10 @@ export default function PresidencialEscrutinio({
     
     try {
       // Subir evidencia si existe (opcional)
-      const actaUrl = await uploadEvidenceIfNeeded();
+      await uploadEvidenceIfNeeded();
       
-      // Marcar el escrutinio como completado
-      const completeResponse = await fetch(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/complete`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          gps: gps || null,
-          actaUrl: actaUrl,
-        }),
-      });
-
-      if (!completeResponse.ok) {
-        throw new Error('Error al completar el escrutinio');
-      }
+      // Marcar el escrutinio como completado (igual que el legislativo)
+      await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/complete`);
       
       setIsCompleting(false);
       setShowSuccessModal(true);
