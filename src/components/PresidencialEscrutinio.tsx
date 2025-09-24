@@ -52,19 +52,9 @@ export default function PresidencialEscrutinio({
     }
   }, []);
 
-  // Función para finalizar escrutinio
-  const handleSendResults = async () => {
-    if (!actaImage) {
-      alert('Por favor sube una foto del acta antes de finalizar el escrutinio');
-      return;
-    }
-
-    if (!escrutinioId) {
-      alert('Error: No se encontró el ID del escrutinio');
-      return;
-    }
-
-    setIsCompleting(true);
+  // Función para subir evidencia si existe
+  const uploadEvidenceIfNeeded = async (): Promise<string | null> => {
+    if (!actaImage || !escrutinioId) return null;
     
     try {
       // Obtener URL de presign para subir la foto
@@ -106,6 +96,26 @@ export default function PresidencialEscrutinio({
         throw new Error('Error al subir la foto del acta');
       }
       
+      return publicUrl;
+    } catch (error) {
+      console.error('Error subiendo evidencia:', error);
+      return null;
+    }
+  };
+
+  // Función para finalizar escrutinio
+  const handleSendResults = async () => {
+    if (!escrutinioId) {
+      alert('Error: No se encontró el ID del escrutinio');
+      return;
+    }
+
+    setIsCompleting(true);
+    
+    try {
+      // Subir evidencia si existe (opcional)
+      const actaUrl = await uploadEvidenceIfNeeded();
+      
       // Marcar el escrutinio como completado
       const completeResponse = await fetch(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/complete`, {
         method: 'POST',
@@ -114,7 +124,7 @@ export default function PresidencialEscrutinio({
         },
         body: JSON.stringify({
           gps: gps || null,
-          actaUrl: publicUrl,
+          actaUrl: actaUrl,
         }),
       });
 
