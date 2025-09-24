@@ -26,11 +26,7 @@ export async function GET(
         status: 'COMPLETED' // Solo escrutinios completados
       },
       include: {
-        mesa: {
-          include: {
-            department: true
-          }
-        },
+        mesa: true,
         user: {
           select: {
             id: true,
@@ -40,14 +36,9 @@ export async function GET(
         },
         votes: {
           include: {
-            candidate: {
-              include: {
-                party: true
-              }
-            }
+            candidate: true
           }
         },
-        evidence: true
       }
     });
 
@@ -76,8 +67,8 @@ export async function GET(
         candidatesMap.set(candidateId, {
           id: candidateId,
           name: vote.candidate.name,
-          party: vote.candidate.party.name,
-          partyColor: vote.candidate.party.color,
+          party: vote.candidate.party,
+          partyColor: '#e5e7eb', // Color por defecto
           number: vote.candidate.number,
           votes: 0
         });
@@ -89,20 +80,20 @@ export async function GET(
     const totalVotes = candidates.reduce((sum, candidate) => sum + candidate.votes, 0);
 
     // Obtener la URL de la evidencia si existe
-    const actaUrl = escrutinio.evidence.length > 0 ? escrutinio.evidence[0].url : null;
+    const actaUrl = escrutinio.actaImageUrl || null;
 
     // Datos del GPS si están disponibles
-    const gps = escrutinio.gpsLatitude && escrutinio.gpsLongitude ? {
-      latitude: escrutinio.gpsLatitude,
-      longitude: escrutinio.gpsLongitude,
-      accuracy: escrutinio.gpsAccuracy || 0
+    const gps = escrutinio.latitude && escrutinio.longitude ? {
+      latitude: escrutinio.latitude,
+      longitude: escrutinio.longitude,
+      accuracy: escrutinio.locationAccuracy || 0
     } : null;
 
     const escrutinioData = {
       id: escrutinio.id,
       mesaNumber: escrutinio.mesa.number,
-      mesaName: escrutinio.mesa.name,
-      department: escrutinio.mesa.department.name,
+      mesaName: escrutinio.mesa.location,
+      department: escrutinio.mesa.department,
       electionLevel: escrutinio.electionLevel,
       completedAt: escrutinio.completedAt?.toISOString() || escrutinio.updatedAt.toISOString(),
       totalVotes,
