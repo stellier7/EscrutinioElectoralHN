@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useCallback, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Loader2, AlertCircle, CheckCircle, FileText, Camera, Upload } from 'lucide-react';
 import VoteCard from '@/components/VoteCard';
 import { useVoteStore } from '@/store/voteStore';
@@ -34,6 +35,7 @@ export default function PresidencialEscrutinio({
   gps, 
   deviceId 
 }: PresidencialEscrutinioProps) {
+  const router = useRouter();
   const { counts, increment, decrement } = useVoteStore((s) => ({
     counts: s.counts,
     increment: s.increment,
@@ -45,6 +47,7 @@ export default function PresidencialEscrutinio({
   const [isUploading, setIsUploading] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [isEscrutinioClosed, setIsEscrutinioClosed] = useState(false);
 
   const handleActaUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -98,6 +101,8 @@ export default function PresidencialEscrutinio({
       // Marcar el escrutinio como completado (igual que el legislativo)
       await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/complete`);
       
+      // Cerrar el escrutinio (no permitir más votos)
+      setIsEscrutinioClosed(true);
       setIsCompleting(false);
       setShowSuccessModal(true);
     } catch (error) {
@@ -110,6 +115,8 @@ export default function PresidencialEscrutinio({
   // Función para revisar escrutinio
   const handleReviewEscrutinio = () => {
     setShowSuccessModal(false);
+    // Navegar a la página de revisión
+    router.push(`/revisar/${escrutinioId}`);
   };
 
   // Función para volver a la pantalla principal
@@ -178,13 +185,17 @@ export default function PresidencialEscrutinio({
                 number={c.number}
                 count={counts[c.id] || 0}
                 isPending={false} // Sin indicadores de pending - conteo instantáneo
-                disabled={false} // Siempre habilitado hasta finalizar
-                onIncrement={() =>
-                  increment(c.id, { escrutinioId, userId, mesaId, gps: gps || undefined, deviceId })
-                }
-                onDecrement={() =>
-                  decrement(c.id, { escrutinioId, userId, mesaId, gps: gps || undefined, deviceId })
-                }
+                disabled={isEscrutinioClosed} // Deshabilitado cuando el escrutinio esté cerrado
+                onIncrement={() => {
+                  if (!isEscrutinioClosed) {
+                    increment(c.id, { escrutinioId, userId, mesaId, gps: gps || undefined, deviceId });
+                  }
+                }}
+                onDecrement={() => {
+                  if (!isEscrutinioClosed) {
+                    decrement(c.id, { escrutinioId, userId, mesaId, gps: gps || undefined, deviceId });
+                  }
+                }}
               />
             ))}
           </div>
@@ -225,13 +236,18 @@ export default function PresidencialEscrutinio({
               </p>
               <button
                 onClick={handleSendResults}
-                disabled={isCompleting || isUploading}
+                disabled={isCompleting || isUploading || isEscrutinioClosed}
                 className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
               >
                 {isCompleting ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Finalizando...
+                  </>
+                ) : isEscrutinioClosed ? (
+                  <>
+                    <CheckCircle className="h-4 w-4" />
+                    Escrutinio Finalizado
                   </>
                 ) : (
                   <>
