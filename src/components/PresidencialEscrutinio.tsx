@@ -78,10 +78,9 @@ export default function PresidencialEscrutinio({
     }
   };
 
-  // Función para revisar escrutinio (mantiene la vista congelada)
+  // Función para revisar escrutinio
   const handleReviewEscrutinio = () => {
     setShowSuccessModal(false);
-    // Mantener isEscrutinioClosed = true para vista congelada
   };
 
   // Función para volver a la pantalla principal
@@ -170,12 +169,12 @@ export default function PresidencialEscrutinio({
                 number={c.number}
                 count={counts[c.id] || 0}
                 isPending={false} // Sin indicadores de pending - conteo instantáneo
-                disabled={isEscrutinioClosed} // Deshabilitar cuando el escrutinio esté cerrado
+                disabled={false} // Siempre habilitado hasta finalizar
                 onIncrement={() =>
-                  !isEscrutinioClosed && increment(c.id, { escrutinioId, userId, mesaId, gps: gps || undefined, deviceId })
+                  increment(c.id, { escrutinioId, userId, mesaId, gps: gps || undefined, deviceId })
                 }
                 onDecrement={() =>
-                  !isEscrutinioClosed && decrement(c.id, { escrutinioId, userId, mesaId, gps: gps || undefined, deviceId })
+                  decrement(c.id, { escrutinioId, userId, mesaId, gps: gps || undefined, deviceId })
                 }
               />
             ))}
