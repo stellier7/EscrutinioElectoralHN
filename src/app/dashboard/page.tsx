@@ -235,11 +235,21 @@ export default function DashboardPage() {
                     <p className="text-xs text-gray-500">{activity.department}</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-xs text-gray-500">
-                    {new Date(activity.completedAt).toLocaleDateString()}
-                  </p>
-                  <p className="text-xs text-green-600 font-medium">{activity.electionLevel}</p>
+                <div className="flex items-center gap-3">
+                  <div className="text-right">
+                    <p className="text-xs text-gray-500">
+                      {new Date(activity.completedAt).toLocaleDateString()}
+                    </p>
+                    <p className="text-xs text-green-600 font-medium">{activity.electionLevel}</p>
+                  </div>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => router.push(`/revisar/${activity.id}`)}
+                    className="text-xs"
+                  >
+                    Revisar
+                  </Button>
                 </div>
               </div>
             ))}

@@ -189,35 +189,6 @@ export default function PresidencialEscrutinio({
             ))}
           </div>
 
-          {/* Resumen de Votos */}
-          {hasVotes && (
-            <div className="mb-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <h3 className="text-lg font-semibold text-blue-900 mb-3 flex items-center gap-2">
-                <CheckCircle className="h-5 w-5" />
-                Resumen de Votos
-              </h3>
-              <div className="space-y-2">
-                {candidates
-                  .filter(c => counts[c.id] > 0)
-                  .map(c => (
-                    <div key={c.id} className="flex justify-between items-center text-sm">
-                      <span className="text-blue-700">
-                        {c.number}. {c.name} ({c.party})
-                      </span>
-                      <span className="font-bold text-blue-900">
-                        {counts[c.id]} voto{counts[c.id] !== 1 ? 's' : ''}
-                      </span>
-                    </div>
-                  ))}
-              </div>
-              <div className="mt-3 pt-3 border-t border-blue-200">
-                <div className="flex justify-between items-center font-semibold">
-                  <span className="text-blue-700">Total:</span>
-                  <span className="text-blue-900">{getTotalVotes()} voto{getTotalVotes() !== 1 ? 's' : ''}</span>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Sección de Foto y Cierre de Escrutinio */}
           <div className="mt-8 space-y-4">

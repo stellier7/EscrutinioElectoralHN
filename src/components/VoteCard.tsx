@@ -111,12 +111,12 @@ export function VoteCard({ id, name, party, partyColor = '#e5e7eb', number, coun
               </div>
             )}
             <div>
-              <div className="text-base font-semibold text-white drop-shadow-sm">{partyConfig.name}</div>
-              <div className="text-sm text-white/90 drop-shadow-sm">{formatInitialSurname(name)}{number !== undefined ? ` • Lista ${number}` : ''}</div>
+              <div className="text-base font-semibold text-gray-800 drop-shadow-sm">{partyConfig.name}</div>
+              <div className="text-sm text-gray-700 drop-shadow-sm">{formatInitialSurname(name)}{number !== undefined ? ` • Lista ${number}` : ''}</div>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-2xl font-bold tabular-nums text-white drop-shadow-sm" aria-live="polite">{count}</span>
+            <span className="text-2xl font-bold tabular-nums text-gray-900 drop-shadow-sm" aria-live="polite">{count}</span>
             <button
               type="button"
               aria-label={`Restar 1 a ${name}`}
@@ -126,7 +126,7 @@ export function VoteCard({ id, name, party, partyColor = '#e5e7eb', number, coun
                 onDecrement(); 
               }}
               disabled={disabled}
-              className="px-3 py-2 text-sm rounded border bg-white/20 active:bg-white/30 touch-manipulation select-none min-h-[32px] min-w-[32px] text-white border-white/30 hover:bg-white/30 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-2 text-sm rounded border bg-white/80 active:bg-white touch-manipulation select-none min-h-[32px] min-w-[32px] text-gray-800 border-gray-300 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed"
             >
               –
             </button>
