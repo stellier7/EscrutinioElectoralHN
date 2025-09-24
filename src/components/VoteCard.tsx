@@ -1,7 +1,7 @@
 "use client";
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
-import { getPartyConfig } from '@/lib/party-config';
+import { getPartyConfig, getTransparentColor } from '@/lib/party-config';
 import Image from 'next/image';
 
 type Props = {
@@ -88,10 +88,10 @@ export function VoteCard({ id, name, party, partyColor = '#e5e7eb', number, coun
         disabled && 'opacity-50 cursor-not-allowed'
       )}
       style={{ 
-        backgroundColor: effectivePartyColor,
+        backgroundColor: getTransparentColor(effectivePartyColor, 0.2),
         borderLeftWidth: 6, 
         borderLeftColor: effectivePartyColor,
-        borderColor: effectivePartyColor
+        borderColor: getTransparentColor(effectivePartyColor, 0.3)
       }}
       data-testid={`vote-card-${id}`}
     >

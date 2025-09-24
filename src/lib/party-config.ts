@@ -50,6 +50,22 @@ export const PARTY_CONFIGS: Record<string, PartyConfig> = {
   }
 };
 
+// Función para convertir colores a versiones más transparentes
+export function getTransparentColor(color: string, opacity: number = 0.15): string {
+  // Si el color ya tiene transparencia, lo mantenemos
+  if (color.includes('rgba') || color.includes('hsla')) {
+    return color;
+  }
+  
+  // Convertir hex a RGB
+  const hex = color.replace('#', '');
+  const r = parseInt(hex.substr(0, 2), 16);
+  const g = parseInt(hex.substr(2, 2), 16);
+  const b = parseInt(hex.substr(4, 2), 16);
+  
+  return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+}
+
 export function getPartyConfig(partyId: string): PartyConfig {
   return PARTY_CONFIGS[partyId] || {
     id: partyId,
