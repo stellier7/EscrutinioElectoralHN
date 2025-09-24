@@ -140,7 +140,7 @@ function EscrutinioPageContent() {
     load();
   }, [escrutinioState.selectedLevel]);
 
-  // Cargar votos existentes cuando se establece el escrutinioId
+  // Cargar votos existentes cuando se establece el escrutinioId (solo una vez)
   useEffect(() => {
     const loadExistingVotes = async () => {
       if (!escrutinioState.escrutinioId) return;
@@ -151,7 +151,7 @@ function EscrutinioPageContent() {
       }
     };
     loadExistingVotes();
-  }, [escrutinioState.escrutinioId, voteStore]);
+  }, [escrutinioState.escrutinioId]); // Removido voteStore de dependencias
 
   // Map party acronyms to display names using party config
   const mapPartyToDisplayName = (party: string): string => {
@@ -381,13 +381,6 @@ function EscrutinioPageContent() {
       const currentKey = `${escrutinioState.selectedMesa}-${escrutinioState.selectedLevel}`;
       const lastKey = localStorage.getItem('last-escrutinio-key');
       
-      console.log('🔍 Verificando cambio de JRV/nivel:', { 
-        currentKey, 
-        lastKey, 
-        currentStep: escrutinioState.currentStep,
-        escrutinioId: escrutinioState.escrutinioId 
-      });
-      
       // Si cambió el JRV o nivel, limpiar los votos
       if (lastKey && lastKey !== currentKey) {
         console.log('🔄 JRV o nivel cambió, limpiando votos:', { lastKey, currentKey });
@@ -399,7 +392,7 @@ function EscrutinioPageContent() {
       // Guardar la clave actual
       localStorage.setItem('last-escrutinio-key', currentKey);
     }
-  }, [escrutinioState.selectedMesa, escrutinioState.selectedLevel, voteStore, saveState]);
+  }, [escrutinioState.selectedMesa, escrutinioState.selectedLevel]);
 
   return (
     <div className="min-h-screen bg-gray-50" style={{ fontSize: "16px" }}>
