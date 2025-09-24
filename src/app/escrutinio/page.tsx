@@ -361,12 +361,12 @@ function EscrutinioPageContent() {
 
   const totalVotes = Object.keys(voteStore.counts).reduce((sum, k) => sum + (voteStore.counts[k] || 0), 0);
 
-  // Mostrar alerta de recuperación inmediatamente si hay datos persistentes
+  // Mostrar alerta de recuperación solo cuando hay JRV seleccionado
   useEffect(() => {
-    if (canRecoverEscrutinio && !hasActiveEscrutinio) {
+    if (canRecoverEscrutinio && !hasActiveEscrutinio && escrutinioState.selectedMesa) {
       setShowRecoveryAlert(true);
     }
-  }, [canRecoverEscrutinio, hasActiveEscrutinio]);
+  }, [canRecoverEscrutinio, hasActiveEscrutinio, escrutinioState.selectedMesa]);
 
   // Limpiar votos cuando cambie el JRV o el nivel
   useEffect(() => {
