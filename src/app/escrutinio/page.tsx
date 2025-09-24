@@ -70,8 +70,9 @@ function EscrutinioPageContent() {
   const [isStarting, setIsStarting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
-  const [showRecoveryDialog, setShowRecoveryDialog] = useState(false);
+  const [showRecoveryAlert, setShowRecoveryAlert] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [gpsSuccess, setGpsSuccess] = useState(false);
   
   const voteStore = useVoteStore();
   
@@ -108,6 +109,16 @@ function EscrutinioPageContent() {
     if (!escrutinioState.selectedMesa) {
       alert('Por favor selecciona una JRV primero');
       return;
+    }
+
+    // Si hay un escrutinio anterior, limpiarlo primero
+    if (showRecoveryAlert) {
+      clearState();
+      voteStore.clear();
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('last-escrutinio-key');
+      }
+      setShowRecoveryAlert(false);
     }
 
     // Guardar el nivel seleccionado
@@ -163,6 +174,8 @@ function EscrutinioPageContent() {
     if (!result) return;
     try {
       setIsStarting(true);
+      setGpsSuccess(false);
+      
       const resp = await axios.post('/api/escrutinio/start', {
         mesaNumber: escrutinioState.selectedMesa,
         electionLevel: escrutinioState.selectedLevel,
@@ -171,6 +184,10 @@ function EscrutinioPageContent() {
       if (resp.data?.success && resp.data?.data?.escrutinioId) {
         // Reset any previous counts/batch when starting a brand new escrutinio
         voteStore.clear();
+        
+        // Mostrar mensaje de éxito por un momento
+        setGpsSuccess(true);
+        setTimeout(() => setGpsSuccess(false), 3000);
         
         // Guardar el estado del escrutinio iniciado
         saveState({
@@ -325,10 +342,10 @@ function EscrutinioPageContent() {
 
   const totalVotes = Object.keys(voteStore.counts).reduce((sum, k) => sum + (voteStore.counts[k] || 0), 0);
 
-  // Mostrar diálogo de recuperación si hay datos persistentes pero no escrutinio activo
+  // Mostrar alerta de recuperación si hay datos persistentes pero no escrutinio activo
   useEffect(() => {
     if (canRecoverEscrutinio && !hasActiveEscrutinio && escrutinioState.currentStep === 1) {
-      setShowRecoveryDialog(true);
+      setShowRecoveryAlert(true);
     }
   }, [canRecoverEscrutinio, hasActiveEscrutinio, escrutinioState.currentStep]);
 
@@ -462,13 +479,34 @@ function EscrutinioPageContent() {
           <div className="bg-white p-6 rounded-lg shadow-sm border">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900">Configuración del Escrutinio</h2>
-              {canRecoverEscrutinio && (
-                <div className="flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
-                  <CheckCircle className="h-4 w-4" />
-                  <span>Datos previos cargados</span>
-                </div>
-              )}
             </div>
+            
+            {/* Alerta de Escrutinio Anterior */}
+            {showRecoveryAlert && (
+              <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-start">
+                  <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-3 mt-0.5">
+                    <CheckCircle className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-sm font-semibold text-blue-900 mb-1">
+                      Escrutinio Anterior Encontrado
+                    </h3>
+                    <p className="text-sm text-blue-700 mb-3">
+                      Se encontró un escrutinio previo para la JRV <strong>{escrutinioState.selectedMesaInfo?.label || escrutinioState.selectedMesa}</strong> 
+                      ({escrutinioState.selectedLevel === 'PRESIDENTIAL' ? 'Presidencial' : 'Legislativo'}). 
+                      Al seleccionar un nuevo nivel, se iniciará un escrutinio completamente nuevo.
+                    </p>
+                    <button
+                      onClick={() => setShowRecoveryAlert(false)}
+                      className="text-sm text-blue-600 underline hover:text-blue-800"
+                    >
+                      Entendido
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
             
             <div className="space-y-4">
               <div>
@@ -583,6 +621,18 @@ function EscrutinioPageContent() {
         {escrutinioState.currentStep === 2 && (
           <div className="bg-white p-6 rounded-lg shadow-sm border">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Conteo de Votos</h2>
+            
+            {/* Mensaje de éxito del GPS */}
+            {gpsSuccess && (
+              <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
+                  <span className="text-sm text-green-800">
+                    ✅ GPS obtenido correctamente. Ubicación registrada para el escrutinio.
+                  </span>
+                </div>
+              </div>
+            )}
             
             {escrutinioState.location && (
               <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-md">
@@ -754,61 +804,6 @@ function EscrutinioPageContent() {
         </div>
       )}
 
-      {/* Diálogo de Recuperación de Escrutinio */}
-      {showRecoveryDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-            <div className="p-6">
-              <div className="flex items-center mb-4">
-                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-                  <CheckCircle className="h-6 w-6 text-blue-600" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Escrutinio Anterior Encontrado
-                </h3>
-              </div>
-              <p className="text-gray-600 mb-6">
-                Se encontró un escrutinio previo para la JRV <strong>{escrutinioState.selectedMesaInfo?.label || escrutinioState.selectedMesa}</strong> 
-                ({escrutinioState.selectedLevel === 'PRESIDENTIAL' ? 'Presidencial' : 'Legislativo'}). 
-                ¿Qué deseas hacer?
-              </p>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <button
-                  onClick={() => {
-                    setShowRecoveryDialog(false);
-                    // Continuar con el escrutinio existente
-                    if (escrutinioState.currentStep === 1) {
-                      saveState({ currentStep: 2 });
-                    }
-                  }}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-                >
-                  Regresar al Escrutinio
-                </button>
-                <button
-                  onClick={() => {
-                    setShowRecoveryDialog(false);
-                    // Limpiar estado y ir al paso 1 (configuración)
-                    clearState();
-                    // Limpiar también el store de votos y la clave del último escrutinio
-                    if (typeof window !== 'undefined') {
-                      import('@/store/voteStore').then(({ useVoteStore }) => {
-                        useVoteStore.getState().clear();
-                      });
-                      localStorage.removeItem('last-escrutinio-key');
-                    }
-                    // Ir al paso 1 para configurar nuevo escrutinio
-                    saveState({ currentStep: 1 });
-                  }}
-                  className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
-                >
-                  Nuevo Escrutinio
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Diálogo de Confirmación de Cancelación */}
       {showCancelDialog && (
