@@ -62,7 +62,7 @@ type Actions = {
 };
 
 // Configuración optimizada para sincronización silenciosa
-const SYNC_INTERVAL_MS = 2000; // Sincronizar cada 2 segundos
+const SYNC_INTERVAL_MS = 3000; // Auto-save cada 3 segundos
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 1000;
 
@@ -79,7 +79,6 @@ export const useVoteStore = create<State & Actions>()(
       setCounts: (counts) => set({ counts }),
 
       increment: (candidateId, meta) => {
-        console.log('🔍 [VOTE STORE] Increment llamado con:', { candidateId, meta });
         const { counts, pendingVotes } = get();
         const newCount = (counts[candidateId] || 0) + 1;
         const clientBatchId = AuditClient.createBatchId();
@@ -94,9 +93,8 @@ export const useVoteStore = create<State & Actions>()(
           gps: meta.gps,
           deviceId: meta.deviceId,
         };
-        console.log('🔍 [VOTE STORE] Delta creado:', delta);
 
-        // Log para auditoría
+        // Log simple para auditoría
         AuditClient.log({
           event: 'vote_increment',
           userId: meta.userId,
@@ -117,12 +115,11 @@ export const useVoteStore = create<State & Actions>()(
           context: { gps: meta.gps, deviceId: meta.deviceId },
         });
 
-        // Iniciar sincronización silenciosa si no está activa
+        // Auto-save cada 3 segundos
         startSilentSync();
       },
 
       decrement: (candidateId, meta) => {
-        console.log('🔍 [VOTE STORE] Decrement llamado con:', { candidateId, meta });
         const { counts, pendingVotes } = get();
         const newCount = Math.max(0, (counts[candidateId] || 0) - 1);
         const clientBatchId = AuditClient.createBatchId();
@@ -137,9 +134,8 @@ export const useVoteStore = create<State & Actions>()(
           gps: meta.gps,
           deviceId: meta.deviceId,
         };
-        console.log('🔍 [VOTE STORE] Delta creado:', delta);
 
-        // Log para auditoría
+        // Log simple para auditoría
         AuditClient.log({
           event: 'vote_decrement',
           userId: meta.userId,
@@ -160,7 +156,7 @@ export const useVoteStore = create<State & Actions>()(
           context: { gps: meta.gps, deviceId: meta.deviceId },
         });
 
-        // Iniciar sincronización silenciosa si no está activa
+        // Auto-save cada 3 segundos
         startSilentSync();
       },
 
@@ -217,7 +213,7 @@ export const useVoteStore = create<State & Actions>()(
   )
 );
 
-// Función para sincronizar votos de un escrutinio específico
+// Función para sincronizar votos de un escrutinio específico (auto-save silencioso)
 async function syncVotesForEscrutinio(
   escrutinioId: string, 
   votes: VoteDelta[], 
@@ -237,12 +233,9 @@ async function syncVotesForEscrutinio(
     deviceId: context?.deviceId,
   };
 
-  console.log('🔍 [VOTE STORE] Payload a enviar:', JSON.stringify(payload, null, 2));
-  
   const parsed = VotePayloadSchema.safeParse(payload);
   if (!parsed.success) {
-    console.error('❌ [VOTE STORE] Error de validación en votos:', JSON.stringify(parsed.error, null, 2));
-    console.error('❌ [VOTE STORE] Payload que falló:', JSON.stringify(payload, null, 2));
+    console.error('❌ Error de validación en votos:', parsed.error);
     AuditClient.restore(auditEvents as any);
     return;
   }
@@ -250,11 +243,7 @@ async function syncVotesForEscrutinio(
   let retries = 0;
   while (retries < MAX_RETRIES) {
     try {
-      console.log('📤 [VOTE STORE] Enviando petición a:', `/api/escrutinio/${encodeURIComponent(escrutinioId)}/votes`);
-      console.log('📤 [VOTE STORE] Payload final:', JSON.stringify(payload, null, 2));
-      
-      const response = await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/votes`, payload);
-      console.log('✅ [VOTE STORE] Respuesta del servidor:', response.data);
+      await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/votes`, payload);
       
       // Éxito: remover votos sincronizados del estado
       const { pendingVotes } = useVoteStore.getState();
@@ -269,11 +258,6 @@ async function syncVotesForEscrutinio(
       return; // Éxito, salir del loop de reintentos
     } catch (error: any) {
       retries++;
-      console.error(`❌ [VOTE STORE] Error sincronizando votos (intento ${retries}/${MAX_RETRIES}):`, error);
-      if (error.response) {
-        console.error('❌ [VOTE STORE] Respuesta del servidor:', error.response.data);
-        console.error('❌ [VOTE STORE] Status:', error.response.status);
-      }
       
       if (retries < MAX_RETRIES) {
         // Esperar antes del siguiente intento
@@ -281,7 +265,7 @@ async function syncVotesForEscrutinio(
       } else {
         // Fallo final: restaurar eventos de auditoría para reintento posterior
         AuditClient.restore(auditEvents as any);
-        console.error('Falló la sincronización de votos después de todos los reintentos');
+        console.error('❌ Error en auto-save después de reintentos');
       }
     }
   }
