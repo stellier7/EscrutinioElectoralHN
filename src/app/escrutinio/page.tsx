@@ -284,16 +284,16 @@ function EscrutinioPageContent() {
       // Si falla el envío online, intentar guardar offline
       if (isOnline) {
         const offlineData = {
-          escrutinioId,
+          escrutinioId: escrutinioState.escrutinioId,
           votes: voteStore.counts,
-          actaImage: actaImage ? {
-            name: actaImage.name,
-            type: actaImage.type,
-            size: actaImage.size,
+          actaImage: escrutinioState.actaImage ? {
+            name: escrutinioState.actaImage.name,
+            type: escrutinioState.actaImage.type,
+            size: escrutinioState.actaImage.size,
           } : null,
-          gps: { latitude: location.lat, longitude: location.lng, accuracy: location.accuracy },
-          mesaNumber: selectedMesa,
-          electionLevel: selectedLevel,
+          gps: { latitude: escrutinioState.location!.lat, longitude: escrutinioState.location!.lng, accuracy: escrutinioState.location!.accuracy || 0 },
+          mesaNumber: escrutinioState.selectedMesa,
+          electionLevel: escrutinioState.selectedLevel,
         };
 
         addToQueue('submit_escrutinio', offlineData);
@@ -343,31 +343,31 @@ function EscrutinioPageContent() {
         {/* Progress Steps - Mobile optimized */}
         <div className="mb-6 lg:mb-8">
           <div className="flex items-center justify-center space-x-2 lg:space-x-4">
-            <div className={`flex items-center ${currentStep >= 1 ? 'text-primary-600' : 'text-gray-400'}`}>
+            <div className={`flex items-center ${escrutinioState.currentStep >= 1 ? 'text-primary-600' : 'text-gray-400'}`}>
               <div className={`w-6 h-6 lg:w-8 lg:h-8 rounded-full flex items-center justify-center border-2 text-xs lg:text-sm ${
-                currentStep >= 1 ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-300'
+                escrutinioState.currentStep >= 1 ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-300'
               }`}>
                 1
               </div>
               <span className="ml-1 lg:ml-2 text-xs lg:text-sm font-medium hidden sm:block">Configuración</span>
             </div>
             
-            <div className={`w-8 lg:w-16 h-0.5 ${currentStep >= 2 ? 'bg-primary-600' : 'bg-gray-300'}`}></div>
+            <div className={`w-8 lg:w-16 h-0.5 ${escrutinioState.currentStep >= 2 ? 'bg-primary-600' : 'bg-gray-300'}`}></div>
             
-            <div className={`flex items-center ${currentStep >= 2 ? 'text-primary-600' : 'text-gray-400'}`}>
+            <div className={`flex items-center ${escrutinioState.currentStep >= 2 ? 'text-primary-600' : 'text-gray-400'}`}>
               <div className={`w-6 h-6 lg:w-8 lg:h-8 rounded-full flex items-center justify-center border-2 text-xs lg:text-sm ${
-                currentStep >= 2 ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-300'
+                escrutinioState.currentStep >= 2 ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-300'
               }`}>
                 2
               </div>
               <span className="ml-1 lg:ml-2 text-xs lg:text-sm font-medium hidden sm:block">Conteo</span>
             </div>
             
-            <div className={`w-8 lg:w-16 h-0.5 ${currentStep >= 3 ? 'bg-primary-600' : 'bg-gray-300'}`}></div>
+            <div className={`w-8 lg:w-16 h-0.5 ${escrutinioState.currentStep >= 3 ? 'bg-primary-600' : 'bg-gray-300'}`}></div>
             
-            <div className={`flex items-center ${currentStep >= 3 ? 'text-primary-600' : 'text-gray-400'}`}>
+            <div className={`flex items-center ${escrutinioState.currentStep >= 3 ? 'text-primary-600' : 'text-gray-400'}`}>
               <div className={`w-6 h-6 lg:w-8 lg:h-8 rounded-full flex items-center justify-center border-2 text-xs lg:text-sm ${
-                currentStep >= 3 ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-300'
+                escrutinioState.currentStep >= 3 ? 'border-primary-600 bg-primary-600 text-white' : 'border-gray-300'
               }`}>
                 3
               </div>
@@ -377,7 +377,7 @@ function EscrutinioPageContent() {
         </div>
 
         {/* Step 1: Configuration */}
-        {currentStep === 1 && (
+        {escrutinioState.currentStep === 1 && (
           <div className="bg-white p-6 rounded-lg shadow-sm border">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Configuración del Escrutinio</h2>
             
@@ -387,7 +387,7 @@ function EscrutinioPageContent() {
                   Mesa Electoral (JRV)
                 </label>
                 <SearchInput
-                  value={selectedMesa}
+                  value={escrutinioState.selectedMesa}
                   onChange={handleJRVChange}
                   onSelect={handleJRVSelect}
                   placeholder="Escribir número de JRV (ej: 00001)"
