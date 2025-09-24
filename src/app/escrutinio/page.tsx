@@ -342,12 +342,12 @@ function EscrutinioPageContent() {
 
   const totalVotes = Object.keys(voteStore.counts).reduce((sum, k) => sum + (voteStore.counts[k] || 0), 0);
 
-  // Mostrar alerta de recuperación si hay datos persistentes pero no escrutinio activo
+  // Mostrar alerta de recuperación inmediatamente si hay datos persistentes
   useEffect(() => {
-    if (canRecoverEscrutinio && !hasActiveEscrutinio && escrutinioState.currentStep === 1) {
+    if (canRecoverEscrutinio && !hasActiveEscrutinio) {
       setShowRecoveryAlert(true);
     }
-  }, [canRecoverEscrutinio, hasActiveEscrutinio, escrutinioState.currentStep]);
+  }, [canRecoverEscrutinio, hasActiveEscrutinio]);
 
   // Limpiar votos cuando cambie el JRV o el nivel
   useEffect(() => {
@@ -495,14 +495,43 @@ function EscrutinioPageContent() {
                     <p className="text-sm text-blue-700 mb-3">
                       Se encontró un escrutinio previo para la JRV <strong>{escrutinioState.selectedMesaInfo?.label || escrutinioState.selectedMesa}</strong> 
                       ({escrutinioState.selectedLevel === 'PRESIDENTIAL' ? 'Presidencial' : 'Legislativo'}). 
-                      Al seleccionar un nuevo nivel, se iniciará un escrutinio completamente nuevo.
+                      ¿Deseas continuar con el escrutinio anterior o iniciar uno nuevo?
                     </p>
-                    <button
-                      onClick={() => setShowRecoveryAlert(false)}
-                      className="text-sm text-blue-600 underline hover:text-blue-800"
-                    >
-                      Entendido
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          setShowRecoveryAlert(false);
+                          // Cargar los votos guardados y continuar con el escrutinio
+                          if (escrutinioState.escrutinioId) {
+                            voteStore.loadFromServer(escrutinioState.escrutinioId).then(() => {
+                              saveState({ currentStep: 2 });
+                            }).catch((error) => {
+                              console.warn('No se pudieron cargar los votos guardados:', error);
+                              saveState({ currentStep: 2 });
+                            });
+                          } else {
+                            saveState({ currentStep: 2 });
+                          }
+                        }}
+                        className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                      >
+                        Continuar con el escrutinio
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowRecoveryAlert(false);
+                          // Limpiar todo y permitir iniciar nuevo escrutinio
+                          clearState();
+                          voteStore.clear();
+                          if (typeof window !== 'undefined') {
+                            localStorage.removeItem('last-escrutinio-key');
+                          }
+                        }}
+                        className="px-3 py-1 text-sm bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+                      >
+                        Cerrar
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
