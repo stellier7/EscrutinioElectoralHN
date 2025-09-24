@@ -202,7 +202,7 @@ export default function PresidencialEscrutinio({
           <div className="mb-6">
             <button
               onClick={handleToggleEscrutinio}
-              className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+              className={`w-full sm:w-auto px-6 py-3 rounded-lg font-medium transition-colors ${
                 isEscrutinioClosed
                   ? 'bg-orange-600 hover:bg-orange-700 text-white'
                   : 'bg-red-600 hover:bg-red-700 text-white'
