@@ -361,10 +361,16 @@ function EscrutinioPageContent() {
 
   const totalVotes = Object.keys(voteStore.counts).reduce((sum, k) => sum + (voteStore.counts[k] || 0), 0);
 
-  // Mostrar alerta de recuperación solo cuando hay JRV seleccionado
+  // Mostrar alerta de recuperación con delay cuando hay JRV seleccionado
   useEffect(() => {
     if (canRecoverEscrutinio && !hasActiveEscrutinio && escrutinioState.selectedMesa) {
-      setShowRecoveryAlert(true);
+      // Esperar 3 segundos antes de mostrar la advertencia
+      const timer = setTimeout(() => {
+        setShowRecoveryAlert(true);
+      }, 3000);
+      
+      // Limpiar timer si cambia el estado antes de que se ejecute
+      return () => clearTimeout(timer);
     }
   }, [canRecoverEscrutinio, hasActiveEscrutinio, escrutinioState.selectedMesa]);
 
