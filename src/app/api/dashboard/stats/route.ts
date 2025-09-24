@@ -27,14 +27,14 @@ export async function GET(request: NextRequest) {
 
     const completedEscrutinios = await prisma.escrutinio.count({
       where: { 
-        isCompleted: true,
+        status: 'COMPLETED',
         ...(userRole === 'ADMIN' ? {} : { userId: userId }), // Solo admins ven todos
       },
     });
 
     const pendingEscrutinios = await prisma.escrutinio.count({
       where: { 
-        isCompleted: false,
+        status: { not: 'COMPLETED' },
         ...(userRole === 'ADMIN' ? {} : { userId: userId }), // Solo admins ven todos
       },
     });
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
     // Obtener escrutinios recientes (solo del usuario actual, excepto para admins)
     const recentEscrutinios = await prisma.escrutinio.findMany({
       where: {
-        isCompleted: true,
+        status: 'COMPLETED',
         ...(userRole === 'ADMIN' ? {} : { userId: userId }), // Solo admins ven todos
       },
       include: {
@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
       ['PRESIDENTIAL', 'LEGISLATIVE', 'MUNICIPAL'].map(async (level) => {
         const completed = await prisma.escrutinio.count({
           where: {
-            isCompleted: true,
+            status: 'COMPLETED',
             electionLevel: level as any,
             ...(userRole === 'ADMIN' ? {} : { userId: userId }), // Solo admins ven todos
           },
@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
 
         const pending = await prisma.escrutinio.count({
           where: {
-            isCompleted: false,
+            status: { not: 'COMPLETED' },
             electionLevel: level as any,
             ...(userRole === 'ADMIN' ? {} : { userId: userId }), // Solo admins ven todos
           },
