@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth-options';
+import { AuthUtils } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
 export async function GET(
@@ -8,13 +7,14 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { success: false, error: 'No autorizado' },
-        { status: 401 }
-      );
+    const authHeader = request.headers.get('authorization') || undefined;
+    const token = AuthUtils.extractTokenFromHeader(authHeader);
+    if (!token) {
+      return NextResponse.json({ success: false, error: 'No autorizado' }, { status: 401 });
+    }
+    const payload = AuthUtils.verifyToken(token);
+    if (!payload) {
+      return NextResponse.json({ success: false, error: 'Token inválido' }, { status: 401 });
     }
 
     const escrutinioId = params.id;
@@ -60,7 +60,7 @@ export async function GET(
 
     // Verificar que el usuario tiene acceso al escrutinio
     // (opcional: solo el usuario que lo creó o admins)
-    if (escrutinio.userId !== session.user.id && session.user.role !== 'ADMIN') {
+    if (escrutinio.userId !== payload.userId && payload.role !== 'ADMIN') {
       return NextResponse.json(
         { success: false, error: 'No tienes acceso a este escrutinio' },
         { status: 403 }
