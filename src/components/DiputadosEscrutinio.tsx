@@ -500,34 +500,71 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     if (!diputadosData) return null;
 
     return (
-      <div className="space-y-3">
-        {diputadosData.parties.map((party) => (
-          <button
-            key={party.id}
-            onClick={() => handlePartyClick(party.id)}
-            className={clsx(
-              'w-full flex items-center rounded-lg border shadow-sm focus:outline-none focus:ring-2 transition-transform',
-              'active:scale-[0.98] touch-manipulation select-none',
-              'bg-white min-h-[60px]' // Altura mínima para mejor toque
-            )}
-            style={{ borderLeftWidth: 6, borderLeftColor: party.color }}
-          >
-            <div className="flex-1 p-3 sm:p-4 text-left">
-              <div className="flex items-center justify-between">
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm sm:text-base font-semibold text-gray-900 truncate">{party.fullName}</div>
-                  <div className="text-xs sm:text-sm text-gray-600">Casillas {party.slotRange}</div>
-                </div>
-                <div className="flex items-center gap-2 ml-3">
-                  <span className="text-xl sm:text-2xl font-bold tabular-nums" aria-live="polite">
-                    {getTotalPartyCount(party.id)}
-                  </span>
-                  <div className="text-sm text-gray-500">+</div>
+      <div className="space-y-4">
+        {/* Papeleta Status and Controls - Show when papeleta is open */}
+        {papeleta.status === 'OPEN' && (
+          <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-blue-600" />
+                <span className="text-sm font-medium text-blue-900">Papeleta número: {papeletaNumber}</span>
+              </div>
+              <span className="text-sm text-blue-700">
+                {papeleta.votesBuffer.length} marca{papeleta.votesBuffer.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row gap-2">
+              <button
+                onClick={handleClosePapeleta}
+                disabled={papeletaLoading}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+              >
+                <Check className="h-4 w-4" />
+                <span>Cerrar Papeleta</span>
+              </button>
+              <button
+                onClick={handleAnularPapeleta}
+                disabled={papeletaLoading}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+              >
+                <X className="h-4 w-4" />
+                <span>Anular Papeleta</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Party Cards */}
+        <div className="space-y-3">
+          {diputadosData.parties.map((party) => (
+            <button
+              key={party.id}
+              onClick={() => handlePartyClick(party.id)}
+              className={clsx(
+                'w-full flex items-center rounded-lg border shadow-sm focus:outline-none focus:ring-2 transition-transform',
+                'active:scale-[0.98] touch-manipulation select-none',
+                'bg-white min-h-[60px]' // Altura mínima para mejor toque
+              )}
+              style={{ borderLeftWidth: 6, borderLeftColor: party.color }}
+            >
+              <div className="flex-1 p-3 sm:p-4 text-left">
+                <div className="flex items-center justify-between">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm sm:text-base font-semibold text-gray-900 truncate">{party.fullName}</div>
+                    <div className="text-xs sm:text-sm text-gray-600">Casillas {party.slotRange}</div>
+                  </div>
+                  <div className="flex items-center gap-2 ml-3">
+                    <span className="text-xl sm:text-2xl font-bold tabular-nums" aria-live="polite">
+                      {getTotalPartyCount(party.id)}
+                    </span>
+                    <div className="text-sm text-gray-500">+</div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </button>
-        ))}
+            </button>
+          ))}
+        </div>
       </div>
     );
   };
@@ -602,9 +639,9 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
                 )}
                 style={{
                   borderColor: party.color,
-                  backgroundColor: isSelected 
-                    ? `${party.color}25`  // Solo color para selección actual (papeleta abierta)
-                    : 'transparent',      // Marcas aplicadas vuelven a blanco
+                  backgroundColor: (isSelected || isApplied)
+                    ? `${party.color}25`  // Color para selección actual Y casillas con votos
+                    : 'transparent',      // Sin votos = transparente
                   color: isSelected ? party.color : '#374151',
                   '--tw-ring-color': party.color,
                   borderWidth: isSelected ? '3px' : '2px' // Borde más grueso para seleccionadas
@@ -639,23 +676,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
           Toca una casilla para seleccionar/deseleccionar diputado
         </div>
 
-        {/* Legend - Responsive */}
-        <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-6 text-xs text-gray-600">
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded border-2 border-dashed" style={{ borderColor: party.color }}></div>
-            <span>Sin marcas</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded border-2 border-solid" style={{ borderColor: party.color }}></div>
-            <span>Con marcas (numerito)</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded border-2 border-solid" style={{ borderColor: party.color, backgroundColor: `${party.color}25` }}></div>
-            <span>Seleccionado actual</span>
-          </div>
-        </div>
-
-        {/* Papeleta Status and Controls */}
+        {/* Papeleta Status and Controls - Moved up for mobile */}
         {papeleta.status === 'OPEN' && (
           <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
             <div className="flex items-center justify-between mb-3">
@@ -676,7 +697,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
               >
                 <Check className="h-4 w-4" />
                 <span className="hidden sm:inline">Cerrar Papeleta</span>
-                <span className="sm:hidden">Cerrar</span>
+                <span className="sm:hidden">Cerrar Papeleta</span>
               </button>
               <button
                 onClick={handleAnularPapeleta}
@@ -685,11 +706,27 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
               >
                 <X className="h-4 w-4" />
                 <span className="hidden sm:inline">Anular Papeleta</span>
-                <span className="sm:hidden">Anular</span>
+                <span className="sm:hidden">Anular Papeleta</span>
               </button>
             </div>
           </div>
         )}
+
+        {/* Legend - Moved down for mobile */}
+        <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-6 text-xs text-gray-600">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded border-2 border-dashed" style={{ borderColor: party.color }}></div>
+            <span>Sin marcas</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded border-2 border-solid" style={{ borderColor: party.color }}></div>
+            <span>Con marcas</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded border-2 border-solid" style={{ borderColor: party.color, backgroundColor: `${party.color}25` }}></div>
+            <span>Seleccionado actual</span>
+          </div>
+        </div>
 
         {/* Papeleta Error */}
         {papeletaError && (
