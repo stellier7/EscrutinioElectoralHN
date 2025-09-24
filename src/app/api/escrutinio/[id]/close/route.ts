@@ -14,7 +14,10 @@ export async function POST(request: Request, { params }: { params: { id: string 
     if (!payload) return NextResponse.json({ success: false, error: 'Token inválido' }, { status: 401 });
 
     const escrutinioId = params.id;
-    const existing = await prisma.escrutinio.findUnique({ where: { id: escrutinioId } });
+    const existing = await prisma.escrutinio.findUnique({ 
+      where: { id: escrutinioId },
+      include: { mesa: true }
+    });
     if (!existing) return NextResponse.json({ success: false, error: 'Escrutinio no encontrado' }, { status: 404 });
 
     // Solo permitir cerrar escrutinios que están COMPLETED
@@ -33,10 +36,10 @@ export async function POST(request: Request, { params }: { params: { id: string 
       data: {
         userId: payload.userId,
         action: 'CLOSE_ESCRUTINIO',
-        description: `Escrutinio cerrado para JRV ${existing.mesaNumber}`,
+        description: `Escrutinio cerrado para JRV ${existing.mesa.numero}`,
         metadata: {
           escrutinioId,
-          mesaNumber: existing.mesaNumber,
+          mesaNumber: existing.mesa.numero,
           electionLevel: existing.electionLevel,
           timestamp: new Date().toISOString(),
         },

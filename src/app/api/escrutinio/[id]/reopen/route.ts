@@ -14,7 +14,10 @@ export async function POST(request: Request, { params }: { params: { id: string 
     if (!payload) return NextResponse.json({ success: false, error: 'Token inválido' }, { status: 401 });
 
     const escrutinioId = params.id;
-    const existing = await prisma.escrutinio.findUnique({ where: { id: escrutinioId } });
+    const existing = await prisma.escrutinio.findUnique({ 
+      where: { id: escrutinioId },
+      include: { mesa: true }
+    });
     if (!existing) return NextResponse.json({ success: false, error: 'Escrutinio no encontrado' }, { status: 404 });
 
     // Solo permitir reabrir escrutinios que están CLOSED
@@ -46,10 +49,10 @@ export async function POST(request: Request, { params }: { params: { id: string 
       data: {
         userId: payload.userId,
         action: 'REOPEN_ESCRUTINIO',
-        description: `Escrutinio reabierto para edición en JRV ${existing.mesaNumber}`,
+        description: `Escrutinio reabierto para edición en JRV ${existing.mesa.numero}`,
         metadata: {
           escrutinioId,
-          mesaNumber: existing.mesaNumber,
+          mesaNumber: existing.mesa.numero,
           electionLevel: existing.electionLevel,
           voteSnapshotBeforeReopen: voteSnapshot,
           timestamp: new Date().toISOString(),
