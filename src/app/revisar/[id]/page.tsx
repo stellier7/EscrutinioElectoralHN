@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '../../../components/AuthProvider';
+import axios from 'axios';
 import { 
   ArrowLeft, 
   CheckCircle, 
@@ -72,17 +73,12 @@ export default function RevisarEscrutinioPage() {
       setLoading(true);
       setError(null);
       
-      const response = await fetch(`/api/escrutinio/${escrutinioId}/review`);
-      const data = await response.json();
+      const response = await axios.get(`/api/escrutinio/${escrutinioId}/review`);
       
-      if (!response.ok) {
-        throw new Error(data.error || 'Error al cargar el escrutinio');
-      }
-      
-      if (data.success) {
-        setEscrutinioData(data.data);
+      if (response.data.success) {
+        setEscrutinioData(response.data.data);
       } else {
-        throw new Error(data.error || 'Error al cargar el escrutinio');
+        throw new Error(response.data.error || 'Error al cargar el escrutinio');
       }
     } catch (err) {
       console.error('Error loading escrutinio:', err);
