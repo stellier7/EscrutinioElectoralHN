@@ -70,22 +70,29 @@ export default function DashboardPage() {
   // Función para cargar estadísticas del dashboard
   const loadStats = useCallback(async () => {
     try {
+      console.log('🔄 Loading dashboard stats...');
       setStatsLoading(true);
       const resp = await axios.get('/api/dashboard/stats');
+      console.log('📊 Dashboard stats response:', resp.data);
       if (resp.data?.success) {
         setStats(resp.data.data);
+        console.log('✅ Dashboard stats loaded successfully');
+      } else {
+        console.error('❌ Dashboard stats response not successful:', resp.data);
       }
     } catch (e) {
-      console.error('Error loading dashboard stats:', e);
+      console.error('❌ Error loading dashboard stats:', e);
     } finally {
       setStatsLoading(false);
     }
   }, []);
 
-  // Cargar estadísticas del dashboard
+  // Cargar estadísticas del dashboard solo cuando el usuario esté disponible
   useEffect(() => {
-    loadStats();
-  }, [loadStats]);
+    if (!isLoading && user) {
+      loadStats();
+    }
+  }, [loadStats, isLoading, user]);
 
   const handleLogout = async () => {
     await logout();

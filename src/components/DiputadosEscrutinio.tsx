@@ -191,26 +191,52 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     }
   }, [appliedVotes, jrvNumber]);
 
+  // Cargar datos desde localStorage al montar el componente o cambiar JRV
+  useEffect(() => {
+    if (jrvNumber && typeof window !== 'undefined') {
+      console.log('📱 Cargando datos desde localStorage para JRV', jrvNumber);
+      
+      // Cargar número de papeleta
+      const storedPapeletaNumber = localStorage.getItem(`papeleta-number-${jrvNumber}`);
+      if (storedPapeletaNumber) {
+        setPapeletaNumber(parseInt(storedPapeletaNumber, 10));
+        console.log('📱 Papeleta number cargado:', storedPapeletaNumber);
+      } else {
+        setPapeletaNumber(1);
+        console.log('📱 Iniciando papeleta en 1 para nueva JRV');
+      }
+      
+      // Cargar party counts
+      const storedPartyCounts = localStorage.getItem(`party-counts-${jrvNumber}`);
+      if (storedPartyCounts) {
+        const parsed = JSON.parse(storedPartyCounts);
+        setPartyCounts(parsed);
+        console.log('📱 Party counts cargados:', parsed);
+      } else {
+        setPartyCounts({});
+        console.log('📱 Iniciando party counts vacío para nueva JRV');
+      }
+      
+      // Cargar applied votes
+      const storedAppliedVotes = localStorage.getItem(`applied-votes-${jrvNumber}`);
+      if (storedAppliedVotes) {
+        const parsed = JSON.parse(storedAppliedVotes);
+        setAppliedVotes(parsed);
+        console.log('📱 Applied votes cargados:', parsed);
+      } else {
+        setAppliedVotes({});
+        console.log('📱 Iniciando applied votes vacío para nueva JRV');
+      }
+    }
+  }, [jrvNumber]);
+
   // Inicializar papeleta automáticamente cuando se carga el componente
   useEffect(() => {
     if (escrutinioId && userId && papeleta.status === null) {
       console.log('🔄 Inicializando papeleta automáticamente...');
-      // Limpiar datos de JRV anterior si existe (para empezar limpio)
-      if (jrvNumber && typeof window !== 'undefined') {
-        console.log('🧹 Limpiando datos de JRV anterior para empezar limpio...');
-        localStorage.removeItem(`papeleta-number-${jrvNumber}`);
-        localStorage.removeItem(`party-counts-${jrvNumber}`);
-        localStorage.removeItem(`applied-votes-${jrvNumber}`);
-        
-        // Resetear estados locales también
-        setPapeletaNumber(1);
-        setPartyCounts({});
-        setAppliedVotes({});
-        console.log('🔄 Estados locales reseteados para empezar limpio');
-      }
       startPapeleta(escrutinioId, userId);
     }
-  }, [escrutinioId, userId, papeleta.status, startPapeleta, jrvNumber]);
+  }, [escrutinioId, userId, papeleta.status, startPapeleta]);
 
   // Cargar datos de diputados según la JRV
   useEffect(() => {

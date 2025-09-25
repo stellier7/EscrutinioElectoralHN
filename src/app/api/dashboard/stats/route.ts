@@ -6,16 +6,22 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
+    console.log('🔄 Dashboard stats API called');
+    
     // Autenticación
     const authHeader = request.headers.get('authorization') || undefined;
     const token = AuthUtils.extractTokenFromHeader(authHeader);
     if (!token) {
+      console.log('❌ No authorization header found');
       return NextResponse.json({ success: false, error: 'No autorizado' }, { status: 401 });
     }
     const payload = AuthUtils.verifyToken(token);
     if (!payload) {
+      console.log('❌ Invalid token');
       return NextResponse.json({ success: false, error: 'Token inválido' }, { status: 401 });
     }
+    
+    console.log('✅ User authenticated:', { userId: payload.userId, role: payload.role });
 
     const userId = payload.userId;
     const userRole = payload.role;
@@ -122,16 +128,20 @@ export async function GET(request: NextRequest) {
       })
     );
 
+    const responseData = {
+      totalMesas,
+      completedEscrutinios,
+      pendingEscrutinios,
+      inProgressActivity,
+      recentActivity,
+      statsByLevel,
+    };
+    
+    console.log('📊 Dashboard stats data:', responseData);
+    
     return NextResponse.json({
       success: true,
-      data: {
-        totalMesas,
-        completedEscrutinios,
-        pendingEscrutinios,
-        inProgressActivity,
-        recentActivity,
-        statsByLevel,
-      },
+      data: responseData,
     });
   } catch (error) {
     console.error('Error fetching dashboard stats:', error);
