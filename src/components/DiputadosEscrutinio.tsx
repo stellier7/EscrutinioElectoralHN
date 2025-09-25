@@ -690,7 +690,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
 
         {/* Papeleta Status and Controls - Moved up for mobile */}
         {papeleta.status === 'OPEN' && (
-          <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <div className="mt-6 p-6 bg-blue-50 rounded-lg border border-blue-200">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <FileText className="h-5 w-5 text-blue-600" />
@@ -868,7 +868,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
             <div className="mt-8 space-y-4">
               {/* Papeleta Status and Controls - Show when papeleta is open */}
               {papeleta.status === 'OPEN' && (
-                <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="p-6 bg-blue-50 rounded-lg border border-blue-200">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <FileText className="h-5 w-5 text-blue-600" />
@@ -901,7 +901,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
               )}
 
               {/* Subir Foto del Acta */}
-              <div className="bg-gray-50 p-4 rounded-lg border">
+              <div className="bg-gray-50 p-6 rounded-lg border">
                 <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
                   <Camera className="h-5 w-5" />
                   Foto del Acta
@@ -924,7 +924,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
 
               {/* Botón Finalizar Escrutinio - Cuando está en progreso o cerrado */}
               {(escrutinioStatus === 'COMPLETED' && !isEscrutinioClosed) || (escrutinioStatus === 'CLOSED') ? (
-                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
                   <h3 className="text-lg font-semibold text-blue-900 mb-3 flex items-center gap-2">
                     <Check className="h-5 w-5" />
                     Finalizar Escrutinio
@@ -956,7 +956,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
               ) : null}
 
               {/* Control de Escrutinio */}
-              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
                 <h3 className="text-lg font-semibold text-blue-900 mb-3 flex items-center gap-2">
                   <Upload className="h-5 w-5" />
                   Control de Escrutinio

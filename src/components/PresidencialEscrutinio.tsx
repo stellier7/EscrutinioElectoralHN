@@ -247,7 +247,7 @@ export default function PresidencialEscrutinio({
           {/* Sección de Control de Escrutinio y Foto */}
           <div className="mt-8 space-y-4">
             {/* Control de Escrutinio */}
-            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
               <h3 className="text-lg font-semibold text-blue-900 mb-3 flex items-center gap-2">
                 <Upload className="h-5 w-5" />
                 Control de Escrutinio
@@ -314,7 +314,7 @@ export default function PresidencialEscrutinio({
             </div>
 
             {/* Subir Foto del Acta */}
-            <div className="bg-gray-50 p-4 rounded-lg border">
+            <div className="bg-gray-50 p-6 rounded-lg border">
               <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
                 <Camera className="h-5 w-5" />
                 Foto del Acta
@@ -337,7 +337,7 @@ export default function PresidencialEscrutinio({
 
             {/* Botón Finalizar Escrutinio - Cuando está en progreso o cerrado */}
             {(escrutinioStatus === 'COMPLETED' && !isEscrutinioClosed) || (escrutinioStatus === 'CLOSED') ? (
-              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
                 <h3 className="text-lg font-semibold text-blue-900 mb-3 flex items-center gap-2">
                   <CheckCircle className="h-5 w-5" />
                   Finalizar Escrutinio
