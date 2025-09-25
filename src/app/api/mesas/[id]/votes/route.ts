@@ -98,6 +98,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
           if (papeleta.votesBuffer && Array.isArray(papeleta.votesBuffer)) {
             papeleta.votesBuffer.forEach((vote: any) => {
               if (vote.partyId && vote.casillaNumber) {
+                // Crear una entrada única para cada casilla de cada partido
                 const partyKey = `${vote.partyId}_${vote.casillaNumber}`;
                 if (!partyVotes[partyKey]) {
                   partyVotes[partyKey] = {

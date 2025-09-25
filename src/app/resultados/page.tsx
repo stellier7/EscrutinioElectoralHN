@@ -455,23 +455,75 @@ export default function ResultadosPage() {
                       </div>
                     </div>
                     <div className="space-y-2">
-                      {data.candidates.map((candidate: CandidateResult, index: number) => (
-                        <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                          <div className="flex items-center gap-3">
-                            <div className="w-6 h-6 bg-primary-100 rounded-full flex items-center justify-center text-xs font-medium text-primary-600">
-                              {index + 1}
+                      {data.level === 'LEGISLATIVE' ? (
+                        // Mostrar votos legislativos agrupados por partido
+                        <div className="space-y-3">
+                          {Object.entries(
+                            data.candidates.reduce((acc: Record<string, {party: string, votes: number, casillas: Array<{name: string, votes: number}>}>, candidate: any) => {
+                              const party = candidate.party;
+                              if (!acc[party]) {
+                                acc[party] = {
+                                  party: party,
+                                  votes: 0,
+                                  casillas: []
+                                };
+                              }
+                              acc[party].votes += candidate.votes;
+                              acc[party].casillas.push({
+                                name: candidate.name,
+                                votes: candidate.votes
+                              });
+                              return acc;
+                            }, {})
+                          ).map(([party, partyData]: [string, any]) => (
+                            <div key={party} className="border rounded-lg p-3">
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-bold text-blue-600">
+                                    {party.charAt(0)}
+                                  </div>
+                                  <div>
+                                    <div className="font-semibold text-gray-900">{party}</div>
+                                    <div className="text-sm text-gray-600">Partido Político</div>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="font-bold text-gray-900">{partyData.votes.toLocaleString()}</div>
+                                  <div className="text-sm text-gray-600">{((partyData.votes / data.totalVotes) * 100).toFixed(1)}%</div>
+                                </div>
+                              </div>
+                              <div className="ml-11 space-y-1">
+                                <div className="text-xs font-medium text-gray-500 mb-1">Casillas:</div>
+                                {partyData.casillas.map((casilla: any, casillaIndex: number) => (
+                                  <div key={casillaIndex} className="flex items-center justify-between text-sm bg-gray-50 rounded px-2 py-1">
+                                    <span className="text-gray-700">{casilla.name}</span>
+                                    <span className="font-medium text-gray-900">{casilla.votes} votos</span>
+                                  </div>
+                                ))}
+                              </div>
                             </div>
-                            <div>
-                              <div className="font-medium text-gray-900">{candidate.name}</div>
-                              <div className="text-sm text-gray-600">{candidate.party}</div>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="font-medium text-gray-900">{candidate.votes.toLocaleString()}</div>
-                            <div className="text-sm text-gray-600">{candidate.percentage.toFixed(1)}%</div>
-                          </div>
+                          ))}
                         </div>
-                      ))}
+                      ) : (
+                        // Mostrar votos presidenciales como antes
+                        data.candidates.map((candidate: CandidateResult, index: number) => (
+                          <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                            <div className="flex items-center gap-3">
+                              <div className="w-6 h-6 bg-primary-100 rounded-full flex items-center justify-center text-xs font-medium text-primary-600">
+                                {index + 1}
+                              </div>
+                              <div>
+                                <div className="font-medium text-gray-900">{candidate.name}</div>
+                                <div className="text-sm text-gray-600">{candidate.party}</div>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="font-medium text-gray-900">{candidate.votes.toLocaleString()}</div>
+                              <div className="text-sm text-gray-600">{candidate.percentage.toFixed(1)}%</div>
+                            </div>
+                          </div>
+                        ))
+                      )}
                     </div>
                     <div className="mt-3 pt-3 border-t text-sm text-gray-600">
                       Total de votos: {data.totalVotes.toLocaleString()}
