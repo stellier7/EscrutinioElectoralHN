@@ -101,7 +101,16 @@ export default function PresidencialEscrutinio({
     
     try {
       // Subir evidencia si existe (opcional)
-      await uploadEvidenceIfNeeded();
+      const evidenceUrl = await uploadEvidenceIfNeeded();
+      
+      // Si se subió evidencia, guardar la URL en la base de datos
+      if (evidenceUrl) {
+        console.log('📸 Guardando URL de evidencia:', evidenceUrl);
+        await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/evidence`, {
+          publicUrl: evidenceUrl,
+          hash: null // Podríamos calcular el hash si es necesario
+        });
+      }
       
       // Marcar el escrutinio como completado definitivamente
       await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/complete`);
