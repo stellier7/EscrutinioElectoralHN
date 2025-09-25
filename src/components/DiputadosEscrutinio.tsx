@@ -120,7 +120,8 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     isCasillaSelected,
     getCasillaVoteCount,
     isVoteLimitReached,
-    getTotalVotesInBuffer
+    getTotalVotesInBuffer,
+    loadPapeletaFromServer
   } = usePapeleta();
 
   // Inicializar papeleta automáticamente cuando se carga el componente
@@ -234,12 +235,24 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     loadDiputadosData();
   }, [jrvNumber]);
 
-  // Iniciar papeleta cuando se cargan los datos y tenemos escrutinioId
+  // Cargar o iniciar papeleta cuando se cargan los datos y tenemos escrutinioId
   useEffect(() => {
-    if (diputadosData && escrutinioId && userId && !papeleta.id) {
-      startPapeleta(escrutinioId, userId);
-    }
-  }, [diputadosData, escrutinioId, userId, papeleta.id, startPapeleta]);
+    const loadOrStartPapeleta = async () => {
+      if (diputadosData && escrutinioId && userId && !papeleta.id) {
+        // Primero intentar cargar papeleta existente desde el servidor
+        const loaded = await loadPapeletaFromServer(escrutinioId);
+        if (!loaded) {
+          // Si no hay papeleta existente, crear una nueva
+          console.log('🆕 No hay papeleta existente, creando nueva...');
+          startPapeleta(escrutinioId, userId);
+        } else {
+          console.log('✅ Papeleta existente cargada desde servidor');
+        }
+      }
+    };
+    
+    loadOrStartPapeleta();
+  }, [diputadosData, escrutinioId, userId, papeleta.id, startPapeleta, loadPapeletaFromServer]);
 
   // Handle party card click - expand to grid
   const handlePartyClick = useCallback((partyId: string) => {

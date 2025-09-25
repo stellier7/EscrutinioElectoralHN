@@ -278,22 +278,24 @@ export default function DashboardPage() {
                     <p className="text-xs text-gray-500">{activity.electionLevel}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 flex-shrink-0">
                   <Button
                     variant="primary"
                     size="sm"
                     onClick={() => router.push(`/escrutinio?jrv=${activity.mesaNumber}&level=${activity.electionLevel}&escrutinioId=${activity.id}`)}
-                    className="text-xs px-2 py-1"
+                    className="text-xs px-1.5 py-0.5 min-w-0"
                   >
-                    Continuar
+                    Cont.
                   </Button>
                   <Button
                     variant="danger"
                     size="sm"
                     onClick={async () => {
+                      console.log('🔄 Cancelando escrutinio:', activity.id);
                       if (confirm('¿Estás seguro de que quieres cancelar este escrutinio? Esta acción no se puede deshacer.')) {
                         try {
                           const response = await axios.post(`/api/escrutinio/${activity.id}/cancel`);
+                          console.log('✅ Respuesta de cancelación:', response.data);
                           if (response.data.success) {
                             // Recargar las estadísticas
                             loadStats();
@@ -301,12 +303,12 @@ export default function DashboardPage() {
                             alert('Error al cancelar el escrutinio');
                           }
                         } catch (error) {
-                          console.error('Error canceling escrutinio:', error);
+                          console.error('❌ Error canceling escrutinio:', error);
                           alert('Error al cancelar el escrutinio');
                         }
                       }
                     }}
-                    className="text-xs px-2 py-1"
+                    className="text-xs px-1.5 py-0.5 min-w-0"
                   >
                     Cancelar
                   </Button>
@@ -492,22 +494,24 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-gray-500">{activity.electionLevel}</span>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 flex-shrink-0">
                     <Button
                       variant="primary"
                       size="sm"
                       onClick={() => router.push(`/escrutinio?jrv=${activity.mesaNumber}&level=${activity.electionLevel}&escrutinioId=${activity.id}`)}
-                      className="text-xs"
+                      className="text-xs px-1.5 py-0.5 min-w-0"
                     >
-                      Continuar
+                      Cont.
                     </Button>
                     <Button
                       variant="danger"
                       size="sm"
                       onClick={async () => {
+                        console.log('🔄 Cancelando escrutinio:', activity.id);
                         if (confirm('¿Estás seguro de que quieres cancelar este escrutinio? Esta acción no se puede deshacer.')) {
                           try {
                             const response = await axios.post(`/api/escrutinio/${activity.id}/cancel`);
+                            console.log('✅ Respuesta de cancelación:', response.data);
                             if (response.data.success) {
                               // Recargar las estadísticas
                               loadStats();
@@ -515,12 +519,12 @@ export default function DashboardPage() {
                               alert('Error al cancelar el escrutinio');
                             }
                           } catch (error) {
-                            console.error('Error canceling escrutinio:', error);
+                            console.error('❌ Error canceling escrutinio:', error);
                             alert('Error al cancelar el escrutinio');
                           }
                         }
                       }}
-                      className="text-xs"
+                      className="text-xs px-1.5 py-0.5 min-w-0"
                     >
                       Cancelar
                     </Button>
