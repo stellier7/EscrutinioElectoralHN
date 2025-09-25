@@ -16,6 +16,7 @@ import {
   BarChart3
 } from 'lucide-react';
 import Button from '../../../components/ui/Button';
+import LegislativeReview from '../../../components/LegislativeReview';
 
 interface EscrutinioData {
   id: string;
@@ -225,61 +226,16 @@ export default function RevisarEscrutinioPage() {
           <div className="p-6">
             <div className="flex items-center gap-3 mb-6">
               <BarChart3 className="h-6 w-6 text-primary-600" />
-              <h2 className="text-xl font-semibold text-gray-900">Resultados del Conteo</h2>
+              <h2 className="text-xl font-semibold text-gray-900">
+                {escrutinioData.electionLevel === 'LEGISLATIVE' ? 'Resultado de Marcas' : 'Resultados del Conteo'}
+              </h2>
             </div>
             
             {/* Lista de candidatos/partidos con votos */}
             <div className="space-y-3 mb-6">
               {escrutinioData.electionLevel === 'LEGISLATIVE' ? (
-                // Mostrar votos legislativos agrupados por partido
-                <div className="space-y-4">
-                  {Object.entries(
-                    escrutinioData.candidates.reduce((acc: Record<string, {party: string, votes: number, casillas: Array<{name: string, votes: number, number: string}>}>, candidate: any) => {
-                      const party = candidate.party;
-                      if (!acc[party]) {
-                        acc[party] = {
-                          party: party,
-                          votes: 0,
-                          casillas: []
-                        };
-                      }
-                      acc[party].votes += candidate.votes;
-                      acc[party].casillas.push({
-                        name: candidate.name,
-                        votes: candidate.votes,
-                        number: candidate.number
-                      });
-                      return acc;
-                    }, {})
-                  ).map(([party, partyData]: [string, any]) => (
-                    <div key={party} className="border rounded-lg p-4 bg-gray-50">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-sm font-bold text-blue-600">
-                            {party.charAt(0)}
-                          </div>
-                          <div>
-                            <p className="font-semibold text-gray-900">{party}</p>
-                            <p className="text-sm text-gray-600">Partido Político</p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-xl font-bold text-gray-900">{partyData.votes}</p>
-                          <p className="text-sm text-gray-500">voto{partyData.votes !== 1 ? 's' : ''}</p>
-                        </div>
-                      </div>
-                      <div className="ml-13 space-y-2">
-                        <div className="text-xs font-medium text-gray-500 mb-2">Casillas:</div>
-                        {partyData.casillas.map((casilla: any, casillaIndex: number) => (
-                          <div key={casillaIndex} className="flex items-center justify-between text-sm bg-white rounded px-3 py-2 border">
-                            <span className="text-gray-700">{casilla.name}</span>
-                            <span className="font-medium text-gray-900">{casilla.votes} voto{casilla.votes !== 1 ? 's' : ''}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                // Mostrar votos legislativos usando el componente de revisión
+                <LegislativeReview candidates={escrutinioData.candidates} />
               ) : (
                 // Mostrar votos presidenciales como antes
                 escrutinioData.candidates.map((candidate) => (
@@ -319,7 +275,7 @@ export default function RevisarEscrutinioPage() {
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <h3 className="text-lg font-semibold text-blue-900 mb-3 flex items-center gap-2">
                 <CheckCircle className="h-5 w-5" />
-                Resumen de Votos
+                {escrutinioData.electionLevel === 'LEGISLATIVE' ? 'Resumen de Marcas' : 'Resumen de Votos'}
               </h3>
               <div className="space-y-2">
                 {escrutinioData.electionLevel === 'LEGISLATIVE' ? (
@@ -365,7 +321,9 @@ export default function RevisarEscrutinioPage() {
               <div className="mt-3 pt-3 border-t border-blue-200">
                 <div className="flex justify-between items-center font-semibold">
                   <span className="text-blue-700">Total:</span>
-                  <span className="text-blue-900">{escrutinioData.totalVotes} voto{escrutinioData.totalVotes !== 1 ? 's' : ''}</span>
+                  <span className="text-blue-900">
+                    {escrutinioData.totalVotes} {escrutinioData.electionLevel === 'LEGISLATIVE' ? 'marca' : 'voto'}{escrutinioData.totalVotes !== 1 ? 's' : ''}
+                  </span>
                 </div>
               </div>
             </div>

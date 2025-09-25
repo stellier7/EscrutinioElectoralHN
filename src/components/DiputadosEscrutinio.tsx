@@ -993,7 +993,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
         <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border">
           <div className="mb-4">
             <h2 className="text-lg font-semibold text-gray-900">
-              {expandedParty ? 'Selección de Diputado' : 'Conteo de Diputados'}
+              {expandedParty ? 'Selección de Diputado' : 'Marcas por Diputado'}
             </h2>
             <p className="text-sm text-gray-600">
               {diputadosData.jrv.nombre} - {diputadosData.jrv.departamento}
