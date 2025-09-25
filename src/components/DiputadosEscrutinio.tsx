@@ -141,6 +141,10 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
       console.log('📊 Cargando votos desde servidor para escrutinio:', escrutinioId);
       loadVotesFromServer(escrutinioId).then(() => {
         console.log('📊 Votos cargados desde servidor:', counts);
+        console.log('📊 Detalle de votos del servidor:');
+        Object.entries(counts).forEach(([candidateId, count]) => {
+          console.log(`  ${candidateId}: ${count}`);
+        });
       });
     }
   }, [escrutinioId, loadVotesFromServer]);
@@ -533,6 +537,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     const serverCount = Object.entries(counts).reduce((total, [candidateId, count]) => {
       // Formato: "partyId-casillaNumber" (ej: "libre-1", "pdc-5")
       if (candidateId.startsWith(partyId + '-')) {
+        console.log(`🔍 Voto del servidor: ${candidateId} = ${count}`);
         return total + count;
       }
       return total;
