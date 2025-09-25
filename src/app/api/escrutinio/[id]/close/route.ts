@@ -34,9 +34,16 @@ export async function POST(request: Request, { params }: { params: { id: string 
       include: { mesa: true }
     });
     if (!existing) return NextResponse.json({ success: false, error: 'Escrutinio no encontrado' }, { status: 404 });
+    
+    console.log('📊 Estado actual del escrutinio:', {
+      id: existing.id,
+      status: existing.status,
+      electionLevel: existing.electionLevel,
+      mesaNumber: existing.mesa.number
+    });
 
-    // Solo permitir cerrar escrutinios que están COMPLETED (en progreso)
-    if (existing.status !== 'COMPLETED') {
+    // Solo permitir cerrar escrutinios que están COMPLETED o FAILED
+    if (existing.status !== 'COMPLETED' && existing.status !== 'FAILED') {
       return NextResponse.json({ 
         success: false, 
         error: `No se puede cerrar este escrutinio. Estado actual: ${existing.status}` 
