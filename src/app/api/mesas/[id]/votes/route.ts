@@ -19,6 +19,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
             candidate: true,
           },
         },
+        papeletas: true, // Incluir papeletas para votos legislativos
         mesa: true,
         election: true,
       },
@@ -62,30 +63,64 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         };
       }
 
-      // Procesar votos
-      const candidateVotes: Record<string, { name: string; party: string; votes: number }> = {};
-      
-      escrutinio.votes.forEach(vote => {
-        const candidateId = vote.candidate.id;
-        if (!candidateVotes[candidateId]) {
-          candidateVotes[candidateId] = {
-            name: vote.candidate.name,
-            party: vote.candidate.party,
-            votes: 0,
-          };
-        }
-        candidateVotes[candidateId].votes += vote.count;
-      });
+      // Procesar votos según el nivel electoral
+      if (level === 'PRESIDENTIAL') {
+        // Procesar votos presidenciales (candidates)
+        const candidateVotes: Record<string, { name: string; party: string; votes: number }> = {};
+        
+        escrutinio.votes.forEach(vote => {
+          const candidateId = vote.candidate.id;
+          if (!candidateVotes[candidateId]) {
+            candidateVotes[candidateId] = {
+              name: vote.candidate.name,
+              party: vote.candidate.party,
+              votes: 0,
+            };
+          }
+          candidateVotes[candidateId].votes += vote.count;
+        });
 
-      const totalVotes = Object.values(candidateVotes).reduce((sum, candidate) => sum + candidate.votes, 0);
-      
-      results[level].totalVotes = totalVotes;
-      results[level].candidates = Object.values(candidateVotes)
-        .map(candidate => ({
-          ...candidate,
-          percentage: totalVotes > 0 ? (candidate.votes / totalVotes) * 100 : 0,
-        }))
-        .sort((a, b) => b.votes - a.votes);
+        const totalVotes = Object.values(candidateVotes).reduce((sum, candidate) => sum + candidate.votes, 0);
+        
+        results[level].totalVotes = totalVotes;
+        results[level].candidates = Object.values(candidateVotes)
+          .map(candidate => ({
+            ...candidate,
+            percentage: totalVotes > 0 ? (candidate.votes / totalVotes) * 100 : 0,
+          }))
+          .sort((a, b) => b.votes - a.votes);
+      } else if (level === 'LEGISLATIVE') {
+        // Procesar votos legislativos (parties from papeletas)
+        const partyVotes: Record<string, { name: string; party: string; votes: number }> = {};
+        let totalVotes = 0;
+        
+        escrutinio.papeletas.forEach(papeleta => {
+          if (papeleta.votesBuffer && Array.isArray(papeleta.votesBuffer)) {
+            papeleta.votesBuffer.forEach((vote: any) => {
+              if (vote.partyId && vote.casillaNumber) {
+                const partyKey = `${vote.partyId}_${vote.casillaNumber}`;
+                if (!partyVotes[partyKey]) {
+                  partyVotes[partyKey] = {
+                    name: `Casilla ${vote.casillaNumber}`,
+                    party: vote.partyId,
+                    votes: 0,
+                  };
+                }
+                partyVotes[partyKey].votes += 1;
+                totalVotes += 1;
+              }
+            });
+          }
+        });
+        
+        results[level].totalVotes = totalVotes;
+        results[level].candidates = Object.values(partyVotes)
+          .map(party => ({
+            ...party,
+            percentage: totalVotes > 0 ? (party.votes / totalVotes) * 100 : 0,
+          }))
+          .sort((a, b) => b.votes - a.votes);
+      }
     });
 
     return NextResponse.json({

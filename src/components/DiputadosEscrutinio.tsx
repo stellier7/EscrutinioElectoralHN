@@ -195,9 +195,22 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
   useEffect(() => {
     if (escrutinioId && userId && papeleta.status === null) {
       console.log('🔄 Inicializando papeleta automáticamente...');
+      // Limpiar datos de JRV anterior si existe (para empezar limpio)
+      if (jrvNumber && typeof window !== 'undefined') {
+        console.log('🧹 Limpiando datos de JRV anterior para empezar limpio...');
+        localStorage.removeItem(`papeleta-number-${jrvNumber}`);
+        localStorage.removeItem(`party-counts-${jrvNumber}`);
+        localStorage.removeItem(`applied-votes-${jrvNumber}`);
+        
+        // Resetear estados locales también
+        setPapeletaNumber(1);
+        setPartyCounts({});
+        setAppliedVotes({});
+        console.log('🔄 Estados locales reseteados para empezar limpio');
+      }
       startPapeleta(escrutinioId, userId);
     }
-  }, [escrutinioId, userId, papeleta.status, startPapeleta]);
+  }, [escrutinioId, userId, papeleta.status, startPapeleta, jrvNumber]);
 
   // Cargar datos de diputados según la JRV
   useEffect(() => {
