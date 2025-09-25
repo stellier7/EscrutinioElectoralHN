@@ -228,38 +228,91 @@ export default function RevisarEscrutinioPage() {
               <h2 className="text-xl font-semibold text-gray-900">Resultados del Conteo</h2>
             </div>
             
-            {/* Lista de candidatos con votos */}
+            {/* Lista de candidatos/partidos con votos */}
             <div className="space-y-3 mb-6">
-              {escrutinioData.candidates.map((candidate) => (
-                <div 
-                  key={candidate.id}
-                  className="flex items-center justify-between p-4 rounded-lg border"
-                  style={{
-                    backgroundColor: candidate.partyColor ? `${candidate.partyColor}15` : '#f9fafb',
-                    borderLeftWidth: 4,
-                    borderLeftColor: candidate.partyColor || '#e5e7eb'
-                  }}
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="flex-shrink-0">
-                      <div 
-                        className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm"
-                        style={{ backgroundColor: candidate.partyColor || '#6b7280' }}
-                      >
-                        {candidate.number || '?'}
+              {escrutinioData.electionLevel === 'LEGISLATIVE' ? (
+                // Mostrar votos legislativos agrupados por partido
+                <div className="space-y-4">
+                  {Object.entries(
+                    escrutinioData.candidates.reduce((acc: Record<string, {party: string, votes: number, casillas: Array<{name: string, votes: number, number: string}>}>, candidate: any) => {
+                      const party = candidate.party;
+                      if (!acc[party]) {
+                        acc[party] = {
+                          party: party,
+                          votes: 0,
+                          casillas: []
+                        };
+                      }
+                      acc[party].votes += candidate.votes;
+                      acc[party].casillas.push({
+                        name: candidate.name,
+                        votes: candidate.votes,
+                        number: candidate.number
+                      });
+                      return acc;
+                    }, {})
+                  ).map(([party, partyData]: [string, any]) => (
+                    <div key={party} className="border rounded-lg p-4 bg-gray-50">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-sm font-bold text-blue-600">
+                            {party.charAt(0)}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-gray-900">{party}</p>
+                            <p className="text-sm text-gray-600">Partido Político</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xl font-bold text-gray-900">{partyData.votes}</p>
+                          <p className="text-sm text-gray-500">voto{partyData.votes !== 1 ? 's' : ''}</p>
+                        </div>
+                      </div>
+                      <div className="ml-13 space-y-2">
+                        <div className="text-xs font-medium text-gray-500 mb-2">Casillas:</div>
+                        {partyData.casillas.map((casilla: any, casillaIndex: number) => (
+                          <div key={casillaIndex} className="flex items-center justify-between text-sm bg-white rounded px-3 py-2 border">
+                            <span className="text-gray-700">{casilla.name}</span>
+                            <span className="font-medium text-gray-900">{casilla.votes} voto{casilla.votes !== 1 ? 's' : ''}</span>
+                          </div>
+                        ))}
                       </div>
                     </div>
-                    <div>
-                      <p className="font-medium text-gray-900">{candidate.name}</p>
-                      <p className="text-sm text-gray-600">{candidate.party}</p>
+                  ))}
+                </div>
+              ) : (
+                // Mostrar votos presidenciales como antes
+                escrutinioData.candidates.map((candidate) => (
+                  <div 
+                    key={candidate.id}
+                    className="flex items-center justify-between p-4 rounded-lg border"
+                    style={{
+                      backgroundColor: candidate.partyColor ? `${candidate.partyColor}15` : '#f9fafb',
+                      borderLeftWidth: 4,
+                      borderLeftColor: candidate.partyColor || '#e5e7eb'
+                    }}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="flex-shrink-0">
+                        <div 
+                          className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm"
+                          style={{ backgroundColor: candidate.partyColor || '#6b7280' }}
+                        >
+                          {candidate.number || '?'}
+                        </div>
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">{candidate.name}</p>
+                        <p className="text-sm text-gray-600">{candidate.party}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-2xl font-bold text-gray-900">{candidate.votes}</p>
+                      <p className="text-sm text-gray-500">voto{candidate.votes !== 1 ? 's' : ''}</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-bold text-gray-900">{candidate.votes}</p>
-                    <p className="text-sm text-gray-500">voto{candidate.votes !== 1 ? 's' : ''}</p>
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
             
             {/* Resumen de votos */}
@@ -269,18 +322,45 @@ export default function RevisarEscrutinioPage() {
                 Resumen de Votos
               </h3>
               <div className="space-y-2">
-                {escrutinioData.candidates
-                  .filter(c => c.votes > 0)
-                  .map(c => (
-                    <div key={c.id} className="flex justify-between items-center text-sm">
+                {escrutinioData.electionLevel === 'LEGISLATIVE' ? (
+                  // Resumen para votos legislativos
+                  Object.entries(
+                    escrutinioData.candidates.reduce((acc: Record<string, {party: string, votes: number}>, candidate: any) => {
+                      const party = candidate.party;
+                      if (!acc[party]) {
+                        acc[party] = {
+                          party: party,
+                          votes: 0
+                        };
+                      }
+                      acc[party].votes += candidate.votes;
+                      return acc;
+                    }, {})
+                  ).map(([party, partyData]: [string, any]) => (
+                    <div key={party} className="flex justify-between items-center text-sm">
                       <span className="text-blue-700">
-                        {c.number}. {c.name} ({c.party})
+                        {party}
                       </span>
                       <span className="font-bold text-blue-900">
-                        {c.votes} voto{c.votes !== 1 ? 's' : ''}
+                        {partyData.votes} voto{partyData.votes !== 1 ? 's' : ''}
                       </span>
                     </div>
-                  ))}
+                  ))
+                ) : (
+                  // Resumen para votos presidenciales
+                  escrutinioData.candidates
+                    .filter(c => c.votes > 0)
+                    .map(c => (
+                      <div key={c.id} className="flex justify-between items-center text-sm">
+                        <span className="text-blue-700">
+                          {c.number}. {c.name} ({c.party})
+                        </span>
+                        <span className="font-bold text-blue-900">
+                          {c.votes} voto{c.votes !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                    ))
+                )}
               </div>
               <div className="mt-3 pt-3 border-t border-blue-200">
                 <div className="flex justify-between items-center font-semibold">

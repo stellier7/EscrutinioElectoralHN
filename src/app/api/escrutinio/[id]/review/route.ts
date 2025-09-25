@@ -39,6 +39,7 @@ export async function GET(
             candidate: true
           }
         },
+        papeletas: true, // Incluir papeletas para votos legislativos
       }
     });
 
@@ -61,26 +62,53 @@ export async function GET(
       });
     }
 
-    // Procesar los datos de votos por candidato
+    // Procesar los datos de votos según el nivel electoral
     const candidatesMap = new Map();
+    let totalVotes = 0;
     
-    escrutinio.votes.forEach(vote => {
-      const candidateId = vote.candidateId;
-      if (!candidatesMap.has(candidateId)) {
-        candidatesMap.set(candidateId, {
-          id: candidateId,
-          name: vote.candidate.name,
-          party: vote.candidate.party,
-          partyColor: '#e5e7eb', // Color por defecto
-          number: vote.candidate.number,
-          votes: 0
-        });
-      }
-      candidatesMap.get(candidateId).votes += vote.count;
-    });
+    if (escrutinio.electionLevel === 'PRESIDENTIAL') {
+      // Procesar votos presidenciales (candidates)
+      escrutinio.votes.forEach(vote => {
+        const candidateId = vote.candidateId;
+        if (!candidatesMap.has(candidateId)) {
+          candidatesMap.set(candidateId, {
+            id: candidateId,
+            name: vote.candidate.name,
+            party: vote.candidate.party,
+            partyColor: '#e5e7eb', // Color por defecto
+            number: vote.candidate.number,
+            votes: 0
+          });
+        }
+        candidatesMap.get(candidateId).votes += vote.count;
+      });
+      totalVotes = Array.from(candidatesMap.values()).reduce((sum, candidate) => sum + candidate.votes, 0);
+    } else if (escrutinio.electionLevel === 'LEGISLATIVE') {
+      // Procesar votos legislativos (parties from papeletas)
+      escrutinio.papeletas.forEach(papeleta => {
+        if (papeleta.votesBuffer && Array.isArray(papeleta.votesBuffer)) {
+          papeleta.votesBuffer.forEach((vote: any) => {
+            if (vote.partyId && vote.casillaNumber) {
+              const partyKey = `${vote.partyId}_${vote.casillaNumber}`;
+              if (!candidatesMap.has(partyKey)) {
+                candidatesMap.set(partyKey, {
+                  id: partyKey,
+                  name: `Casilla ${vote.casillaNumber}`,
+                  party: vote.partyId,
+                  partyColor: '#e5e7eb', // Color por defecto
+                  number: vote.casillaNumber,
+                  votes: 0
+                });
+              }
+              candidatesMap.get(partyKey).votes += 1;
+              totalVotes += 1;
+            }
+          });
+        }
+      });
+    }
 
     const candidates = Array.from(candidatesMap.values());
-    const totalVotes = candidates.reduce((sum, candidate) => sum + candidate.votes, 0);
 
     // Obtener la URL de la evidencia si existe
     const actaUrl = escrutinio.actaImageUrl || null;
