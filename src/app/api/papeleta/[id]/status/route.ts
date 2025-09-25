@@ -41,18 +41,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ success: false, error: 'No autorizado para ver esta papeleta' }, { status: 403 });
     }
 
-    // Obtener los votos de la papeleta
-    const votes = await prisma.papeletaVote.findMany({
-      where: { papeletaId: papeleta.id },
-      orderBy: { createdAt: 'asc' }
-    });
-
-    // Convertir votos al formato esperado
-    const votesBuffer = votes.map(vote => ({
-      partyId: vote.partyId,
-      casillaNumber: vote.casillaNumber,
-      timestamp: vote.createdAt.getTime()
-    }));
+    // Los votos se almacenan en votesBuffer como JSON
+    const votesBuffer = Array.isArray(papeleta.votesBuffer) ? papeleta.votesBuffer : [];
 
     return NextResponse.json({
       success: true,
