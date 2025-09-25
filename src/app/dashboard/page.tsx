@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../components/AuthProvider';
 import axios from 'axios';
@@ -67,23 +67,25 @@ export default function DashboardPage() {
     }
   }, [user, isLoading, router]);
 
+  // Función para cargar estadísticas del dashboard
+  const loadStats = useCallback(async () => {
+    try {
+      setStatsLoading(true);
+      const resp = await axios.get('/api/dashboard/stats');
+      if (resp.data?.success) {
+        setStats(resp.data.data);
+      }
+    } catch (e) {
+      console.error('Error loading dashboard stats:', e);
+    } finally {
+      setStatsLoading(false);
+    }
+  }, []);
+
   // Cargar estadísticas del dashboard
   useEffect(() => {
-    const loadStats = async () => {
-      try {
-        setStatsLoading(true);
-        const resp = await axios.get('/api/dashboard/stats');
-        if (resp.data?.success) {
-          setStats(resp.data.data);
-        }
-      } catch (e) {
-        console.error('Error loading dashboard stats:', e);
-      } finally {
-        setStatsLoading(false);
-      }
-    };
     loadStats();
-  }, []);
+  }, [loadStats]);
 
   const handleLogout = async () => {
     await logout();
