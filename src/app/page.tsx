@@ -236,7 +236,7 @@ export default function HomePage() {
               />
               <button
                 type="button"
-                className="absolute right-3 top-9 text-gray-400 hover:text-gray-600 touch-target"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 touch-target flex items-center justify-center w-6 h-6"
                 onClick={() => setShowPassword(!showPassword)}
               >
                 {showPassword ? (
