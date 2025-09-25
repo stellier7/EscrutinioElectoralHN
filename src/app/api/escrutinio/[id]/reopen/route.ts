@@ -22,39 +22,28 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
     // Solo permitir reabrir escrutinios que están CLOSED
     if (existing.status !== 'CLOSED') {
-      return NextResponse.json({ success: false, error: 'Solo se pueden reabrir escrutinios cerrados' }, { status: 400 });
+      return NextResponse.json({ 
+        success: false, 
+        error: `No se puede reabrir este escrutinio. Estado actual: ${existing.status}` 
+      }, { status: 400 });
     }
 
-    // Crear snapshot de los votos actuales antes de reabrir (para auditoría)
-    const currentVotes = await prisma.vote.findMany({
-      where: { escrutinioId },
-      include: { candidate: true },
-    });
-
-    const voteSnapshot = currentVotes.map(vote => ({
-      candidateId: vote.candidateId,
-      candidateName: vote.candidate.name,
-      party: vote.candidate.party,
-      count: vote.count,
-    }));
-
-    // Actualizar status a COMPLETED (reabierto para edición)
+    // Actualizar status a COMPLETED (en progreso)
     await prisma.escrutinio.update({
       where: { id: escrutinioId },
       data: { status: 'COMPLETED' },
     });
 
-    // Crear log de auditoría con snapshot de votos
+    // Crear log de auditoría
     await prisma.auditLog.create({
       data: {
         userId: payload.userId,
         action: 'REOPEN_ESCRUTINIO',
-        description: `Escrutinio reabierto para edición en JRV ${existing.mesa.number}`,
+        description: `Escrutinio reabierto para JRV ${existing.mesa.number}`,
         metadata: {
           escrutinioId,
           mesaNumber: existing.mesa.number,
           electionLevel: existing.electionLevel,
-          voteSnapshotBeforeReopen: voteSnapshot,
           timestamp: new Date().toISOString(),
         },
         ipAddress: request.headers.get('x-forwarded-for') || 'unknown',

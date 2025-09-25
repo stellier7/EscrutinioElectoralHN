@@ -713,7 +713,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     setError(null); // Limpiar errores anteriores
     
     try {
-      const response = await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/reopen`);
+      const response = await axios.post(`/api/escrutinio/${escrutinioId}/reopen`);
       console.log('✅ Escrutinio reabierto exitosamente:', response.data);
       
       setEscrutinioStatus('COMPLETED');
