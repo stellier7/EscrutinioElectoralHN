@@ -122,7 +122,7 @@ export async function GET(
       
       // Convertir el mapa de partidos a candidatos para el componente LegislativeReview
       partyVotesMap.forEach((casillasMap, partyId) => {
-        casillasMap.forEach((votes, casillaNumber) => {
+        casillasMap.forEach((votes: number, casillaNumber: number) => {
           const candidateId = `${partyId}_${casillaNumber}`;
           candidatesMap.set(candidateId, {
             id: candidateId,
