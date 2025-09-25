@@ -63,7 +63,16 @@ export default function PresidencialEscrutinio({
 
   // Función para subir evidencia si existe
   const uploadEvidenceIfNeeded = async (): Promise<string | null> => {
-    console.log('📸 uploadEvidenceIfNeeded called:', { actaImage: !!actaImage, escrutinioId });
+    console.log('📸 uploadEvidenceIfNeeded called:', { 
+      actaImage: !!actaImage, 
+      escrutinioId,
+      actaImageDetails: actaImage ? {
+        name: actaImage.name,
+        size: actaImage.size,
+        type: actaImage.type,
+        lastModified: actaImage.lastModified
+      } : null
+    });
     if (!actaImage || !escrutinioId) {
       console.log('📸 No actaImage or escrutinioId, returning null');
       return null;
@@ -109,19 +118,30 @@ export default function PresidencialEscrutinio({
     setIsCompleting(true);
     
     try {
+      console.log('📸 handleSendResults - Iniciando proceso:', { 
+        escrutinioId, 
+        actaImage: actaImage ? { name: actaImage.name, size: actaImage.size, type: actaImage.type } : null 
+      });
+      
       // Subir evidencia si existe (opcional)
       const evidenceUrl = await uploadEvidenceIfNeeded();
+      console.log('📸 handleSendResults - evidenceUrl result:', evidenceUrl);
       
       // Si se subió evidencia, guardar la URL en la base de datos
       if (evidenceUrl) {
         console.log('📸 Guardando URL de evidencia:', evidenceUrl);
-        const evidenceResponse = await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/evidence`, {
-          publicUrl: evidenceUrl,
-          hash: null // Podríamos calcular el hash si es necesario
-        });
-        console.log('📸 Evidence saved response:', evidenceResponse.data);
+        try {
+          const evidenceResponse = await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/evidence`, {
+            publicUrl: evidenceUrl,
+            hash: null // Podríamos calcular el hash si es necesario
+          });
+          console.log('📸 Evidence saved response:', evidenceResponse.data);
+        } catch (evidenceError) {
+          console.error('📸 Error saving evidence:', evidenceError);
+          // Continuar aunque falle el guardado de evidencia
+        }
       } else {
-        console.log('📸 No evidence URL to save');
+        console.log('📸 No evidence URL to save - actaImage was null or upload failed');
       }
       
       // Marcar el escrutinio como completado definitivamente
