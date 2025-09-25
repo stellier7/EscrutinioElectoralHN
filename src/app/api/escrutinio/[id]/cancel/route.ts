@@ -5,15 +5,26 @@ import { AuthUtils } from '@/lib/auth';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+// Force redeploy for cancel endpoint
+
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   try {
+    console.log('🔄 Cancel endpoint called with ID:', params.id);
+    
     const authHeader = request.headers.get('authorization') || undefined;
     const token = AuthUtils.extractTokenFromHeader(authHeader);
-    if (!token) return NextResponse.json({ success: false, error: 'No autorizado' }, { status: 401 });
+    if (!token) {
+      console.log('❌ No token provided');
+      return NextResponse.json({ success: false, error: 'No autorizado' }, { status: 401 });
+    }
     const payload = AuthUtils.verifyToken(token);
-    if (!payload) return NextResponse.json({ success: false, error: 'Token inválido' }, { status: 401 });
+    if (!payload) {
+      console.log('❌ Invalid token');
+      return NextResponse.json({ success: false, error: 'Token inválido' }, { status: 401 });
+    }
 
     const escrutinioId = params.id;
+    console.log('🔍 Looking for escrutinio:', escrutinioId);
     const existing = await prisma.escrutinio.findUnique({ 
       where: { id: escrutinioId },
       include: { mesa: true }
