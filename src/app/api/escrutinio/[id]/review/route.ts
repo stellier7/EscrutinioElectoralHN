@@ -96,6 +96,12 @@ export async function GET(
       // Procesar votos legislativos (parties from papeletas)
       console.log('🔄 Procesando votos legislativos...');
       console.log('📊 Número de papeletas:', escrutinio.papeletas.length);
+      console.log('📊 Papeletas completas:', escrutinio.papeletas.map(p => ({
+        id: p.id,
+        status: p.status,
+        votesBufferLength: Array.isArray(p.votesBuffer) ? p.votesBuffer.length : 0,
+        votesBuffer: p.votesBuffer
+      })));
       
       // Crear un mapa para agrupar votos por partido y casilla
       const partyVotesMap = new Map();
@@ -154,6 +160,13 @@ export async function GET(
     }
 
     const candidates = Array.from(candidatesMap.values());
+    
+    console.log('📊 Candidatos finales para review:', {
+      electionLevel: escrutinio.electionLevel,
+      candidatesCount: candidates.length,
+      candidates: candidates,
+      totalVotes: totalVotes
+    });
 
     // Obtener la URL de la evidencia si existe
     const actaUrl = escrutinio.actaImageUrl || null;
