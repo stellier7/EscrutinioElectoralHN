@@ -914,23 +914,6 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 )}
-                {user.status === 'APPROVED' && (
-                  <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-md">
-                    <div className="flex">
-                      <div className="flex-shrink-0">
-                        <CheckCircle className="h-5 w-5 text-green-400" />
-                      </div>
-                      <div className="ml-3">
-                        <h3 className="text-sm font-medium text-green-800">
-                          Cuenta aprobada
-                        </h3>
-                        <div className="mt-2 text-sm text-green-700">
-                          <p>Tu cuenta ha sido aprobada. Puedes acceder a todas las funcionalidades del sistema.</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
             {renderContent()}
