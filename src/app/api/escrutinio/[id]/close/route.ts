@@ -20,9 +20,35 @@ export async function POST(request: Request, { params }: { params: { id: string 
     });
     if (!existing) return NextResponse.json({ success: false, error: 'Escrutinio no encontrado' }, { status: 404 });
 
-    // Solo permitir cerrar escrutinios que están COMPLETED
+    // Solo permitir cerrar escrutinios que están COMPLETED (en progreso)
     if (existing.status !== 'COMPLETED') {
-      return NextResponse.json({ success: false, error: 'Solo se pueden cerrar escrutinios completados' }, { status: 400 });
+      return NextResponse.json({ 
+        success: false, 
+        error: `No se puede cerrar este escrutinio. Estado actual: ${existing.status}` 
+      }, { status: 400 });
+    }
+
+    // Cerrar automáticamente cualquier papeleta abierta antes de cerrar el escrutinio
+    console.log('🔄 Cerrando papeletas abiertas antes de cerrar escrutinio...');
+    const openPapeletas = await prisma.papeleta.findMany({
+      where: {
+        escrutinioId: escrutinioId,
+        status: 'OPEN'
+      }
+    });
+
+    if (openPapeletas.length > 0) {
+      console.log(`📄 Cerrando ${openPapeletas.length} papeletas abiertas`);
+      await prisma.papeleta.updateMany({
+        where: {
+          escrutinioId: escrutinioId,
+          status: 'OPEN'
+        },
+        data: {
+          status: 'CLOSED',
+          closedAt: new Date()
+        }
+      });
     }
 
     // Actualizar status a CLOSED
