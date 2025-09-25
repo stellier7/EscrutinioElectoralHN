@@ -279,7 +279,7 @@ export default function PresidencialEscrutinio({
               </>
             )}
 
-              {/* Estado: Cerrado - Mostrar opciones para Finalizar o Editar */}
+              {/* Estado: Cerrado - Mostrar solo opción para Editar */}
               {escrutinioStatus === 'CLOSED' && (
                 <>
                   <div className="bg-orange-100 border border-orange-300 rounded-lg p-3 mb-4">
@@ -288,47 +288,27 @@ export default function PresidencialEscrutinio({
                       <span className="font-medium">Escrutinio Cerrado</span>
                     </div>
                     <p className="text-sm text-orange-700 mt-1">
-                      Este escrutinio está pausado. Los votos están congelados. Puedes finalizar definitivamente o reabrir para editar.
+                      Este escrutinio está pausado. Los votos están congelados. Puedes reabrir para editar o finalizar definitivamente después de subir la foto del acta.
                     </p>
                   </div>
                   
-                  <div className="space-y-3">
-                    <button
-                      onClick={handleSendResults}
-                      disabled={isCompleting || isUploading}
-                      className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-                    >
-                      {isCompleting ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Finalizando...
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle className="h-4 w-4" />
-                          Finalizar Escrutinio
-                        </>
-                      )}
-                    </button>
-                    
-                    <button
-                      onClick={handleReopenEscrutinio}
-                      disabled={isReopening}
-                      className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-                    >
-                      {isReopening ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Reabriendo...
-                        </>
-                      ) : (
-                        <>
-                          <FileText className="h-4 w-4" />
-                          Editar Escrutinio
-                        </>
-                      )}
-                    </button>
-                  </div>
+                  <button
+                    onClick={handleReopenEscrutinio}
+                    disabled={isReopening}
+                    className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                  >
+                    {isReopening ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Reabriendo...
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="h-4 w-4" />
+                        Editar Escrutinio
+                      </>
+                    )}
+                  </button>
                 </>
               )}
             </div>
