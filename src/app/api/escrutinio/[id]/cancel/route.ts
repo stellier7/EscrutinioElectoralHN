@@ -10,6 +10,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   try {
     console.log('🔄 Cancel endpoint called with ID:', params.id);
+    console.log('🔄 Request headers:', Object.fromEntries(request.headers.entries()));
     
     const authHeader = request.headers.get('authorization') || undefined;
     const token = AuthUtils.extractTokenFromHeader(authHeader);
@@ -30,15 +31,29 @@ export async function POST(request: Request, { params }: { params: { id: string 
       include: { mesa: true }
     });
     
-    if (!existing) return NextResponse.json({ success: false, error: 'Escrutinio no encontrado' }, { status: 404 });
+    if (!existing) {
+      console.log('❌ Escrutinio no encontrado');
+      return NextResponse.json({ success: false, error: 'Escrutinio no encontrado' }, { status: 404 });
+    }
+
+    console.log('🔍 Escrutinio encontrado:', {
+      id: existing.id,
+      status: existing.status,
+      completedAt: existing.completedAt,
+      userId: existing.userId,
+      payloadUserId: payload.userId,
+      payloadRole: payload.role
+    });
 
     // Solo el creador del escrutinio o un admin puede cancelarlo
     if (existing.userId !== payload.userId && payload.role !== 'ADMIN') {
+      console.log('❌ No autorizado para cancelar este escrutinio');
       return NextResponse.json({ success: false, error: 'No autorizado para cancelar este escrutinio' }, { status: 403 });
     }
 
     // Solo se pueden cancelar escrutinios en progreso (COMPLETED sin finalizar)
     if (existing.status !== 'COMPLETED' || existing.completedAt !== null) {
+      console.log('❌ Escrutinio no se puede cancelar - status:', existing.status, 'completedAt:', existing.completedAt);
       return NextResponse.json({ success: false, error: 'Solo se pueden cancelar escrutinios en progreso' }, { status: 400 });
     }
 
