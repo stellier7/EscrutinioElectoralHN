@@ -10,7 +10,7 @@ export async function POST(
   try {
     const papeletaId = params.id;
     const body = await request.json();
-    const { userId } = body;
+    const { userId, votesBuffer } = body;
 
     if (!userId) {
       return NextResponse.json(
@@ -39,11 +39,14 @@ export async function POST(
       );
     }
 
-    const votesBuffer = papeleta.votesBuffer as any[];
+    // Usar votesBuffer del cliente si está disponible, sino usar el de la base de datos
+    const finalVotesBuffer = votesBuffer || (papeleta.votesBuffer as any[]);
+    
+    console.log('🔒 Cerrando papeleta con votos:', finalVotesBuffer.length);
 
     // Aplicar votos del buffer a los contadores globales
     await prisma.$transaction(async (tx) => {
-      for (const vote of votesBuffer) {
+      for (const vote of finalVotesBuffer) {
         // Buscar o crear candidato
         let candidate = await tx.candidate.findFirst({
           where: {
@@ -95,13 +98,14 @@ export async function POST(
         }
       }
 
-      // Marcar papeleta como cerrada
+      // Marcar papeleta como cerrada y actualizar votesBuffer
       await tx.papeleta.update({
         where: { id: papeletaId },
         data: {
           status: 'CLOSED',
           closedAt: new Date(),
-          updatedAt: new Date()
+          updatedAt: new Date(),
+          votesBuffer: finalVotesBuffer // Actualizar con los votos finales
         }
       });
     });
@@ -119,7 +123,7 @@ export async function POST(
       data: {
         papeletaId,
         status: 'CLOSED',
-        votesApplied: votesBuffer.length,
+        votesApplied: finalVotesBuffer.length,
         closedAt: new Date()
       }
     });
