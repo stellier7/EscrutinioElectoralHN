@@ -238,8 +238,15 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
   // Cargar o iniciar papeleta cuando se cargan los datos y tenemos escrutinioId
   useEffect(() => {
     const loadOrStartPapeleta = async () => {
-      if (diputadosData && escrutinioId && userId && !papeleta.id) {
+      if (diputadosData && escrutinioId && userId) {
+        // Si ya tenemos una papeleta cargada (desde localStorage o servidor), no hacer nada
+        if (papeleta.id) {
+          console.log('✅ Papeleta ya cargada:', papeleta.id);
+          return;
+        }
+
         // Primero intentar cargar papeleta existente desde el servidor
+        console.log('🔍 Intentando cargar papeleta desde servidor para escrutinio:', escrutinioId);
         const loaded = await loadPapeletaFromServer(escrutinioId);
         if (!loaded) {
           // Si no hay papeleta existente, crear una nueva

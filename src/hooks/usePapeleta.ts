@@ -48,13 +48,16 @@ export function usePapeleta(): UsePapeletaReturn {
         const stored = localStorage.getItem('papeleta-state');
         if (stored) {
           const parsed = JSON.parse(stored);
+          console.log('📱 Cargando papeleta desde localStorage:', parsed);
           setPapeleta({
             ...parsed,
             createdAt: parsed.createdAt ? new Date(parsed.createdAt) : null
           });
+        } else {
+          console.log('📱 No hay papeleta en localStorage');
         }
       } catch (error) {
-        console.error('Error loading papeleta from storage:', error);
+        console.error('❌ Error loading papeleta from storage:', error);
       }
     };
 
@@ -66,12 +69,18 @@ export function usePapeleta(): UsePapeletaReturn {
     const savePapeletaToStorage = () => {
       try {
         if (papeleta.id && papeleta.status) {
+          console.log('💾 Guardando papeleta en localStorage:', {
+            id: papeleta.id,
+            status: papeleta.status,
+            votesCount: papeleta.votesBuffer.length
+          });
           localStorage.setItem('papeleta-state', JSON.stringify(papeleta));
         } else {
+          console.log('🗑️ Limpiando papeleta de localStorage');
           localStorage.removeItem('papeleta-state');
         }
       } catch (error) {
-        console.error('Error saving papeleta to storage:', error);
+        console.error('❌ Error saving papeleta to storage:', error);
       }
     };
 
@@ -195,8 +204,11 @@ export function usePapeleta(): UsePapeletaReturn {
       setIsLoading(true);
       setError(null);
 
+      console.log('🔒 Cerrando papeleta:', papeleta.id, 'con', papeleta.votesBuffer.length, 'votos');
+
       const response = await axios.post(`/api/papeleta/${papeleta.id}/close`, {
-        userId
+        userId,
+        votesBuffer: papeleta.votesBuffer
       });
 
       if (response.data?.success) {
@@ -204,6 +216,7 @@ export function usePapeleta(): UsePapeletaReturn {
           ...prev,
           status: 'CLOSED'
         }));
+        console.log('✅ Papeleta cerrada exitosamente');
         return true;
       } else {
         setError(response.data?.error || 'Error al cerrar papeleta');
