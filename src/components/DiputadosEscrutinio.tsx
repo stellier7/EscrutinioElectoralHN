@@ -779,6 +779,49 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     }
   }, [escrutinioId]);
 
+  // Función para limpiar datos locales al crear nuevo escrutinio
+  const clearLocalData = useCallback(() => {
+    console.log('🧹 Limpiando datos locales para nuevo escrutinio');
+    setPartyCounts({});
+    setAppliedVotes({});
+    setPapeletaNumber(1);
+    setEscrutinioStatus('COMPLETED');
+    setIsEscrutinioClosed(false);
+    setHasEdits(false);
+    setEditCount(0);
+  }, []);
+
+  // Detectar si es un nuevo escrutinio o uno existente
+  useEffect(() => {
+    if (!escrutinioId) return;
+    
+    // Verificar si el escrutinio ya tiene papeletas (existe) o es nuevo
+    const checkEscrutinioExists = async () => {
+      try {
+        console.log('🔍 Verificando si escrutinio existe:', escrutinioId);
+        const response = await axios.get(`/api/escrutinio/${escrutinioId}/papeletas`);
+        
+        if (response.data.success) {
+          const data = response.data.data;
+          const hasExistingData = data.totalPapeletas > 0 || data.hasEdits;
+          
+          if (hasExistingData) {
+            console.log('📂 Escrutinio existente encontrado, cargando datos...');
+            await loadEscrutinioData();
+          } else {
+            console.log('🆕 Nuevo escrutinio detectado, limpiando datos locales...');
+            clearLocalData();
+          }
+        }
+      } catch (error: any) {
+        console.log('🆕 Error al verificar escrutinio, asumiendo nuevo escrutinio:', error.message);
+        clearLocalData();
+      }
+    };
+    
+    checkEscrutinioExists();
+  }, [escrutinioId, loadEscrutinioData, clearLocalData]);
+
   // Render party cards (initial view)
   const renderPartyCards = () => {
     if (!diputadosData) return null;
