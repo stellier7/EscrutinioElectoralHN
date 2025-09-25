@@ -106,7 +106,7 @@ export async function POST(request: Request) {
           latitude: gps.latitude,
           longitude: gps.longitude,
           locationAccuracy: gps.accuracy,
-          status: 'PENDING',
+          status: 'COMPLETED', // En progreso - permite cerrar
           isCompleted: false,
         },
       });
