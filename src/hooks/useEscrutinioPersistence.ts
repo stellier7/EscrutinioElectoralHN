@@ -125,6 +125,17 @@ export function useEscrutinioPersistence() {
       state.selectedMesa = jrvFromUrl;
       state.selectedLevel = levelFromUrl;
       
+      // Buscar información de la mesa desde la URL
+      if (jrvFromUrl) {
+        // Crear un objeto selectedMesaInfo básico para la URL
+        state.selectedMesaInfo = {
+          value: jrvFromUrl,
+          label: `${jrvFromUrl} - Cargado desde URL`,
+          location: 'Cargando...',
+          department: 'Cargando...'
+        };
+      }
+      
       // Solo saltar al paso 2 si también tenemos un escrutinioId (escritinio activo)
       if (escrutinioIdFromUrl && state.currentStep === 1) {
         console.log('⏭️ Saltando al paso 2 porque hay escrutinioId en URL');

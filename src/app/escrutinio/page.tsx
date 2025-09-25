@@ -153,6 +153,31 @@ function EscrutinioPageContent() {
     loadExistingVotes();
   }, [escrutinioState.escrutinioId]); // Removido voteStore de dependencias
 
+  // Buscar información de la mesa cuando se carga desde URL
+  useEffect(() => {
+    const loadMesaInfoFromUrl = async () => {
+      if (escrutinioState.selectedMesa && escrutinioState.selectedMesaInfo?.location === 'Cargando...') {
+        try {
+          const response = await axios.get(`/api/mesas/search?q=${escrutinioState.selectedMesa}`);
+          if (response.data.success && response.data.results.length > 0) {
+            const mesaInfo = response.data.results[0];
+            saveState({
+              selectedMesaInfo: {
+                value: mesaInfo.value,
+                label: mesaInfo.label,
+                location: mesaInfo.location,
+                department: mesaInfo.department
+              }
+            });
+          }
+        } catch (error) {
+          console.warn('No se pudo cargar información de la mesa:', error);
+        }
+      }
+    };
+    loadMesaInfoFromUrl();
+  }, [escrutinioState.selectedMesa, escrutinioState.selectedMesaInfo]);
+
   // Map party acronyms to display names using party config
   const mapPartyToDisplayName = (party: string): string => {
     return getPartyConfig(party).name;
