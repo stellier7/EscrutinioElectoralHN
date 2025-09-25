@@ -73,6 +73,8 @@ function EscrutinioPageContent() {
   const [showRecoveryAlert, setShowRecoveryAlert] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [gpsSuccess, setGpsSuccess] = useState(false);
+  const [showJRVWarning, setShowJRVWarning] = useState(false);
+  const [activeEscrutinio, setActiveEscrutinio] = useState<any>(null);
   
   const voteStore = useVoteStore();
   
@@ -89,12 +91,45 @@ function EscrutinioPageContent() {
   // Usar el hook de cola offline
   const { addToQueue, isOnline, hasOfflineItems } = useOfflineQueue();
 
+  // Verificar si hay escrutinio activo en la JRV
+  const checkActiveEscrutinio = async (mesaNumber: string) => {
+    try {
+      console.log('🔍 Verificando escrutinio activo para JRV:', mesaNumber);
+      const response = await axios.get(`/api/mesas/${mesaNumber}/check-active`);
+      
+      if (response.data.success && response.data.hasActive) {
+        console.log('⚠️ Escrutinio activo encontrado:', response.data.escrutinio);
+        setActiveEscrutinio(response.data.escrutinio);
+        setShowJRVWarning(true);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error verificando escrutinio activo:', error);
+      return false;
+    }
+  };
+
   // Manejar selección de JRV
-  const handleJRVSelect = (result: JRVSearchResult) => {
-    saveState({
-      selectedMesa: result.value,
-      selectedMesaInfo: result,
-    });
+  const handleJRVSelect = async (result: JRVSearchResult) => {
+    console.log('🎯 JRV seleccionada:', result);
+    
+    // Verificar si hay escrutinio activo
+    const hasActive = await checkActiveEscrutinio(result.value);
+    
+    if (!hasActive) {
+      // Solo guardar estado si no hay escrutinio activo
+      saveState({
+        selectedMesa: result.value,
+        selectedMesaInfo: result,
+      });
+    } else {
+      // Guardar información de la JRV pero no continuar
+      saveState({
+        selectedMesa: result.value,
+        selectedMesaInfo: result,
+      });
+    }
   };
 
   const handleJRVChange = (value: string) => {
@@ -104,11 +139,45 @@ function EscrutinioPageContent() {
     });
   };
 
+  // Manejar continuar escrutinio existente
+  const handleContinueEscrutinio = () => {
+    if (activeEscrutinio) {
+      console.log('🔄 Continuando escrutinio existente:', activeEscrutinio.id);
+      router.push(`/escrutinio?escrutinioId=${activeEscrutinio.id}&level=${activeEscrutinio.electionLevel}`);
+    }
+    setShowJRVWarning(false);
+    setActiveEscrutinio(null);
+  };
+
+  // Manejar cerrar advertencia
+  const handleCloseJRVWarning = () => {
+    setShowJRVWarning(false);
+    setActiveEscrutinio(null);
+    // Limpiar selección de JRV
+    saveState({
+      selectedMesa: '',
+      selectedMesaInfo: null,
+    });
+  };
+
   // Manejar selección de nivel electoral (automáticamente obtiene GPS y va al conteo)
   const handleLevelSelect = async (level: 'PRESIDENTIAL' | 'LEGISLATIVE') => {
     if (!escrutinioState.selectedMesa) {
       alert('Por favor selecciona una JRV primero');
       return;
+    }
+
+    // Si hay advertencia activa, crear nuevo escrutinio y mover el anterior a "Recientes"
+    if (showJRVWarning && activeEscrutinio) {
+      console.log('🔄 Creando nuevo escrutinio para JRV con escrutinio activo');
+      
+      // Cerrar la advertencia
+      setShowJRVWarning(false);
+      setActiveEscrutinio(null);
+      
+      // Continuar con el flujo normal de creación de nuevo escrutinio
+      // El escrutinio anterior se moverá automáticamente a "Escrutinios Recientes"
+      // cuando se cree el nuevo
     }
 
     // Si hay un escrutinio anterior, limpiarlo primero
@@ -580,6 +649,39 @@ function EscrutinioPageContent() {
                           }
                         }}
                         className="px-3 py-1 text-sm bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+                      >
+                        Cerrar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Alerta de JRV con Escrutinio Activo */}
+            {showJRVWarning && activeEscrutinio && (
+              <div className="mb-6 mx-3 sm:mx-0 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                <div className="flex items-start">
+                  <div className="w-6 h-6 bg-orange-100 rounded-full flex items-center justify-center mr-3 mt-0.5">
+                    <AlertCircle className="h-4 w-4 text-orange-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-sm font-semibold text-orange-900 mb-1">
+                      JRV {activeEscrutinio.mesaNumber} ya tiene un escrutinio abierto
+                    </h3>
+                    <p className="text-sm text-orange-700 mb-3">
+                      Nivel: {activeEscrutinio.electionLevel} | Iniciado por: {activeEscrutinio.user.name}
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleContinueEscrutinio}
+                        className="px-3 py-1 text-sm bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors"
+                      >
+                        Continuar Escrutinio
+                      </button>
+                      <button
+                        onClick={handleCloseJRVWarning}
+                        className="px-3 py-1 text-sm bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors"
                       >
                         Cerrar
                       </button>

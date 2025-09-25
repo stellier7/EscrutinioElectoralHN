@@ -304,6 +304,17 @@ export default function DashboardPage() {
                           const response = await axios.post(`/api/escrutinio/${activity.id}/cancel`);
                           console.log('✅ Respuesta de cancelación:', response.data);
                           if (response.data.success) {
+                            // Limpiar localStorage relacionado con este escrutinio
+                            if (typeof window !== 'undefined') {
+                              const jrvNumber = activity.mesaNumber;
+                              if (jrvNumber) {
+                                localStorage.removeItem(`party-counts-${jrvNumber}`);
+                                localStorage.removeItem(`applied-votes-${jrvNumber}`);
+                                localStorage.removeItem(`papeleta-number-${jrvNumber}`);
+                                localStorage.removeItem(`papeleta-state-${jrvNumber}`);
+                                console.log('🧹 LocalStorage limpiado para JRV:', jrvNumber);
+                              }
+                            }
                             // Recargar las estadísticas
                             loadStats();
                           } else {
@@ -520,6 +531,17 @@ export default function DashboardPage() {
                             const response = await axios.post(`/api/escrutinio/${activity.id}/cancel`);
                             console.log('✅ Respuesta de cancelación:', response.data);
                             if (response.data.success) {
+                              // Limpiar localStorage relacionado con este escrutinio
+                              if (typeof window !== 'undefined') {
+                                const jrvNumber = activity.mesaNumber;
+                                if (jrvNumber) {
+                                  localStorage.removeItem(`party-counts-${jrvNumber}`);
+                                  localStorage.removeItem(`applied-votes-${jrvNumber}`);
+                                  localStorage.removeItem(`papeleta-number-${jrvNumber}`);
+                                  localStorage.removeItem(`papeleta-state-${jrvNumber}`);
+                                  console.log('🧹 LocalStorage limpiado para JRV:', jrvNumber);
+                                }
+                              }
                               // Recargar las estadísticas
                               loadStats();
                             } else {
