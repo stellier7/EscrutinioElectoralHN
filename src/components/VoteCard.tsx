@@ -2,7 +2,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { getPartyConfig, getTransparentColor } from '@/lib/party-config';
-import Image from 'next/image';
 
 type Props = {
   id: string;
@@ -98,18 +97,6 @@ export function VoteCard({ id, name, party, partyColor = '#e5e7eb', number, coun
       <div className="flex-1 p-1 sm:p-4 text-left">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {/* Logo del partido */}
-            {partyConfig.logoUrl && (
-              <div className="flex-shrink-0">
-                <Image
-                  src={partyConfig.logoUrl}
-                  alt={`Logo ${partyConfig.name}`}
-                  width={40}
-                  height={40}
-                  className="rounded-full bg-white/20 p-1"
-                />
-              </div>
-            )}
             <div>
               <div className="text-base font-semibold text-gray-800 drop-shadow-sm">{partyConfig.name}</div>
               <div className="text-sm text-gray-700 drop-shadow-sm">{formatInitialSurname(name)}{number !== undefined ? ` • Lista ${number}` : ''}</div>
