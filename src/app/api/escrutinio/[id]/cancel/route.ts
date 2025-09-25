@@ -36,11 +36,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       // Eliminar votos
       await tx.vote.deleteMany({ where: { escrutinioId } });
       
-      // Eliminar papeletas y sus votos
-      const papeletas = await tx.papeleta.findMany({ where: { escrutinioId } });
-      for (const papeleta of papeletas) {
-        await tx.papeletaVote.deleteMany({ where: { papeletaId: papeleta.id } });
-      }
+      // Eliminar papeletas (los votos se almacenan en votesBuffer como JSON)
       await tx.papeleta.deleteMany({ where: { escrutinioId } });
       
       // Eliminar logs de auditoría
