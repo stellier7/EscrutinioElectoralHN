@@ -127,6 +127,11 @@ export async function GET(
 
     // Obtener la URL de la evidencia si existe
     const actaUrl = escrutinio.actaImageUrl || null;
+    console.log('📸 Acta URL en review API:', {
+      escrutinioId: escrutinio.id,
+      actaImageUrl: escrutinio.actaImageUrl,
+      actaUrl: actaUrl
+    });
 
     // Datos del GPS si están disponibles
     const gps = escrutinio.latitude && escrutinio.longitude ? {

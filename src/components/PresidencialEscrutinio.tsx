@@ -63,9 +63,14 @@ export default function PresidencialEscrutinio({
 
   // Función para subir evidencia si existe
   const uploadEvidenceIfNeeded = async (): Promise<string | null> => {
-    if (!actaImage || !escrutinioId) return null;
+    console.log('📸 uploadEvidenceIfNeeded called:', { actaImage: !!actaImage, escrutinioId });
+    if (!actaImage || !escrutinioId) {
+      console.log('📸 No actaImage or escrutinioId, returning null');
+      return null;
+    }
     
     try {
+      console.log('📸 Uploading evidence:', { fileName: actaImage.name, contentType: actaImage.type });
       // Obtener URL de presign para subir la foto
       const presign = await axios.post('/api/upload/presign', {
         escrutinioId,
@@ -73,13 +78,17 @@ export default function PresidencialEscrutinio({
         contentType: actaImage.type || 'image/jpeg',
       });
       
+      console.log('📸 Presign response:', presign.data);
+      
       if (presign.data?.success) {
         const { uploadUrl, publicUrl } = presign.data.data as { uploadUrl: string; publicUrl: string };
+        console.log('📸 Uploading to:', uploadUrl);
         await fetch(uploadUrl, {
           method: 'PUT',
           headers: { 'Content-Type': actaImage.type || 'image/jpeg' },
           body: actaImage,
         });
+        console.log('📸 Upload successful, publicUrl:', publicUrl);
         return publicUrl;
       }
     } catch (error) {
@@ -106,10 +115,13 @@ export default function PresidencialEscrutinio({
       // Si se subió evidencia, guardar la URL en la base de datos
       if (evidenceUrl) {
         console.log('📸 Guardando URL de evidencia:', evidenceUrl);
-        await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/evidence`, {
+        const evidenceResponse = await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/evidence`, {
           publicUrl: evidenceUrl,
           hash: null // Podríamos calcular el hash si es necesario
         });
+        console.log('📸 Evidence saved response:', evidenceResponse.data);
+      } else {
+        console.log('📸 No evidence URL to save');
       }
       
       // Marcar el escrutinio como completado definitivamente

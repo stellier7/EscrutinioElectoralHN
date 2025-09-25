@@ -80,6 +80,7 @@ export default function RevisarEscrutinioPage() {
         console.log('📊 Datos del escrutinio cargados:', response.data.data);
         console.log('📊 Candidatos:', response.data.data.candidates);
         console.log('📊 Total de votos:', response.data.data.totalVotes);
+        console.log('📸 Acta URL recibida:', response.data.data.actaUrl);
         setEscrutinioData(response.data.data);
       } else {
         throw new Error(response.data.error || 'Error al cargar el escrutinio');
