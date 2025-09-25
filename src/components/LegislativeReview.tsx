@@ -9,7 +9,7 @@ interface LegislativeReviewProps {
     name: string;
     party: string;
     votes: number;
-    number: string;
+    number?: string | number;
   }>;
 }
 
@@ -20,7 +20,7 @@ export default function LegislativeReview({ candidates }: LegislativeReviewProps
   const partiesData = candidates.reduce((acc: Record<string, {
     party: string;
     votes: number;
-    casillas: Array<{name: string, votes: number, number: string}>;
+    casillas: Array<{name: string, votes: number, number?: string | number}>;
   }>, candidate: any) => {
     const party = candidate.party;
     if (!acc[party]) {
@@ -51,7 +51,7 @@ export default function LegislativeReview({ candidates }: LegislativeReviewProps
         const totalCasillas = partyData.casillas.length;
         const casillaRange = totalCasillas > 1 
           ? `Casillas 1-${totalCasillas}` 
-          : `Casilla ${partyData.casillas[0]?.number || '1'}`;
+          : `Casilla ${String(partyData.casillas[0]?.number || '1')}`;
 
         return (
           <div key={partyId}>
