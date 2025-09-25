@@ -759,7 +759,6 @@ export default function ResultadosPage() {
             )}
           </div>
         </div>
-        )}
 
         {/* Modal de Búsqueda de JRV */}
         {showJrvSearch && jrvSearchResults && (
