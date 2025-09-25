@@ -386,7 +386,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const candidates = [
       { id: 'candidate-1', name: 'Mario Rivera', party: 'PDC', number: 1 },
       { id: 'candidate-2', name: 'Rixi Moncada', party: 'LIBRE', number: 2 },
-      { id: 'candidate-3', name: 'N. Ávila', party: 'PINU-SD', number: 3 },
+      { id: 'candidate-3', name: 'Nelson Ávila', party: 'PINU-SD', number: 3 },
       { id: 'candidate-4', name: 'Salvador Nasralla', party: 'PLH', number: 4 },
       { id: 'candidate-5', name: 'Nasry Asfura', party: 'PNH', number: 5 },
     ];
