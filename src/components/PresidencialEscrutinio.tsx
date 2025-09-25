@@ -253,49 +253,29 @@ export default function PresidencialEscrutinio({
                 Control de Escrutinio
               </h3>
               
-            {/* Estado: En progreso - Mostrar botones Cerrar y Finalizar */}
+            {/* Estado: En progreso - Mostrar solo botón Cerrar */}
             {escrutinioStatus === 'COMPLETED' && !isEscrutinioClosed && (
               <>
                 <p className="text-sm text-blue-700 mb-4">
-                  Una vez que hayas completado el conteo de todos los votos, puedes cerrar el escrutinio para pausar las ediciones o finalizar definitivamente.
+                  Una vez que hayas completado el conteo de todos los votos, puedes cerrar el escrutinio para pausar las ediciones.
                 </p>
-                <div className="space-y-3">
-                  <button
-                    onClick={handleCloseEscrutinio}
-                    disabled={isClosing}
-                    className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-                  >
-                    {isClosing ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Cerrando...
-                      </>
-                    ) : (
-                      <>
-                        <AlertCircle className="h-4 w-4" />
-                        Cerrar Escrutinio
-                      </>
-                    )}
-                  </button>
-                  
-                  <button
-                    onClick={handleSendResults}
-                    disabled={isCompleting || isUploading}
-                    className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-                  >
-                    {isCompleting ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Finalizando...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle className="h-4 w-4" />
-                        Finalizar Escrutinio
-                      </>
-                    )}
-                  </button>
-                </div>
+                <button
+                  onClick={handleCloseEscrutinio}
+                  disabled={isClosing}
+                  className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                >
+                  {isClosing ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Cerrando...
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircle className="h-4 w-4" />
+                      Cerrar Escrutinio
+                    </>
+                  )}
+                </button>
               </>
             )}
 
@@ -374,6 +354,36 @@ export default function PresidencialEscrutinio({
                 )}
               </div>
             </div>
+
+            {/* Botón Finalizar Escrutinio - Solo cuando está en progreso */}
+            {escrutinioStatus === 'COMPLETED' && !isEscrutinioClosed && (
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <h3 className="text-lg font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                  <CheckCircle className="h-5 w-5" />
+                  Finalizar Escrutinio
+                </h3>
+                <p className="text-sm text-blue-700 mb-4">
+                  Una vez que hayas subido la foto del acta, puedes finalizar definitivamente el escrutinio.
+                </p>
+                <button
+                  onClick={handleSendResults}
+                  disabled={isCompleting || isUploading}
+                  className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                >
+                  {isCompleting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Finalizando...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="h-4 w-4" />
+                      Finalizar Escrutinio
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
           </div>
 
         </div>
