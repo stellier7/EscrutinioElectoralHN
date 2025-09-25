@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useCallback, useEffect } from 'react';
-import { ArrowLeft, Loader2, AlertCircle, Check, X, FileText, Camera, Upload } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { ArrowLeft, Loader2, AlertCircle, Check, X, FileText, Camera, Upload, CheckCircle } from 'lucide-react';
 import clsx from 'clsx';
 import axios from 'axios';
 import { usePapeleta } from '@/hooks/usePapeleta';
@@ -74,6 +75,7 @@ interface DiputadosEscrutinioProps {
 }
 
 export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }: DiputadosEscrutinioProps) {
+  const router = useRouter();
   const [diputadosData, setDiputadosData] = useState<DiputadosData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -91,6 +93,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
   const [actaImage, setActaImage] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   
   // Estados para alerta de límite de marcas
   const [showVoteLimitAlert, setShowVoteLimitAlert] = useState(false);
@@ -493,11 +496,8 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
       // Finalizar escrutinio definitivamente
       await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/complete`);
       
-      // Mostrar mensaje de éxito
-      alert('Escrutinio completado exitosamente');
-      
-      // Opcional: redirigir o resetear
-      window.location.reload();
+      // Mostrar modal de éxito
+      setShowSuccessModal(true);
     } catch (error: any) {
       console.error('Error completando escrutinio:', error);
       setError(error?.response?.data?.error || 'Error completando escrutinio');
@@ -505,6 +505,12 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
       setIsCompleting(false);
     }
   }, [escrutinioId, actaImage, uploadEvidenceIfNeeded]);
+
+  // Función para revisar escrutinio
+  const handleReviewEscrutinio = () => {
+    setShowSuccessModal(false);
+    router.push(`/revisar/${escrutinioId}`);
+  };
 
   // Función para cerrar escrutinio (pausar)
   const handleCloseEscrutinio = useCallback(async () => {
@@ -1058,6 +1064,39 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
         onAnularPapeleta={handleAnularPapeletaFromAlert}
         isClosingPapeleta={isClosingPapeleta}
       />
+
+      {/* Modal de Confirmación de Envío */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <div className="text-center">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+                <CheckCircle className="h-6 w-6 text-green-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                ¡Envío exitoso!
+              </h3>
+              <p className="text-sm text-gray-600 mb-6">
+                El escrutinio legislativo ha sido finalizado correctamente. Los resultados han sido registrados en el sistema.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  onClick={() => router.push('/dashboard')}
+                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                >
+                  Volver al Dashboard
+                </button>
+                <button
+                  onClick={handleReviewEscrutinio}
+                  className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
+                >
+                  Revisar Escrutinio
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
