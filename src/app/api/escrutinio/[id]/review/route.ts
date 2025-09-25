@@ -136,6 +136,7 @@ export async function GET(
       });
       
       // Convertir el mapa de partidos a candidatos para el componente LegislativeReview
+      // Necesitamos crear un candidato por cada casilla que tenga votos
       partyVotesMap.forEach((casillasMap, partyId) => {
         casillasMap.forEach((votes: number, casillaNumber: number) => {
           const candidateId = `${partyId}_${casillaNumber}`;
@@ -155,7 +156,9 @@ export async function GET(
         candidatesCount: candidatesMap.size,
         candidates: Array.from(candidatesMap.values()),
         partyVotesMapSize: partyVotesMap.size,
-        partyVotesMapEntries: Array.from(partyVotesMap.entries())
+        partyVotesMapEntries: Array.from(partyVotesMap.entries()),
+        papeletasWithVotes: escrutinio.papeletas.filter(p => Array.isArray(p.votesBuffer) && p.votesBuffer.length > 0).length,
+        totalPapeletas: escrutinio.papeletas.length
       });
     }
 
