@@ -84,7 +84,9 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     // Cargar partyCounts desde localStorage
     if (typeof window !== 'undefined' && escrutinioId) {
       const stored = localStorage.getItem(`party-counts-${escrutinioId}`);
-      return stored ? JSON.parse(stored) : {};
+      const parsed = stored ? JSON.parse(stored) : {};
+      console.log('📱 Cargando partyCounts desde localStorage:', parsed);
+      return parsed;
     }
     return {};
   });
@@ -92,7 +94,9 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     // Cargar appliedVotes desde localStorage
     if (typeof window !== 'undefined' && escrutinioId) {
       const stored = localStorage.getItem(`applied-votes-${escrutinioId}`);
-      return stored ? JSON.parse(stored) : {};
+      const parsed = stored ? JSON.parse(stored) : {};
+      console.log('📱 Cargando appliedVotes desde localStorage:', parsed);
+      return parsed;
     }
     return {};
   });
@@ -271,12 +275,17 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
           
           setDiputadosData(data);
           
-          // Inicializar conteos en 0 para todos los partidos
-          const initialCounts: PartyCounts = {};
-          parties.forEach((party: Party) => {
-            initialCounts[party.id] = 0;
+          // Solo inicializar conteos para partidos que no tienen votos
+          setPartyCounts(prevCounts => {
+            const newCounts = { ...prevCounts };
+            parties.forEach((party: Party) => {
+              if (!(party.id in newCounts)) {
+                newCounts[party.id] = 0;
+              }
+            });
+            console.log('🔄 Inicializando partyCounts (preservando votos existentes):', newCounts);
+            return newCounts;
           });
-          setPartyCounts(initialCounts);
         } else {
           console.error('❌ Error en respuesta:', response.data);
           setError(response.data?.error || 'Error al cargar datos de diputados');
@@ -449,6 +458,8 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
         newPartyCounts[partyId] = partyVotes.reduce((sum, count) => sum + count, 0);
       });
       
+      console.log('🔄 Actualizando appliedVotes:', newAppliedVotes);
+      console.log('🔄 Actualizando partyCounts:', newPartyCounts);
       setAppliedVotes(newAppliedVotes);
       setPartyCounts(newPartyCounts);
       setExpandedParty(null);
