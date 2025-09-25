@@ -480,7 +480,7 @@ function EscrutinioPageContent() {
         </div>
       </header>
 
-      <div className={`${escrutinioState.currentStep === 2 ? "mobile-container bg-white" : "max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 lg:py-8"}`}>
+      <div className={`${escrutinioState.currentStep === 2 ? "mobile-container bg-white" : "max-w-4xl mx-auto px-0 sm:px-6 lg:px-8 py-4 lg:py-8"}`}>
         {/* Progress Steps - Mobile optimized */}
         <div className={`${escrutinioState.currentStep === 2 ? "mb-0 px-0 pt-2 pb-1 bg-white border-b border-gray-200" : "mb-6 lg:mb-8"}`}>
           <div className="flex items-center justify-center space-x-2 lg:space-x-4">
