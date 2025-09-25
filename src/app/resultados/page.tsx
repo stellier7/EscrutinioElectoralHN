@@ -10,7 +10,10 @@ import {
   Clock,
   AlertCircle,
   Eye,
-  Calendar
+  Calendar,
+  Shield,
+  User,
+  X
 } from 'lucide-react';
 import { MesaSearchInput } from '@/components/MesaSearchInput';
 import BackButton from '@/components/ui/BackButton';
@@ -74,6 +77,12 @@ export default function ResultadosPage() {
   const [showMesaVotes, setShowMesaVotes] = useState(false);
   const [locationData, setLocationData] = useState<LocationData[]>([]);
   const [showAllRecentMesas, setShowAllRecentMesas] = useState(false);
+  
+  // Estados para búsqueda de JRV
+  const [jrvSearchValue, setJrvSearchValue] = useState('');
+  const [jrvSearchResults, setJrvSearchResults] = useState<any>(null);
+  const [showJrvSearch, setShowJrvSearch] = useState(false);
+  const [isSearchingJrv, setIsSearchingJrv] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -124,6 +133,44 @@ export default function ResultadosPage() {
     } catch (e) {
       console.error('Error loading recent mesas:', e);
     }
+  };
+
+  // Buscar escrutinios por JRV
+  const searchJrvEscrutinios = async () => {
+    if (!jrvSearchValue.trim()) return;
+    
+    try {
+      setIsSearchingJrv(true);
+      setError(null);
+      
+      const resp = await fetch(`/api/mesas/${jrvSearchValue.trim()}/escrutinios`, { 
+        cache: 'no-store',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      const json = await resp.json();
+      if (json?.success && json?.data) {
+        setJrvSearchResults(json.data);
+        setShowJrvSearch(true);
+      } else {
+        setError(json?.error || 'No se encontraron escrutinios para esta JRV');
+        setJrvSearchResults(null);
+        setShowJrvSearch(false);
+      }
+    } catch (e: any) {
+      setError(e?.message || 'Error buscando escrutinios');
+      setJrvSearchResults(null);
+      setShowJrvSearch(false);
+    } finally {
+      setIsSearchingJrv(false);
+    }
+  };
+
+  const handleJrvEscrutinioClick = (escrutinioId: string) => {
+    // Navegar a la página de revisión
+    window.open(`/revisar/${escrutinioId}`, '_blank');
   };
 
   // Cargar votos de mesa específica
@@ -302,6 +349,39 @@ export default function ResultadosPage() {
               >
                 Mesas recientes
               </button>
+            </div>
+            
+            {/* Barra de búsqueda de JRV */}
+            <div className="mt-4 bg-gray-50 p-4 rounded-lg border">
+              <div className="flex items-center space-x-3">
+                <div className="flex-1">
+                  <input
+                    type="text"
+                    value={jrvSearchValue}
+                    onChange={(e) => setJrvSearchValue(e.target.value)}
+                    placeholder="Buscar escrutinios por JRV (ej. 001, 123, 567...)"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    onKeyPress={(e) => e.key === 'Enter' && searchJrvEscrutinios()}
+                  />
+                </div>
+                <button
+                  onClick={searchJrvEscrutinios}
+                  disabled={isSearchingJrv || !jrvSearchValue.trim()}
+                  className="text-sm px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                >
+                  {isSearchingJrv ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Buscando...
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="h-4 w-4" />
+                      Buscar
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
           
@@ -679,6 +759,189 @@ export default function ResultadosPage() {
             )}
           </div>
         </div>
+        )}
+
+        {/* Modal de Búsqueda de JRV */}
+        {showJrvSearch && jrvSearchResults && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4" onClick={() => setShowJrvSearch(false)}>
+            <div className="bg-white rounded-lg shadow-lg max-w-4xl w-full max-h-[80vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between mb-4 p-6 border-b">
+                <div>
+                  <h4 className="text-lg font-semibold">Escrutinios de JRV {jrvSearchResults.mesa.number}</h4>
+                  <p className="text-sm text-gray-600">{jrvSearchResults.mesa.location} - {jrvSearchResults.mesa.department}</p>
+                </div>
+                <button className="text-sm text-gray-600 hover:text-gray-800" onClick={() => setShowJrvSearch(false)}>
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              
+              <div className="p-6 overflow-y-auto max-h-[60vh]">
+                {/* Administradores */}
+                {jrvSearchResults.escrutinios.ADMIN.length > 0 && (
+                  <div className="mb-6">
+                    <h5 className="text-md font-semibold text-red-700 mb-3 flex items-center gap-2">
+                      <Shield className="h-4 w-4" />
+                      Administradores ({jrvSearchResults.escrutinios.ADMIN.length})
+                    </h5>
+                    <div className="space-y-2">
+                      {jrvSearchResults.escrutinios.ADMIN.map((escrutinio: any) => (
+                        <div 
+                          key={escrutinio.id}
+                          onClick={() => handleJrvEscrutinioClick(escrutinio.id)}
+                          className="flex items-center justify-between p-3 border border-red-200 rounded-lg hover:bg-red-50 cursor-pointer transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                            <div>
+                              <div className="font-medium text-gray-900">
+                                {escrutinio.electionLevel} - {escrutinio.status}
+                              </div>
+                              <div className="text-sm text-gray-600">
+                                Por: {escrutinio.user.name} • {escrutinio.voteCount} votos
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm text-gray-500">
+                              {new Date(escrutinio.createdAt).toLocaleDateString()}
+                            </div>
+                            <div className="text-xs text-gray-400">
+                              {escrutinio.completedAt ? new Date(escrutinio.completedAt).toLocaleTimeString() : 'En progreso'}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Observadores */}
+                {jrvSearchResults.escrutinios.OBSERVER.length > 0 && (
+                  <div className="mb-6">
+                    <h5 className="text-md font-semibold text-blue-700 mb-3 flex items-center gap-2">
+                      <Eye className="h-4 w-4" />
+                      Observadores ({jrvSearchResults.escrutinios.OBSERVER.length})
+                    </h5>
+                    <div className="space-y-2">
+                      {jrvSearchResults.escrutinios.OBSERVER.map((escrutinio: any) => (
+                        <div 
+                          key={escrutinio.id}
+                          onClick={() => handleJrvEscrutinioClick(escrutinio.id)}
+                          className="flex items-center justify-between p-3 border border-blue-200 rounded-lg hover:bg-blue-50 cursor-pointer transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                            <div>
+                              <div className="font-medium text-gray-900">
+                                {escrutinio.electionLevel} - {escrutinio.status}
+                              </div>
+                              <div className="text-sm text-gray-600">
+                                Por: {escrutinio.user.name} • {escrutinio.voteCount} votos
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm text-gray-500">
+                              {new Date(escrutinio.createdAt).toLocaleDateString()}
+                            </div>
+                            <div className="text-xs text-gray-400">
+                              {escrutinio.completedAt ? new Date(escrutinio.completedAt).toLocaleTimeString() : 'En progreso'}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Voluntarios */}
+                {jrvSearchResults.escrutinios.VOLUNTEER.length > 0 && (
+                  <div className="mb-6">
+                    <h5 className="text-md font-semibold text-green-700 mb-3 flex items-center gap-2">
+                      <Vote className="h-4 w-4" />
+                      Voluntarios ({jrvSearchResults.escrutinios.VOLUNTEER.length})
+                    </h5>
+                    <div className="space-y-2">
+                      {jrvSearchResults.escrutinios.VOLUNTEER.map((escrutinio: any) => (
+                        <div 
+                          key={escrutinio.id}
+                          onClick={() => handleJrvEscrutinioClick(escrutinio.id)}
+                          className="flex items-center justify-between p-3 border border-green-200 rounded-lg hover:bg-green-50 cursor-pointer transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                            <div>
+                              <div className="font-medium text-gray-900">
+                                {escrutinio.electionLevel} - {escrutinio.status}
+                              </div>
+                              <div className="text-sm text-gray-600">
+                                Por: {escrutinio.user.name} • {escrutinio.voteCount} votos
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm text-gray-500">
+                              {new Date(escrutinio.createdAt).toLocaleDateString()}
+                            </div>
+                            <div className="text-xs text-gray-400">
+                              {escrutinio.completedAt ? new Date(escrutinio.completedAt).toLocaleTimeString() : 'En progreso'}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Miembros de Organización */}
+                {jrvSearchResults.escrutinios.ORGANIZATION_MEMBER.length > 0 && (
+                  <div className="mb-6">
+                    <h5 className="text-md font-semibold text-purple-700 mb-3 flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      Miembros de Organización ({jrvSearchResults.escrutinios.ORGANIZATION_MEMBER.length})
+                    </h5>
+                    <div className="space-y-2">
+                      {jrvSearchResults.escrutinios.ORGANIZATION_MEMBER.map((escrutinio: any) => (
+                        <div 
+                          key={escrutinio.id}
+                          onClick={() => handleJrvEscrutinioClick(escrutinio.id)}
+                          className="flex items-center justify-between p-3 border border-purple-200 rounded-lg hover:bg-purple-50 cursor-pointer transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-3 h-3 rounded-full bg-purple-500"></div>
+                            <div>
+                              <div className="font-medium text-gray-900">
+                                {escrutinio.electionLevel} - {escrutinio.status}
+                              </div>
+                              <div className="text-sm text-gray-600">
+                                Por: {escrutinio.user.name} • {escrutinio.voteCount} votos
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm text-gray-500">
+                              {new Date(escrutinio.createdAt).toLocaleDateString()}
+                            </div>
+                            <div className="text-xs text-gray-400">
+                              {escrutinio.completedAt ? new Date(escrutinio.completedAt).toLocaleTimeString() : 'En progreso'}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {Object.values(jrvSearchResults.escrutinios).every((arr: any) => arr.length === 0) && (
+                  <div className="text-center py-8 text-gray-500">
+                    <AlertCircle className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                    <p>No se encontraron escrutinios para esta JRV</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
