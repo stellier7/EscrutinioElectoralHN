@@ -51,7 +51,11 @@ export async function POST(request: Request, { params }: { params: { id: string 
         console.log('💾 Guardando votos en papeleta abierta:', appliedVotes);
         
         // Convertir appliedVotes a votesBuffer para la papeleta
-        const votesBuffer = [];
+        const votesBuffer: Array<{
+          partyId: string;
+          casillaNumber: number;
+          timestamp: string;
+        }> = [];
         Object.entries(appliedVotes).forEach(([partyId, casillas]: [string, any]) => {
           Object.entries(casillas).forEach(([casillaNumber, votes]: [string, any]) => {
             for (let i = 0; i < votes; i++) {
