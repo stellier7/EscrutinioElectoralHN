@@ -297,6 +297,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
   useEffect(() => {
     if (papeleta.id) {
       console.log('🔄 Sincronizando estado desde papeleta:', papeleta.id, 'status:', papeleta.status);
+      console.log('📋 Papeleta completa:', papeleta);
       
       // Si la papeleta está cerrada, el número de papeleta debería ser el siguiente
       if (papeleta.status === 'CLOSED') {
@@ -336,7 +337,10 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
 
   // Handle grid slot click - toggle vote in buffer and animate (optimized for touch)
   const handleSlotClick = useCallback(async (partyId: string, slotNumber: number, event: React.MouseEvent) => {
+    console.log('🖱️ Click en casilla:', partyId, slotNumber, 'papeleta.status:', papeleta.status, 'userId:', userId);
+    
     if (!userId || papeleta.status !== 'OPEN') {
+      console.log('❌ Click bloqueado - userId:', userId, 'papeleta.status:', papeleta.status);
       setError('No hay papeleta abierta');
       return;
     }
