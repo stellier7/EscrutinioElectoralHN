@@ -59,7 +59,9 @@ export async function POST(request: Request, { params }: { params: { id: string 
     }
 
     // Marcar escrutinio como cancelado (FAILED) en lugar de eliminarlo
+    console.log('🔄 Iniciando transacción para marcar escrutinio como FAILED...');
     await prisma.$transaction(async (tx) => {
+      console.log('🔄 Actualizando escrutinio en base de datos...');
       // Marcar escrutinio como cancelado
       await tx.escrutinio.update({
         where: { id: escrutinioId },
@@ -72,23 +74,30 @@ export async function POST(request: Request, { params }: { params: { id: string 
       
       console.log('✅ Escrutinio marcado como cancelado (FAILED)');
     });
+    console.log('✅ Transacción completada');
 
-    // Crear log de auditoría
-    await prisma.auditLog.create({
-      data: {
-        userId: payload.userId,
-        action: 'CANCEL_ESCRUTINIO',
-        description: `Escrutinio cancelado para JRV ${existing.mesa.number}`,
-        metadata: {
-          escrutinioId,
-          mesaNumber: existing.mesa.number,
-          electionLevel: existing.electionLevel,
-          timestamp: new Date().toISOString(),
+    // Crear log de auditoría (opcional, no crítico)
+    try {
+      await prisma.auditLog.create({
+        data: {
+          userId: payload.userId,
+          action: 'CANCEL_ESCRUTINIO',
+          description: `Escrutinio cancelado para JRV ${existing.mesa?.number || 'N/A'}`,
+          metadata: {
+            escrutinioId,
+            mesaNumber: existing.mesa?.number || null,
+            electionLevel: existing.electionLevel,
+            timestamp: new Date().toISOString(),
+          },
+          ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+          userAgent: request.headers.get('user-agent') || 'unknown',
         },
-        ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
-        userAgent: request.headers.get('user-agent') || 'unknown',
-      },
-    });
+      });
+      console.log('✅ Audit log creado');
+    } catch (auditError) {
+      console.log('⚠️ Error creando audit log (no crítico):', auditError);
+      // No fallar la operación por un error de audit log
+    }
 
     return NextResponse.json({ success: true });
   } catch (e: any) {
