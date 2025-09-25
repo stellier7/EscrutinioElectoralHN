@@ -88,6 +88,9 @@ export async function GET(
       console.log('🔄 Procesando votos legislativos...');
       console.log('📊 Número de papeletas:', escrutinio.papeletas.length);
       
+      // Crear un mapa para agrupar votos por partido y casilla
+      const partyVotesMap = new Map();
+      
       escrutinio.papeletas.forEach((papeleta, papeletaIndex) => {
         console.log(`📄 Papeleta ${papeletaIndex + 1}:`, {
           id: papeleta.id,
@@ -98,22 +101,38 @@ export async function GET(
         if (papeleta.votesBuffer && Array.isArray(papeleta.votesBuffer)) {
           papeleta.votesBuffer.forEach((vote: any) => {
             if (vote.partyId && vote.casillaNumber) {
-              const partyKey = `${vote.partyId}_${vote.casillaNumber}`;
-              if (!candidatesMap.has(partyKey)) {
-                candidatesMap.set(partyKey, {
-                  id: partyKey,
-                  name: `Casilla ${vote.casillaNumber}`,
-                  party: vote.partyId,
-                  partyColor: '#e5e7eb', // Color por defecto
-                  number: vote.casillaNumber,
-                  votes: 0
-                });
+              const partyKey = vote.partyId;
+              const casillaKey = vote.casillaNumber;
+              
+              if (!partyVotesMap.has(partyKey)) {
+                partyVotesMap.set(partyKey, new Map());
               }
-              candidatesMap.get(partyKey).votes += 1;
+              
+              const casillasMap = partyVotesMap.get(partyKey);
+              if (!casillasMap.has(casillaKey)) {
+                casillasMap.set(casillaKey, 0);
+              }
+              
+              casillasMap.set(casillaKey, casillasMap.get(casillaKey) + 1);
               totalVotes += 1;
             }
           });
         }
+      });
+      
+      // Convertir el mapa de partidos a candidatos para el componente LegislativeReview
+      partyVotesMap.forEach((casillasMap, partyId) => {
+        casillasMap.forEach((votes, casillaNumber) => {
+          const candidateId = `${partyId}_${casillaNumber}`;
+          candidatesMap.set(candidateId, {
+            id: candidateId,
+            name: `Casilla ${casillaNumber}`, // El componente mostrará esto como nombre del candidato
+            party: partyId,
+            partyColor: '#e5e7eb', // Color por defecto
+            number: casillaNumber,
+            votes: votes
+          });
+        });
       });
       
       console.log('📊 Votos legislativos procesados:', {
