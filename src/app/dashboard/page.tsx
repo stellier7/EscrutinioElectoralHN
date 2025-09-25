@@ -27,12 +27,22 @@ interface DashboardStats {
   totalMesas: number;
   completedEscrutinios: number;
   pendingEscrutinios: number;
+  inProgressActivity: Array<{
+    id: string;
+    mesaNumber: string;
+    mesaName: string;
+    department: string;
+    electionLevel: string;
+    status: string;
+    createdAt: string;
+  }>;
   recentActivity: Array<{
     id: string;
     mesaNumber: string;
     mesaName: string;
     department: string;
     electionLevel: string;
+    status: string;
     completedAt: string;
   }>;
   statsByLevel: Array<{
@@ -241,8 +251,8 @@ export default function DashboardPage() {
         </Button>
       </div>
 
-      {/* Mostrar escrutinios completados recientes (para todos los usuarios) */}
-      {stats?.recentActivity && stats.recentActivity.length > 0 && (
+      {/* Mostrar escrutinios en progreso y completados recientes (para todos los usuarios) */}
+      {((stats?.inProgressActivity && stats.inProgressActivity.length > 0) || (stats?.recentActivity && stats.recentActivity.length > 0)) && (
         <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-lg font-semibold text-gray-900">Mis Escrutinios Recientes</h3>
@@ -256,7 +266,28 @@ export default function DashboardPage() {
             </Button>
           </div>
           <div className="space-y-2">
-            {stats.recentActivity.slice(0, 3).map((activity) => (
+            {/* Escrutinios en Progreso */}
+            {stats?.inProgressActivity && stats.inProgressActivity.slice(0, 2).map((activity) => (
+              <div key={activity.id} className="flex items-center justify-between p-2 bg-orange-50 rounded-lg border border-orange-200">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-3 w-3 text-orange-600" />
+                  <div>
+                    <p className="text-xs font-medium text-gray-900">{activity.mesaNumber}</p>
+                    <p className="text-xs text-gray-500">{activity.electionLevel}</p>
+                  </div>
+                </div>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => router.push(`/escrutinio?jrv=${activity.mesaNumber}&level=${activity.electionLevel}&escrutinioId=${activity.id}`)}
+                  className="text-xs"
+                >
+                  Continuar
+                </Button>
+              </div>
+            ))}
+            {/* Escrutinios Completados */}
+            {stats?.recentActivity && stats.recentActivity.slice(0, 3).map((activity) => (
               <div key={activity.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
                 <div className="flex items-center gap-2">
                   <CheckCircle className="h-3 w-3 text-green-600" />
@@ -412,8 +443,49 @@ export default function DashboardPage() {
 
   const renderReview = () => (
     <div className="space-y-4">
+      {/* Escrutinios en Progreso */}
+      {stats?.inProgressActivity && stats.inProgressActivity.length > 0 && (
+        <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+            <Clock className="h-5 w-5 text-orange-600" />
+            Escrutinios en Progreso
+          </h3>
+          <div className="space-y-3">
+            {stats.inProgressActivity.map((activity) => (
+              <div key={activity.id} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg border border-orange-200">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-orange-100 rounded-lg">
+                    <Clock className="h-4 w-4 text-orange-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{activity.mesaNumber}</p>
+                    <p className="text-xs text-gray-600">{activity.mesaName}</p>
+                    <p className="text-xs text-gray-500">{activity.department}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500">{activity.electionLevel}</span>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => router.push(`/escrutinio?jrv=${activity.mesaNumber}&level=${activity.electionLevel}&escrutinioId=${activity.id}`)}
+                    className="text-xs"
+                  >
+                    Continuar
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Escrutinios Completados */}
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900 mb-3">Mis Escrutinios Completados</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+          <CheckCircle className="h-5 w-5 text-green-600" />
+          Escrutinios Completados
+        </h3>
         {statsLoading ? (
           <div className="text-center py-6 text-gray-500">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto"></div>

@@ -39,10 +39,27 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // Obtener escrutinios recientes (solo del usuario actual, excepto para admins)
-    const recentEscrutinios = await prisma.escrutinio.findMany({
+    // Obtener escrutinios en progreso (no cerrados ni finalizados)
+    const inProgressEscrutinios = await prisma.escrutinio.findMany({
+      where: {
+        status: 'COMPLETED', // En progreso (no cerrado)
+        ...(userRole === 'ADMIN' ? {} : { userId: userId }), // Solo admins ven todos
+      },
+      include: {
+        mesa: true,
+        election: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: 10,
+    });
+
+    // Obtener escrutinios finalizados (para revisar)
+    const completedEscrutinios = await prisma.escrutinio.findMany({
       where: {
         status: 'COMPLETED',
+        completedAt: { not: null }, // Solo los que tienen fecha de completado
         ...(userRole === 'ADMIN' ? {} : { userId: userId }), // Solo admins ven todos
       },
       include: {
@@ -55,12 +72,23 @@ export async function GET(request: NextRequest) {
       take: 5,
     });
 
-    const recentActivity = recentEscrutinios.map(escrutinio => ({
+    const inProgressActivity = inProgressEscrutinios.map(escrutinio => ({
       id: escrutinio.id,
       mesaNumber: escrutinio.mesa.number,
       mesaName: escrutinio.mesa.location,
       department: escrutinio.mesa.department,
       electionLevel: escrutinio.electionLevel,
+      status: 'IN_PROGRESS',
+      createdAt: escrutinio.createdAt,
+    }));
+
+    const recentActivity = completedEscrutinios.map(escrutinio => ({
+      id: escrutinio.id,
+      mesaNumber: escrutinio.mesa.number,
+      mesaName: escrutinio.mesa.location,
+      department: escrutinio.mesa.department,
+      electionLevel: escrutinio.electionLevel,
+      status: 'COMPLETED',
       completedAt: escrutinio.completedAt,
     }));
 
@@ -98,6 +126,7 @@ export async function GET(request: NextRequest) {
         totalMesas,
         completedEscrutinios,
         pendingEscrutinios,
+        inProgressActivity,
         recentActivity,
         statsByLevel,
       },
