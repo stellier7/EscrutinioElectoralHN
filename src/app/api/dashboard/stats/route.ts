@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     const userId = payload.userId;
     const userRole = payload.role;
 
-    // Obtener estadísticas generales
+    // Obtener estadísticas generales (todos los usuarios ven números globales)
     const totalMesas = await prisma.mesa.count({
       where: { isActive: true },
     });
@@ -28,14 +28,14 @@ export async function GET(request: NextRequest) {
     const completedEscrutinios = await prisma.escrutinio.count({
       where: { 
         status: 'COMPLETED',
-        ...(userRole === 'ADMIN' ? {} : { userId: userId }), // Solo admins ven todos
+        // Todos los usuarios ven estadísticas globales
       },
     });
 
     const pendingEscrutinios = await prisma.escrutinio.count({
       where: { 
         status: { not: 'COMPLETED' },
-        ...(userRole === 'ADMIN' ? {} : { userId: userId }), // Solo admins ven todos
+        // Todos los usuarios ven estadísticas globales
       },
     });
 
@@ -92,14 +92,14 @@ export async function GET(request: NextRequest) {
       completedAt: escrutinio.completedAt,
     }));
 
-    // Obtener estadísticas por nivel electoral
+    // Obtener estadísticas por nivel electoral (todos ven números globales)
     const statsByLevel = await Promise.all(
       ['PRESIDENTIAL', 'LEGISLATIVE', 'MUNICIPAL'].map(async (level) => {
         const completed = await prisma.escrutinio.count({
           where: {
             status: 'COMPLETED',
             electionLevel: level as any,
-            ...(userRole === 'ADMIN' ? {} : { userId: userId }), // Solo admins ven todos
+            // Todos los usuarios ven estadísticas globales
           },
         });
 
@@ -107,7 +107,7 @@ export async function GET(request: NextRequest) {
           where: {
             status: { not: 'COMPLETED' },
             electionLevel: level as any,
-            ...(userRole === 'ADMIN' ? {} : { userId: userId }), // Solo admins ven todos
+            // Todos los usuarios ven estadísticas globales
           },
         });
 
