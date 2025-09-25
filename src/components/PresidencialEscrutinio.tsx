@@ -20,6 +20,7 @@ interface PresidencialEscrutinioProps {
   userId?: string;
   mesaId?: string;
   jrvNumber?: string;
+  jrvLocation?: string;
   department?: string;
   gps?: { latitude: number; longitude: number; accuracy?: number } | null;
   deviceId?: string;
@@ -31,6 +32,7 @@ export default function PresidencialEscrutinio({
   userId, 
   mesaId, 
   jrvNumber,
+  jrvLocation,
   department,
   gps, 
   deviceId 
@@ -191,6 +193,9 @@ export default function PresidencialEscrutinio({
                 {jrvNumber || 'N/A'}
               </div>
               <div className="text-xs text-gray-500">
+                {jrvLocation || 'N/A'}
+              </div>
+              <div className="text-xs text-gray-400">
                 {department || 'N/A'}
               </div>
             </div>
@@ -239,30 +244,8 @@ export default function PresidencialEscrutinio({
           </div>
 
 
-          {/* Sección de Foto y Cierre de Escrutinio */}
+          {/* Sección de Control de Escrutinio y Foto */}
           <div className="mt-8 space-y-4">
-            {/* Subir Foto del Acta */}
-            <div className="bg-gray-50 p-4 rounded-lg border">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                <Camera className="h-5 w-5" />
-                Foto del Acta
-              </h3>
-              <div className="space-y-3">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleActaUpload}
-                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                />
-                {actaImage && (
-                  <div className="flex items-center gap-2 text-sm text-green-600">
-                    <CheckCircle className="h-4 w-4" />
-                    <span>Foto seleccionada: {actaImage.name}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
             {/* Control de Escrutinio */}
             <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
               <h3 className="text-lg font-semibold text-blue-900 mb-3 flex items-center gap-2">
@@ -348,6 +331,28 @@ export default function PresidencialEscrutinio({
                   </div>
                 </>
               )}
+            </div>
+
+            {/* Subir Foto del Acta */}
+            <div className="bg-gray-50 p-4 rounded-lg border">
+              <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                <Camera className="h-5 w-5" />
+                Foto del Acta
+              </h3>
+              <div className="space-y-3">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleActaUpload}
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                />
+                {actaImage && (
+                  <div className="flex items-center gap-2 text-sm text-green-600">
+                    <CheckCircle className="h-4 w-4" />
+                    <span>Foto seleccionada: {actaImage.name}</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
