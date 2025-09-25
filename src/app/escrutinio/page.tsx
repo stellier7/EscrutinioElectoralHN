@@ -70,7 +70,6 @@ function EscrutinioPageContent() {
   const [isStarting, setIsStarting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
-  const [showRecoveryAlert, setShowRecoveryAlert] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [gpsSuccess, setGpsSuccess] = useState(false);
   const [showJRVWarning, setShowJRVWarning] = useState(false);
@@ -178,16 +177,6 @@ function EscrutinioPageContent() {
       // Continuar con el flujo normal de creación de nuevo escrutinio
       // El escrutinio anterior se moverá automáticamente a "Escrutinios Recientes"
       // cuando se cree el nuevo
-    }
-
-    // Si hay un escrutinio anterior, limpiarlo primero
-    if (showRecoveryAlert) {
-      clearState();
-      voteStore.clear();
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('last-escrutinio-key');
-      }
-      setShowRecoveryAlert(false);
     }
 
     // Guardar el nivel seleccionado
@@ -455,18 +444,6 @@ function EscrutinioPageContent() {
 
   const totalVotes = Object.keys(voteStore.counts).reduce((sum, k) => sum + (voteStore.counts[k] || 0), 0);
 
-  // Mostrar alerta de recuperación con delay cuando hay JRV seleccionado
-  useEffect(() => {
-    if (canRecoverEscrutinio && !hasActiveEscrutinio && escrutinioState.selectedMesa) {
-      // Esperar 3 segundos antes de mostrar la advertencia
-      const timer = setTimeout(() => {
-        setShowRecoveryAlert(true);
-      }, 3000);
-      
-      // Limpiar timer si cambia el estado antes de que se ejecute
-      return () => clearTimeout(timer);
-    }
-  }, [canRecoverEscrutinio, hasActiveEscrutinio, escrutinioState.selectedMesa]);
 
   // Limpiar votos cuando cambie el JRV o el nivel
   useEffect(() => {
@@ -602,61 +579,6 @@ function EscrutinioPageContent() {
               <h2 className="text-lg font-semibold text-gray-900">Configuración del Escrutinio</h2>
             </div>
             
-            {/* Alerta de Escrutinio Anterior */}
-            {showRecoveryAlert && (
-              <div className="mb-6 mx-3 sm:mx-0 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="flex items-start">
-                  <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-3 mt-0.5">
-                    <CheckCircle className="h-4 w-4 text-blue-600" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-sm font-semibold text-blue-900 mb-1">
-                      Escrutinio Anterior Encontrado
-                    </h3>
-                    <p className="text-sm text-blue-700 mb-3">
-                      Se encontró un escrutinio previo para la JRV <strong>{escrutinioState.selectedMesaInfo?.label || escrutinioState.selectedMesa}</strong> 
-                      ({escrutinioState.selectedLevel === 'PRESIDENTIAL' ? 'Presidencial' : 'Legislativo'}). 
-                      ¿Deseas continuar con el escrutinio anterior o iniciar uno nuevo?
-                    </p>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => {
-                          setShowRecoveryAlert(false);
-                          // Cargar los votos guardados y continuar con el escrutinio
-                          if (escrutinioState.escrutinioId) {
-                            voteStore.loadFromServer(escrutinioState.escrutinioId).then(() => {
-                              saveState({ currentStep: 2 });
-                            }).catch((error) => {
-                              console.warn('No se pudieron cargar los votos guardados:', error);
-                              saveState({ currentStep: 2 });
-                            });
-                          } else {
-                            saveState({ currentStep: 2 });
-                          }
-                        }}
-                        className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-                      >
-                        Continuar con el escrutinio
-                      </button>
-                      <button
-                        onClick={() => {
-                          setShowRecoveryAlert(false);
-                          // Limpiar todo y permitir iniciar nuevo escrutinio
-                          clearState();
-                          voteStore.clear();
-                          if (typeof window !== 'undefined') {
-                            localStorage.removeItem('last-escrutinio-key');
-                          }
-                        }}
-                        className="px-3 py-1 text-sm bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
-                      >
-                        Cerrar
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* Alerta de JRV con Escrutinio Activo */}
             {showJRVWarning && activeEscrutinio && (
@@ -667,10 +589,11 @@ function EscrutinioPageContent() {
                   </div>
                   <div className="flex-1">
                     <h3 className="text-sm font-semibold text-orange-900 mb-1">
-                      JRV {activeEscrutinio.mesaNumber} ya tiene un escrutinio abierto
+                      Escrutinio Activo Encontrado
                     </h3>
                     <p className="text-sm text-orange-700 mb-3">
-                      Nivel: {activeEscrutinio.electionLevel} | Iniciado por: {activeEscrutinio.user.name}
+                      JRV <strong>{activeEscrutinio.mesaNumber}</strong> ya tiene un escrutinio abierto.<br/>
+                      Nivel: <strong>{activeEscrutinio.electionLevel}</strong> | Iniciado por: <strong>{activeEscrutinio.user.name}</strong>
                     </p>
                     <div className="flex gap-2">
                       <button
