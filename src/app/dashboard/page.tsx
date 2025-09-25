@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../components/AuthProvider';
+import axios from 'axios';
 import Button from '../../components/ui/Button';
 import { 
   Vote, 
@@ -61,10 +62,9 @@ export default function DashboardPage() {
     const loadStats = async () => {
       try {
         setStatsLoading(true);
-        const resp = await fetch('/api/dashboard/stats', { cache: 'no-store' });
-        const json = await resp.json();
-        if (json?.success) {
-          setStats(json.data);
+        const resp = await axios.get('/api/dashboard/stats');
+        if (resp.data?.success) {
+          setStats(resp.data.data);
         }
       } catch (e) {
         console.error('Error loading dashboard stats:', e);
