@@ -20,10 +20,11 @@ export async function GET(
     const escrutinioId = params.id;
 
     // Obtener el escrutinio con todos los datos relacionados
+    console.log('🔍 Buscando escrutinio para review:', escrutinioId);
     const escrutinio = await prisma.escrutinio.findUnique({
       where: {
         id: escrutinioId,
-        status: 'COMPLETED' // Solo escrutinios completados
+        // Remover filtro de status para debugging
       },
       include: {
         mesa: true,
@@ -44,11 +45,19 @@ export async function GET(
     });
 
     if (!escrutinio) {
+      console.log('❌ Escrutinio no encontrado:', escrutinioId);
       return NextResponse.json(
         { success: false, error: 'Escrutinio no encontrado' },
         { status: 404 }
       );
     }
+
+    console.log('✅ Escrutinio encontrado:', {
+      id: escrutinio.id,
+      status: escrutinio.status,
+      actaImageUrl: escrutinio.actaImageUrl,
+      electionLevel: escrutinio.electionLevel
+    });
 
     // Verificar que el usuario tiene acceso al escrutinio
     // Permitir acceso si es el creador, admin, o cualquier usuario autenticado (transparencia)
