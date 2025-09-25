@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Obtener escrutinios finalizados (para revisar)
-    const completedEscrutinios = await prisma.escrutinio.findMany({
+    const completedEscrutiniosList = await prisma.escrutinio.findMany({
       where: {
         status: 'COMPLETED',
         completedAt: { not: null }, // Solo los que tienen fecha de completado
@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
       createdAt: escrutinio.createdAt,
     }));
 
-    const recentActivity = completedEscrutinios.map(escrutinio => ({
+    const recentActivity = completedEscrutiniosList.map(escrutinio => ({
       id: escrutinio.id,
       mesaNumber: escrutinio.mesa.number,
       mesaName: escrutinio.mesa.location,
