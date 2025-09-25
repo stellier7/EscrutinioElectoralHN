@@ -85,7 +85,16 @@ export async function GET(
       totalVotes = Array.from(candidatesMap.values()).reduce((sum, candidate) => sum + candidate.votes, 0);
     } else if (escrutinio.electionLevel === 'LEGISLATIVE') {
       // Procesar votos legislativos (parties from papeletas)
-      escrutinio.papeletas.forEach(papeleta => {
+      console.log('🔄 Procesando votos legislativos...');
+      console.log('📊 Número de papeletas:', escrutinio.papeletas.length);
+      
+      escrutinio.papeletas.forEach((papeleta, papeletaIndex) => {
+        console.log(`📄 Papeleta ${papeletaIndex + 1}:`, {
+          id: papeleta.id,
+          status: papeleta.status,
+          votesBuffer: papeleta.votesBuffer
+        });
+        
         if (papeleta.votesBuffer && Array.isArray(papeleta.votesBuffer)) {
           papeleta.votesBuffer.forEach((vote: any) => {
             if (vote.partyId && vote.casillaNumber) {
@@ -105,6 +114,12 @@ export async function GET(
             }
           });
         }
+      });
+      
+      console.log('📊 Votos legislativos procesados:', {
+        totalVotes,
+        candidatesCount: candidatesMap.size,
+        candidates: Array.from(candidatesMap.values())
       });
     }
 

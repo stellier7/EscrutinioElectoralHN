@@ -77,6 +77,9 @@ export default function RevisarEscrutinioPage() {
       const response = await axios.get(`/api/escrutinio/${escrutinioId}/review`);
       
       if (response.data.success) {
+        console.log('📊 Datos del escrutinio cargados:', response.data.data);
+        console.log('📊 Candidatos:', response.data.data.candidates);
+        console.log('📊 Total de votos:', response.data.data.totalVotes);
         setEscrutinioData(response.data.data);
       } else {
         throw new Error(response.data.error || 'Error al cargar el escrutinio');
