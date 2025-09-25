@@ -81,21 +81,21 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [partyCounts, setPartyCounts] = useState<PartyCounts>(() => {
-    // Cargar partyCounts desde localStorage
-    if (typeof window !== 'undefined' && escrutinioId) {
-      const stored = localStorage.getItem(`party-counts-${escrutinioId}`);
+    // Cargar partyCounts desde localStorage (específico por JRV)
+    if (typeof window !== 'undefined' && jrvNumber) {
+      const stored = localStorage.getItem(`party-counts-${jrvNumber}`);
       const parsed = stored ? JSON.parse(stored) : {};
-      console.log('📱 Cargando partyCounts desde localStorage:', parsed);
+      console.log('📱 Cargando partyCounts desde localStorage para JRV', jrvNumber, ':', parsed);
       return parsed;
     }
     return {};
   });
   const [appliedVotes, setAppliedVotes] = useState<AppliedVotes>(() => {
-    // Cargar appliedVotes desde localStorage
-    if (typeof window !== 'undefined' && escrutinioId) {
-      const stored = localStorage.getItem(`applied-votes-${escrutinioId}`);
+    // Cargar appliedVotes desde localStorage (específico por JRV)
+    if (typeof window !== 'undefined' && jrvNumber) {
+      const stored = localStorage.getItem(`applied-votes-${jrvNumber}`);
       const parsed = stored ? JSON.parse(stored) : {};
-      console.log('📱 Cargando appliedVotes desde localStorage:', parsed);
+      console.log('📱 Cargando appliedVotes desde localStorage para JRV', jrvNumber, ':', parsed);
       return parsed;
     }
     return {};
@@ -118,9 +118,9 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
   const [showVoteLimitAlert, setShowVoteLimitAlert] = useState(false);
   const [isClosingPapeleta, setIsClosingPapeleta] = useState(false);
   const [papeletaNumber, setPapeletaNumber] = useState(() => {
-    // Cargar número de papeleta desde localStorage
-    if (typeof window !== 'undefined' && escrutinioId) {
-      const stored = localStorage.getItem(`papeleta-number-${escrutinioId}`);
+    // Cargar número de papeleta desde localStorage (específico por JRV)
+    if (typeof window !== 'undefined' && jrvNumber) {
+      const stored = localStorage.getItem(`papeleta-number-${jrvNumber}`);
       return stored ? parseInt(stored, 10) : 1;
     }
     return 1;
@@ -167,29 +167,29 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
   //   }
   // }, [escrutinioId, loadVotesFromServer]);
 
-  // Guardar número de papeleta en localStorage
+  // Guardar número de papeleta en localStorage (específico por JRV)
   useEffect(() => {
-    if (escrutinioId && typeof window !== 'undefined') {
-      localStorage.setItem(`papeleta-number-${escrutinioId}`, papeletaNumber.toString());
-      console.log('💾 Guardando número de papeleta:', papeletaNumber);
+    if (jrvNumber && typeof window !== 'undefined') {
+      localStorage.setItem(`papeleta-number-${jrvNumber}`, papeletaNumber.toString());
+      console.log('💾 Guardando número de papeleta para JRV', jrvNumber, ':', papeletaNumber);
     }
-  }, [papeletaNumber, escrutinioId]);
+  }, [papeletaNumber, jrvNumber]);
 
-  // Guardar partyCounts en localStorage
+  // Guardar partyCounts en localStorage (específico por JRV)
   useEffect(() => {
-    if (escrutinioId && typeof window !== 'undefined' && Object.keys(partyCounts).length > 0) {
-      localStorage.setItem(`party-counts-${escrutinioId}`, JSON.stringify(partyCounts));
-      console.log('💾 Guardando partyCounts:', partyCounts);
+    if (jrvNumber && typeof window !== 'undefined' && Object.keys(partyCounts).length > 0) {
+      localStorage.setItem(`party-counts-${jrvNumber}`, JSON.stringify(partyCounts));
+      console.log('💾 Guardando partyCounts para JRV', jrvNumber, ':', partyCounts);
     }
-  }, [partyCounts, escrutinioId]);
+  }, [partyCounts, jrvNumber]);
 
-  // Guardar appliedVotes en localStorage
+  // Guardar appliedVotes en localStorage (específico por JRV)
   useEffect(() => {
-    if (escrutinioId && typeof window !== 'undefined' && Object.keys(appliedVotes).length > 0) {
-      localStorage.setItem(`applied-votes-${escrutinioId}`, JSON.stringify(appliedVotes));
-      console.log('💾 Guardando appliedVotes:', appliedVotes);
+    if (jrvNumber && typeof window !== 'undefined' && Object.keys(appliedVotes).length > 0) {
+      localStorage.setItem(`applied-votes-${jrvNumber}`, JSON.stringify(appliedVotes));
+      console.log('💾 Guardando appliedVotes para JRV', jrvNumber, ':', appliedVotes);
     }
-  }, [appliedVotes, escrutinioId]);
+  }, [appliedVotes, jrvNumber]);
 
   // Inicializar papeleta automáticamente cuando se carga el componente
   useEffect(() => {
