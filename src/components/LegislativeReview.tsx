@@ -16,6 +16,8 @@ interface LegislativeReviewProps {
 export default function LegislativeReview({ candidates }: LegislativeReviewProps) {
   const [expandedParty, setExpandedParty] = useState<string | null>(null);
 
+  console.log('📊 LegislativeReview recibió candidates:', candidates);
+
   // Agrupar candidatos por partido
   const partiesData = candidates.reduce((acc: Record<string, {
     party: string;

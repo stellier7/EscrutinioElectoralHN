@@ -239,7 +239,10 @@ export default function RevisarEscrutinioPage() {
             <div className="space-y-3 mb-6">
               {escrutinioData.electionLevel === 'LEGISLATIVE' ? (
                 // Mostrar votos legislativos usando el componente de revisión
-                <LegislativeReview candidates={escrutinioData.candidates} />
+                (() => {
+                  console.log('📊 Renderizando LegislativeReview con candidates:', escrutinioData.candidates);
+                  return <LegislativeReview candidates={escrutinioData.candidates} />;
+                })()
               ) : (
                 // Mostrar votos presidenciales como antes
                 escrutinioData.candidates.map((candidate) => (
