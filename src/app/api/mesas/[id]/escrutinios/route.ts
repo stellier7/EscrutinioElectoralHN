@@ -88,7 +88,7 @@ export async function GET(
           department: mesa.department,
           actaImageUrl: escrutinio.actaImageUrl,
           voteCount: escrutinio.electionLevel === 'PRESIDENTIAL' 
-            ? escrutinio.votes.reduce((sum, vote) => sum + vote.votes, 0)
+            ? escrutinio.votes.reduce((sum, vote) => sum + (vote as any).votes, 0)
             : escrutinio.papeletas.reduce((sum, papeleta) => {
                 if (papeleta.votesBuffer && Array.isArray(papeleta.votesBuffer)) {
                   return sum + papeleta.votesBuffer.length;
