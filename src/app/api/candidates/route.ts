@@ -9,7 +9,23 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const level = searchParams.get('level') as 'PRESIDENTIAL' | 'LEGISLATIVE' | 'MUNICIPAL' | null;
 
-    const election = await prisma.election.findFirst({ where: { isActive: true }, orderBy: { startDate: 'desc' } });
+    // Buscar la elección "Elecciones Generales Honduras 2025" específicamente
+    let election = await prisma.election.findFirst({ 
+      where: { 
+        isActive: true,
+        name: { contains: 'Elecciones Generales' }
+      }, 
+      orderBy: { startDate: 'desc' } 
+    });
+    
+    // Si no encuentra esa específica, tomar la primera activa
+    if (!election) {
+      election = await prisma.election.findFirst({ 
+        where: { isActive: true }, 
+        orderBy: { startDate: 'desc' } 
+      });
+    }
+    
     if (!election) return NextResponse.json({ success: true, data: [] });
 
     const where: any = { electionId: election.id, isActive: true };
