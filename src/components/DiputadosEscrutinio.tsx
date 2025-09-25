@@ -251,15 +251,56 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
         if (!loaded) {
           // Si no hay papeleta existente, crear una nueva
           console.log('🆕 No hay papeleta existente, creando nueva...');
-          startPapeleta(escrutinioId, userId);
+          await startPapeleta(escrutinioId, userId);
         } else {
           console.log('✅ Papeleta existente cargada desde servidor');
+          // Si la papeleta cargada está cerrada, incrementar número para la siguiente
+          if (papeleta.status === 'CLOSED') {
+            console.log('📄 Papeleta cerrada cargada, preparando para siguiente');
+            setPapeletaNumber(prev => prev + 1);
+          }
         }
       }
     };
     
     loadOrStartPapeleta();
   }, [diputadosData, escrutinioId, userId, papeleta.id, startPapeleta, loadPapeletaFromServer]);
+
+  // Sincronizar estado local con papeleta cuando se carga
+  useEffect(() => {
+    if (papeleta.id) {
+      console.log('🔄 Sincronizando estado desde papeleta:', papeleta.id, 'status:', papeleta.status);
+      
+      // Si la papeleta está cerrada, el número de papeleta debería ser el siguiente
+      if (papeleta.status === 'CLOSED') {
+        console.log('📄 Papeleta cerrada detectada');
+        // No incrementar aquí, solo marcar que esta papeleta está cerrada
+        // El número se incrementará cuando se abra una nueva papeleta
+      }
+      
+      // Reconstruir partyCounts y appliedVotes desde votesBuffer si hay votos
+      if (papeleta.votesBuffer && papeleta.votesBuffer.length > 0) {
+        console.log('🔄 Sincronizando votos desde papeleta:', papeleta.votesBuffer.length, 'votos');
+        
+        const newPartyCounts: PartyCounts = {};
+        const newAppliedVotes: AppliedVotes = {};
+        
+        papeleta.votesBuffer.forEach(vote => {
+          if (!newAppliedVotes[vote.partyId]) {
+            newAppliedVotes[vote.partyId] = {};
+          }
+          newAppliedVotes[vote.partyId][vote.casillaNumber] = 1;
+          
+          newPartyCounts[vote.partyId] = (newPartyCounts[vote.partyId] || 0) + 1;
+        });
+        
+        setPartyCounts(newPartyCounts);
+        setAppliedVotes(newAppliedVotes);
+        
+        console.log('✅ Estado sincronizado:', newPartyCounts);
+      }
+    }
+  }, [papeleta.id, papeleta.status, papeleta.votesBuffer]);
 
   // Handle party card click - expand to grid
   const handlePartyClick = useCallback((partyId: string) => {
