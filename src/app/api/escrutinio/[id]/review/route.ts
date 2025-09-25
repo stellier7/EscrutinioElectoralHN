@@ -138,7 +138,9 @@ export async function GET(
       console.log('📊 Votos legislativos procesados:', {
         totalVotes,
         candidatesCount: candidatesMap.size,
-        candidates: Array.from(candidatesMap.values())
+        candidates: Array.from(candidatesMap.values()),
+        partyVotesMapSize: partyVotesMap.size,
+        partyVotesMapEntries: Array.from(partyVotesMap.entries())
       });
     }
 
