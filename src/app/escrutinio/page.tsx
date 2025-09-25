@@ -688,6 +688,24 @@ function EscrutinioPageContent() {
                 </p>
               </div>
 
+              {/* Información del usuario que realizará el escrutinio */}
+              {user && (
+                <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-start">
+                    <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-3 mt-0.5">
+                      <Settings className="h-4 w-4 text-blue-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-medium text-blue-900 mb-1">
+                        Información del Escrutinio
+                      </h3>
+                      <p className="text-sm text-blue-700">
+                        Estarás realizando este escrutinio con el nombre <span className="font-semibold">{user.name}</span> y correo electrónico <span className="font-semibold">{user.email}</span>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {error && (
                 <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-md">
