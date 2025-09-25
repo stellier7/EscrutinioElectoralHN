@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import axios from 'axios';
 
 export interface PapeletaVote {
@@ -19,6 +19,7 @@ export interface UsePapeletaReturn {
   isLoading: boolean;
   error: string | null;
   startPapeleta: (escrutinioId: string, userId: string) => Promise<boolean>;
+  loadPapeletaFromServer: (papeletaId: string) => Promise<boolean>;
   addVoteToBuffer: (partyId: string, casillaNumber: number, userId: string, voteLimit?: number) => Promise<boolean>;
   removeVoteFromBuffer: (partyId: string, casillaNumber: number) => void;
   closePapeleta: (userId: string) => Promise<boolean>;
@@ -39,6 +40,43 @@ export function usePapeleta(): UsePapeletaReturn {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Cargar estado desde localStorage al inicializar
+  useEffect(() => {
+    const loadPapeletaFromStorage = () => {
+      try {
+        const stored = localStorage.getItem('papeleta-state');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          setPapeleta({
+            ...parsed,
+            createdAt: parsed.createdAt ? new Date(parsed.createdAt) : null
+          });
+        }
+      } catch (error) {
+        console.error('Error loading papeleta from storage:', error);
+      }
+    };
+
+    loadPapeletaFromStorage();
+  }, []);
+
+  // Guardar estado en localStorage cuando cambie
+  useEffect(() => {
+    const savePapeletaToStorage = () => {
+      try {
+        if (papeleta.id && papeleta.status) {
+          localStorage.setItem('papeleta-state', JSON.stringify(papeleta));
+        } else {
+          localStorage.removeItem('papeleta-state');
+        }
+      } catch (error) {
+        console.error('Error saving papeleta to storage:', error);
+      }
+    };
+
+    savePapeletaToStorage();
+  }, [papeleta]);
 
   const startPapeleta = useCallback(async (escrutinioId: string, userId: string): Promise<boolean> => {
     try {
@@ -65,6 +103,35 @@ export function usePapeleta(): UsePapeletaReturn {
     } catch (err: any) {
       console.error('Error starting papeleta:', err);
       setError(err?.response?.data?.error || 'Error al iniciar papeleta');
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const loadPapeletaFromServer = useCallback(async (papeletaId: string): Promise<boolean> => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const response = await axios.get(`/api/papeleta/${papeletaId}/status`);
+
+      if (response.data?.success) {
+        const data = response.data.data;
+        setPapeleta({
+          id: data.id,
+          status: data.status,
+          votesBuffer: data.votesBuffer || [],
+          createdAt: new Date(data.createdAt)
+        });
+        return true;
+      } else {
+        setError(response.data?.error || 'Error al cargar papeleta');
+        return false;
+      }
+    } catch (err: any) {
+      console.error('Error loading papeleta from server:', err);
+      setError(err?.response?.data?.error || 'Error al cargar papeleta');
       return false;
     } finally {
       setIsLoading(false);
@@ -214,6 +281,7 @@ export function usePapeleta(): UsePapeletaReturn {
       createdAt: null
     });
     setError(null);
+    localStorage.removeItem('papeleta-state');
   }, []);
 
   const isVoteLimitReached = useCallback((voteLimit: number): boolean => {
@@ -229,6 +297,7 @@ export function usePapeleta(): UsePapeletaReturn {
     isLoading,
     error,
     startPapeleta,
+    loadPapeletaFromServer,
     addVoteToBuffer,
     removeVoteFromBuffer,
     closePapeleta,

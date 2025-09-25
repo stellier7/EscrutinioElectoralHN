@@ -52,6 +52,7 @@ enum AuditLogAction {
   CLOSE_ESCRUTINIO
   EDIT_ESCRUTINIO
   REOPEN_ESCRUTINIO
+  CANCEL_ESCRUTINIO
 }
 
 enum PapeletaStatus {
