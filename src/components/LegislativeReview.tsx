@@ -41,6 +41,8 @@ export default function LegislativeReview({ candidates }: LegislativeReviewProps
     return acc;
   }, {});
 
+  console.log('📊 LegislativeReview - partiesData procesado:', partiesData);
+
   const handlePartyClick = (partyId: string) => {
     setExpandedParty(expandedParty === partyId ? null : partyId);
   };
@@ -75,7 +77,7 @@ export default function LegislativeReview({ candidates }: LegislativeReviewProps
                 </div>
                 <div className="text-right">
                   <p className="text-2xl font-bold text-gray-900">{partyData.votes}</p>
-                  <p className="text-sm text-gray-500">marca{partyData.votes !== 1 ? 's' : ''}</p>
+                  <p className="text-sm text-gray-500">+</p>
                 </div>
               </div>
             </div>
