@@ -677,16 +677,27 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
       setError('No hay escrutinio activo');
       return;
     }
+    
+    console.log('🔄 Cerrando escrutinio:', escrutinioId);
     setIsClosing(true);
+    setError(null); // Limpiar errores anteriores
+    
     try {
-      await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/close`);
+      const response = await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/close`);
+      console.log('✅ Escrutinio cerrado exitosamente:', response.data);
+      
       setEscrutinioStatus('CLOSED');
       setIsEscrutinioClosed(true);
     } catch (error: any) {
-      console.error('Error cerrando escrutinio:', error);
-      setError(error?.response?.data?.error || 'Error cerrando escrutinio');
+      console.error('❌ Error cerrando escrutinio:', error);
+      const errorMessage = error?.response?.data?.error || error?.message || 'Error cerrando escrutinio';
+      setError(errorMessage);
+      
+      // Mostrar error al usuario
+      alert(`Error cerrando escrutinio: ${errorMessage}`);
     } finally {
       setIsClosing(false);
+      console.log('🔄 Estado isClosing reseteado');
     }
   }, [escrutinioId]);
 
@@ -696,16 +707,27 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
       setError('No hay escrutinio activo');
       return;
     }
+    
+    console.log('🔄 Reabriendo escrutinio:', escrutinioId);
     setIsReopening(true);
+    setError(null); // Limpiar errores anteriores
+    
     try {
-      await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/reopen`);
+      const response = await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/reopen`);
+      console.log('✅ Escrutinio reabierto exitosamente:', response.data);
+      
       setEscrutinioStatus('COMPLETED');
       setIsEscrutinioClosed(false);
     } catch (error: any) {
-      console.error('Error reabriendo escrutinio:', error);
-      setError(error?.response?.data?.error || 'Error reabriendo escrutinio');
+      console.error('❌ Error reabriendo escrutinio:', error);
+      const errorMessage = error?.response?.data?.error || error?.message || 'Error reabriendo escrutinio';
+      setError(errorMessage);
+      
+      // Mostrar error al usuario
+      alert(`Error reabriendo escrutinio: ${errorMessage}`);
     } finally {
       setIsReopening(false);
+      console.log('🔄 Estado isReopening reseteado');
     }
   }, [escrutinioId]);
 
