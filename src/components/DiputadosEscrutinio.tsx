@@ -268,7 +268,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
       if (diputadosData && escrutinioId && userId) {
         // Si ya tenemos una papeleta cargada (desde localStorage o servidor), no hacer nada
         if (papeleta.id) {
-          console.log('✅ Papeleta ya cargada:', papeleta.id);
+          console.log('✅ Papeleta ya cargada:', papeleta.id, 'status:', papeleta.status);
           return;
         }
 
