@@ -6,10 +6,10 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { number: string } }
+  { params }: { params: { id: string } }
 ) {
   try {
-    console.log('🔍 Checking active escrutinio for JRV:', params.number);
+    console.log('🔍 Checking active escrutinio for JRV:', params.id);
     
     // Autenticación
     const authHeader = request.headers.get('authorization') || undefined;
@@ -22,7 +22,7 @@ export async function GET(
       return NextResponse.json({ success: false, error: 'Token inválido' }, { status: 401 });
     }
 
-    const mesaNumber = params.number;
+    const mesaNumber = params.id;
 
     // Buscar escrutinios activos para esta JRV
     const activeEscrutinios = await prisma.escrutinio.findMany({
