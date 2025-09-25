@@ -134,6 +134,8 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
   const [isEscrutinioClosed, setIsEscrutinioClosed] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [isReopening, setIsReopening] = useState(false);
+  const [hasEdits, setHasEdits] = useState(false);
+  const [editCount, setEditCount] = useState(0);
 
   // Hook para manejar papeletas
   const { 
@@ -732,6 +734,10 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
       
       setEscrutinioStatus('COMPLETED');
       setIsEscrutinioClosed(false);
+      
+      // Recargar los datos del escrutinio para sincronizar con el servidor
+      console.log('🔄 Recargando datos del escrutinio después de reabrir...');
+      await loadEscrutinioData();
     } catch (error: any) {
       console.error('❌ Error reabriendo escrutinio:', error);
       const errorMessage = error?.response?.data?.error || error?.message || 'Error reabriendo escrutinio';
@@ -742,6 +748,34 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     } finally {
       setIsReopening(false);
       console.log('🔄 Estado isReopening reseteado');
+    }
+  }, [escrutinioId]);
+
+  // Función para cargar datos del escrutinio desde el servidor
+  const loadEscrutinioData = useCallback(async () => {
+    if (!escrutinioId) return;
+    
+    try {
+      console.log('🔄 Cargando datos del escrutinio desde servidor:', escrutinioId);
+      const response = await axios.get(`/api/escrutinio/${escrutinioId}/papeletas`);
+      
+      if (response.data.success) {
+        const data = response.data.data;
+        console.log('✅ Datos cargados del servidor:', data);
+        
+        // Actualizar estados con los datos del servidor
+        setPartyCounts(data.partyCounts || {});
+        setAppliedVotes(data.appliedVotes || {});
+        setPapeletaNumber(data.papeletaNumber || 1);
+        setEscrutinioStatus(data.escrutinioStatus || 'COMPLETED');
+        setIsEscrutinioClosed(data.escrutinioStatus === 'CLOSED');
+        setHasEdits(data.hasEdits || false);
+        setEditCount(data.editCount || 0);
+        
+        console.log('🔄 Estados actualizados desde servidor');
+      }
+    } catch (error: any) {
+      console.error('❌ Error cargando datos del escrutinio:', error);
     }
   }, [escrutinioId]);
 
@@ -1041,6 +1075,11 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
                   Cerrado
                 </span>
               )}
+              {hasEdits && (
+                <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                  Editado ({editCount}x)
+                </span>
+              )}
             </h2>
             <p className="text-sm text-gray-600">
               {diputadosData.jrv.nombre} - {diputadosData.jrv.departamento}
@@ -1156,6 +1195,19 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
                     <p className="text-sm text-orange-700 mt-1">
                       Este escrutinio está pausado. Los votos están congelados. Puedes reabrir para editar o finalizar definitivamente después de subir la foto del acta.
                     </p>
+                    {hasEdits && (
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+                        <div className="flex items-center gap-2">
+                          <span className="text-yellow-600">⚠️</span>
+                          <span className="text-sm font-medium text-yellow-800">
+                            Este escrutinio ha sido editado {editCount} vez(es) después de cerrarse
+                          </span>
+                        </div>
+                        <p className="text-xs text-yellow-700 mt-1">
+                          Los administradores pueden ver tanto la versión original como la versión editada.
+                        </p>
+                      </div>
+                    )}
                   </div>
                   
                   <button

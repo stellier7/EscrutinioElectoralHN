@@ -106,10 +106,38 @@ export async function POST(request: Request, { params }: { params: { id: string 
       }
     }
 
+    // Guardar versión original si es la primera vez que se cierra
+    let originalData = null;
+    if (!existing.hasEdits && partyCounts && appliedVotes) {
+      // Obtener todas las papeletas cerradas para guardar como versión original
+      const closedPapeletas = await prisma.papeleta.findMany({
+        where: {
+          escrutinioId: escrutinioId,
+          status: 'CLOSED'
+        }
+      });
+      
+      originalData = {
+        partyCounts,
+        appliedVotes,
+        papeletas: closedPapeletas.map(p => ({
+          id: p.id,
+          votesBuffer: p.votesBuffer,
+          closedAt: p.closedAt
+        })),
+        timestamp: new Date().toISOString()
+      };
+      
+      console.log('💾 Guardando versión original:', originalData);
+    }
+
     // Actualizar status a CLOSED
     await prisma.escrutinio.update({
       where: { id: escrutinioId },
-      data: { status: 'CLOSED' },
+      data: { 
+        status: 'CLOSED',
+        ...(originalData && { originalData })
+      },
     });
 
     // Crear log de auditoría

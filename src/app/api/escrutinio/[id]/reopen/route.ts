@@ -28,10 +28,14 @@ export async function POST(request: Request, { params }: { params: { id: string 
       }, { status: 400 });
     }
 
-    // Actualizar status a COMPLETED (en progreso)
+    // Actualizar status a COMPLETED (en progreso) y marcar que ha sido editado
     await prisma.escrutinio.update({
       where: { id: escrutinioId },
-      data: { status: 'COMPLETED' },
+      data: { 
+        status: 'COMPLETED',
+        hasEdits: true,
+        editCount: existing.editCount + 1
+      },
     });
 
     // Crear log de auditoría

@@ -201,6 +201,11 @@ model Escrutinio {
   
   // Sistema de prioridad y cola
   priority        Int                @default(0) // 0 = normal, 1 = alta (observadores)
+  
+  // Seguimiento de versiones para edits
+  originalData    Json?              // Datos originales antes del primer close
+  hasEdits        Boolean            @default(false) // Indica si ha sido editado después de cerrar
+  editCount       Int                @default(0) // Número de veces que ha sido editado
   queuePosition   Int?               // Posición en cola si hay congestión
   
   createdAt       DateTime           @default(now())
