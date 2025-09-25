@@ -80,8 +80,22 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
   const [diputadosData, setDiputadosData] = useState<DiputadosData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [partyCounts, setPartyCounts] = useState<PartyCounts>({});
-  const [appliedVotes, setAppliedVotes] = useState<AppliedVotes>({});
+  const [partyCounts, setPartyCounts] = useState<PartyCounts>(() => {
+    // Cargar partyCounts desde localStorage
+    if (typeof window !== 'undefined' && escrutinioId) {
+      const stored = localStorage.getItem(`party-counts-${escrutinioId}`);
+      return stored ? JSON.parse(stored) : {};
+    }
+    return {};
+  });
+  const [appliedVotes, setAppliedVotes] = useState<AppliedVotes>(() => {
+    // Cargar appliedVotes desde localStorage
+    if (typeof window !== 'undefined' && escrutinioId) {
+      const stored = localStorage.getItem(`applied-votes-${escrutinioId}`);
+      return stored ? JSON.parse(stored) : {};
+    }
+    return {};
+  });
   const [expandedParty, setExpandedParty] = useState<string | null>(null);
   const [animation, setAnimation] = useState<AnimationState>({
     show: false,
@@ -156,6 +170,22 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
       console.log('💾 Guardando número de papeleta:', papeletaNumber);
     }
   }, [papeletaNumber, escrutinioId]);
+
+  // Guardar partyCounts en localStorage
+  useEffect(() => {
+    if (escrutinioId && typeof window !== 'undefined' && Object.keys(partyCounts).length > 0) {
+      localStorage.setItem(`party-counts-${escrutinioId}`, JSON.stringify(partyCounts));
+      console.log('💾 Guardando partyCounts:', partyCounts);
+    }
+  }, [partyCounts, escrutinioId]);
+
+  // Guardar appliedVotes en localStorage
+  useEffect(() => {
+    if (escrutinioId && typeof window !== 'undefined' && Object.keys(appliedVotes).length > 0) {
+      localStorage.setItem(`applied-votes-${escrutinioId}`, JSON.stringify(appliedVotes));
+      console.log('💾 Guardando appliedVotes:', appliedVotes);
+    }
+  }, [appliedVotes, escrutinioId]);
 
   // Inicializar papeleta automáticamente cuando se carga el componente
   useEffect(() => {
