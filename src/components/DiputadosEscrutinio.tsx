@@ -683,7 +683,11 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     setError(null); // Limpiar errores anteriores
     
     try {
-      const response = await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/close`);
+      // Enviar los votos actuales al cerrar el escrutinio
+      const response = await axios.post(`/api/escrutinio/${escrutinioId}/close`, {
+        partyCounts,
+        appliedVotes
+      });
       console.log('✅ Escrutinio cerrado exitosamente:', response.data);
       
       setEscrutinioStatus('CLOSED');

@@ -14,6 +14,12 @@ export async function POST(request: Request, { params }: { params: { id: string 
     if (!payload) return NextResponse.json({ success: false, error: 'Token inválido' }, { status: 401 });
 
     const escrutinioId = params.id;
+    
+    // Obtener datos del cuerpo de la petición
+    const body = await request.json();
+    const { partyCounts, appliedVotes } = body;
+    
+    console.log('🔄 Cerrando escrutinio con datos:', { escrutinioId, partyCounts, appliedVotes });
     const existing = await prisma.escrutinio.findUnique({ 
       where: { id: escrutinioId },
       include: { mesa: true }
@@ -39,16 +45,52 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
     if (openPapeletas.length > 0) {
       console.log(`📄 Cerrando ${openPapeletas.length} papeletas abiertas`);
-      await prisma.papeleta.updateMany({
-        where: {
-          escrutinioId: escrutinioId,
-          status: 'OPEN'
-        },
-        data: {
-          status: 'CLOSED',
-          closedAt: new Date()
-        }
-      });
+      
+      // Si hay votos en appliedVotes, guardarlos en la papeleta abierta
+      if (appliedVotes && Object.keys(appliedVotes).length > 0) {
+        console.log('💾 Guardando votos en papeleta abierta:', appliedVotes);
+        
+        // Convertir appliedVotes a votesBuffer para la papeleta
+        const votesBuffer = [];
+        Object.entries(appliedVotes).forEach(([partyId, casillas]: [string, any]) => {
+          Object.entries(casillas).forEach(([casillaNumber, votes]: [string, any]) => {
+            for (let i = 0; i < votes; i++) {
+              votesBuffer.push({
+                partyId,
+                casillaNumber: parseInt(casillaNumber),
+                timestamp: new Date().toISOString()
+              });
+            }
+          });
+        });
+        
+        console.log('📊 VotesBuffer generado:', votesBuffer);
+        
+        // Actualizar la papeleta abierta con los votos
+        await prisma.papeleta.updateMany({
+          where: {
+            escrutinioId: escrutinioId,
+            status: 'OPEN'
+          },
+          data: {
+            status: 'CLOSED',
+            closedAt: new Date(),
+            votesBuffer: votesBuffer
+          }
+        });
+      } else {
+        // Solo cerrar sin votos
+        await prisma.papeleta.updateMany({
+          where: {
+            escrutinioId: escrutinioId,
+            status: 'OPEN'
+          },
+          data: {
+            status: 'CLOSED',
+            closedAt: new Date()
+          }
+        });
+      }
     }
 
     // Actualizar status a CLOSED
