@@ -529,13 +529,13 @@ function EscrutinioPageContent() {
         {/* Step 1: Configuration */}
         {escrutinioState.currentStep === 1 && (
           <div className="bg-white p-0 sm:p-6 rounded-none sm:rounded-lg shadow-none sm:shadow-sm border-0 sm:border min-h-full sm:min-h-0 w-full mobile-full-width">
-            <div className="flex items-center justify-between mb-4 px-4 sm:px-0">
+            <div className="flex items-center justify-between mb-4 px-3 sm:px-0">
               <h2 className="text-lg font-semibold text-gray-900">Configuración del Escrutinio</h2>
             </div>
             
             {/* Alerta de Escrutinio Anterior */}
             {showRecoveryAlert && (
-              <div className="mb-6 mx-4 sm:mx-0 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="mb-6 mx-3 sm:mx-0 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <div className="flex items-start">
                   <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center mr-3 mt-0.5">
                     <CheckCircle className="h-4 w-4 text-blue-600" />
@@ -589,7 +589,7 @@ function EscrutinioPageContent() {
               </div>
             )}
             
-            <div className="space-y-4 px-4 sm:px-0">
+            <div className="space-y-4 px-3 sm:px-0">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Mesa Electoral (JRV)
