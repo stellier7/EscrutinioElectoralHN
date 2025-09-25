@@ -308,10 +308,14 @@ export default function DashboardPage() {
                             if (typeof window !== 'undefined') {
                               const jrvNumber = activity.mesaNumber;
                               if (jrvNumber) {
+                                // Limpiar localStorage para ambos niveles (presidencial y legislativo)
                                 localStorage.removeItem(`party-counts-${jrvNumber}`);
                                 localStorage.removeItem(`applied-votes-${jrvNumber}`);
                                 localStorage.removeItem(`papeleta-number-${jrvNumber}`);
                                 localStorage.removeItem(`papeleta-state-${jrvNumber}`);
+                                localStorage.removeItem(`party-counts-${jrvNumber}-LEGISLATIVE`);
+                                localStorage.removeItem(`applied-votes-${jrvNumber}-LEGISLATIVE`);
+                                localStorage.removeItem(`papeleta-number-${jrvNumber}-LEGISLATIVE`);
                                 console.log('🧹 LocalStorage limpiado para JRV:', jrvNumber);
                               }
                             }
@@ -535,10 +539,14 @@ export default function DashboardPage() {
                               if (typeof window !== 'undefined') {
                                 const jrvNumber = activity.mesaNumber;
                                 if (jrvNumber) {
+                                  // Limpiar localStorage para ambos niveles (presidencial y legislativo)
                                   localStorage.removeItem(`party-counts-${jrvNumber}`);
                                   localStorage.removeItem(`applied-votes-${jrvNumber}`);
                                   localStorage.removeItem(`papeleta-number-${jrvNumber}`);
                                   localStorage.removeItem(`papeleta-state-${jrvNumber}`);
+                                  localStorage.removeItem(`party-counts-${jrvNumber}-LEGISLATIVE`);
+                                  localStorage.removeItem(`applied-votes-${jrvNumber}-LEGISLATIVE`);
+                                  localStorage.removeItem(`papeleta-number-${jrvNumber}-LEGISLATIVE`);
                                   console.log('🧹 LocalStorage limpiado para JRV:', jrvNumber);
                                 }
                               }
