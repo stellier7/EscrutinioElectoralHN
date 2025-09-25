@@ -6,7 +6,7 @@ import clsx from 'clsx';
 import axios from 'axios';
 import { usePapeleta } from '@/hooks/usePapeleta';
 import { VoteLimitAlert } from './ui/VoteLimitAlert';
-import { useVoteStore } from '@/store/voteStore';
+// import { useVoteStore } from '@/store/voteStore'; // REMOVIDO TEMPORALMENTE
 
 // Utility function to generate block-based slot ranges for legislative elections
 // Input: parties[] (fixed order array), S = seatCount (number of diputados)
@@ -132,22 +132,22 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     loadPapeletaFromServer
   } = usePapeleta();
 
-  // Hook para manejar votos globales (como en presidencial)
-  const { counts, loadFromServer: loadVotesFromServer } = useVoteStore();
+  // Hook para manejar votos globales (como en presidencial) - REMOVIDO TEMPORALMENTE
+  // const { counts, loadFromServer: loadVotesFromServer } = useVoteStore();
 
-  // Cargar votos desde servidor al montar el componente
-  useEffect(() => {
-    if (escrutinioId) {
-      console.log('📊 Cargando votos desde servidor para escrutinio:', escrutinioId);
-      loadVotesFromServer(escrutinioId).then(() => {
-        console.log('📊 Votos cargados desde servidor:', counts);
-        console.log('📊 Detalle de votos del servidor:');
-        Object.entries(counts).forEach(([candidateId, count]) => {
-          console.log(`  ${candidateId}: ${count}`);
-        });
-      });
-    }
-  }, [escrutinioId, loadVotesFromServer]);
+  // Cargar votos desde servidor al montar el componente - REMOVIDO TEMPORALMENTE
+  // useEffect(() => {
+  //   if (escrutinioId) {
+  //     console.log('📊 Cargando votos desde servidor para escrutinio:', escrutinioId);
+  //     loadVotesFromServer(escrutinioId).then(() => {
+  //       console.log('📊 Votos cargados desde servidor:', counts);
+  //       console.log('📊 Detalle de votos del servidor:');
+  //       Object.entries(counts).forEach(([candidateId, count]) => {
+  //         console.log(`  ${candidateId}: ${count}`);
+  //       });
+  //     });
+  //   }
+  // }, [escrutinioId, loadVotesFromServer]);
 
   // Guardar número de papeleta en localStorage
   useEffect(() => {
@@ -422,10 +422,10 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     
     const success = await closePapeleta(userId);
     if (success) {
-      // Recargar votos desde servidor para obtener conteos actualizados
-      console.log('🔄 Recargando votos desde servidor después de cerrar papeleta');
-      await loadVotesFromServer(escrutinioId!);
-      console.log('📊 Votos recargados después de cerrar papeleta:', counts);
+      // Recargar votos desde servidor para obtener conteos actualizados - REMOVIDO TEMPORALMENTE
+      // console.log('🔄 Recargando votos desde servidor después de cerrar papeleta');
+      // await loadVotesFromServer(escrutinioId!);
+      // console.log('📊 Votos recargados después de cerrar papeleta:', counts);
       // Aplicar marcas del buffer a las marcas aplicadas (conteo general)
       const newAppliedVotes = { ...appliedVotes };
       const newPartyCounts = { ...partyCounts };
@@ -472,9 +472,9 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     
     const success = await anularPapeleta(userId, 'Anulada por usuario');
     if (success) {
-      // Recargar votos desde servidor para obtener conteos actualizados
-      console.log('🔄 Recargando votos desde servidor después de anular papeleta');
-      await loadVotesFromServer(escrutinioId!);
+      // Recargar votos desde servidor para obtener conteos actualizados - REMOVIDO TEMPORALMENTE
+      // console.log('🔄 Recargando votos desde servidor después de anular papeleta');
+      // await loadVotesFromServer(escrutinioId!);
       // Solo limpiar el grid actual, mantener marcas aplicadas
       setExpandedParty(null);
       
@@ -533,22 +533,14 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     // Contar votos del buffer actual (papeleta abierta)
     const bufferCount = papeleta.votesBuffer.filter(vote => vote.partyId === partyId).length;
     
-    // Contar votos totales desde el servidor (incluye todos los candidatos de este partido)
-    const serverCount = Object.entries(counts).reduce((total, [candidateId, count]) => {
-      // Formato: "partyId-casillaNumber" (ej: "libre-1", "pdc-5")
-      if (candidateId.startsWith(partyId + '-')) {
-        console.log(`🔍 Voto del servidor: ${candidateId} = ${count}`);
-        return total + count;
-      }
-      return total;
-    }, 0);
+    // Contar votos aplicados (papeletas cerradas) desde el estado local
+    const appliedCount = partyCounts[partyId] || 0;
     
-    console.log(`📊 Partido ${partyId}: buffer=${bufferCount}, server=${serverCount}, total=${serverCount + bufferCount}`);
+    console.log(`📊 Partido ${partyId}: buffer=${bufferCount}, applied=${appliedCount}, total=${appliedCount + bufferCount}`);
     
-    // Retornar votos del servidor + votos del buffer actual
-    // El servidor tiene todos los votos de papeletas cerradas
-    return serverCount + bufferCount;
-  }, [papeleta.votesBuffer, counts]);
+    // Retornar votos aplicados + votos del buffer actual
+    return appliedCount + bufferCount;
+  }, [papeleta.votesBuffer, partyCounts]);
 
   // Funciones para manejar foto y cierre de escrutinio
   const handleActaUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
