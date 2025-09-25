@@ -139,7 +139,9 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
   useEffect(() => {
     if (escrutinioId) {
       console.log('📊 Cargando votos desde servidor para escrutinio:', escrutinioId);
-      loadVotesFromServer(escrutinioId);
+      loadVotesFromServer(escrutinioId).then(() => {
+        console.log('📊 Votos cargados desde servidor:', counts);
+      });
     }
   }, [escrutinioId, loadVotesFromServer]);
 
@@ -419,6 +421,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
       // Recargar votos desde servidor para obtener conteos actualizados
       console.log('🔄 Recargando votos desde servidor después de cerrar papeleta');
       await loadVotesFromServer(escrutinioId!);
+      console.log('📊 Votos recargados después de cerrar papeleta:', counts);
       // Aplicar marcas del buffer a las marcas aplicadas (conteo general)
       const newAppliedVotes = { ...appliedVotes };
       const newPartyCounts = { ...partyCounts };
@@ -526,25 +529,21 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     // Contar votos del buffer actual (papeleta abierta)
     const bufferCount = papeleta.votesBuffer.filter(vote => vote.partyId === partyId).length;
     
-    // Contar votos aplicados (papeletas cerradas) desde el store global
-    const appliedCount = partyCounts[partyId] || 0;
-    
     // Contar votos totales desde el servidor (incluye todos los candidatos de este partido)
     const serverCount = Object.entries(counts).reduce((total, [candidateId, count]) => {
-      // Asumir que candidateId contiene el partyId y casillaNumber
-      // Formato: "partyId-casillaNumber" o similar
-      if (candidateId.startsWith(partyId)) {
+      // Formato: "partyId-casillaNumber" (ej: "libre-1", "pdc-5")
+      if (candidateId.startsWith(partyId + '-')) {
         return total + count;
       }
       return total;
     }, 0);
     
-    console.log(`📊 Partido ${partyId}: buffer=${bufferCount}, applied=${appliedCount}, server=${serverCount}`);
+    console.log(`📊 Partido ${partyId}: buffer=${bufferCount}, server=${serverCount}, total=${serverCount + bufferCount}`);
     
-    // Retornar el mayor entre serverCount y (appliedCount + bufferCount)
-    // El serverCount debería ser el más confiable ya que incluye todos los votos
-    return Math.max(serverCount, appliedCount + bufferCount);
-  }, [papeleta.votesBuffer, partyCounts, counts]);
+    // Retornar votos del servidor + votos del buffer actual
+    // El servidor tiene todos los votos de papeletas cerradas
+    return serverCount + bufferCount;
+  }, [papeleta.votesBuffer, counts]);
 
   // Funciones para manejar foto y cierre de escrutinio
   const handleActaUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
