@@ -253,12 +253,13 @@ export default function PresidencialEscrutinio({
                 Control de Escrutinio
               </h3>
               
-              {/* Estado: En progreso - Mostrar botón Cerrar Escrutinio */}
-              {escrutinioStatus === 'COMPLETED' && !isEscrutinioClosed && (
-                <>
-                  <p className="text-sm text-blue-700 mb-4">
-                    Una vez que hayas completado el conteo de todos los votos, puedes cerrar el escrutinio para pausar las ediciones.
-                  </p>
+            {/* Estado: En progreso - Mostrar botones Cerrar y Finalizar */}
+            {escrutinioStatus === 'COMPLETED' && !isEscrutinioClosed && (
+              <>
+                <p className="text-sm text-blue-700 mb-4">
+                  Una vez que hayas completado el conteo de todos los votos, puedes cerrar el escrutinio para pausar las ediciones o finalizar definitivamente.
+                </p>
+                <div className="space-y-3">
                   <button
                     onClick={handleCloseEscrutinio}
                     disabled={isClosing}
@@ -276,8 +277,27 @@ export default function PresidencialEscrutinio({
                       </>
                     )}
                   </button>
-                </>
-              )}
+                  
+                  <button
+                    onClick={handleSendResults}
+                    disabled={isCompleting || isUploading}
+                    className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                  >
+                    {isCompleting ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Finalizando...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="h-4 w-4" />
+                        Finalizar Escrutinio
+                      </>
+                    )}
+                  </button>
+                </div>
+              </>
+            )}
 
               {/* Estado: Cerrado - Mostrar opciones para Finalizar o Editar */}
               {escrutinioStatus === 'CLOSED' && (
