@@ -742,9 +742,12 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
             key={party.id}
             onClick={() => handlePartyClick(party.id)}
             className={clsx(
-              'w-full flex items-center rounded-lg border shadow-sm focus:outline-none focus:ring-2 transition-transform',
+              'w-full flex items-center rounded-lg border focus:outline-none focus:ring-2 transition-transform',
               'active:scale-[0.98] touch-manipulation select-none',
-              'bg-white min-h-[60px]' // Altura mínima para mejor toque
+              'min-h-[60px]', // Altura mínima para mejor toque
+              isEscrutinioClosed 
+                ? 'bg-gray-50 opacity-60 cursor-pointer' // Transparente pero clickeable
+                : 'bg-white shadow-sm hover:shadow-md' // Normal con hover
             )}
             style={{ borderLeftWidth: 6, borderLeftColor: party.color }}
           >
@@ -827,11 +830,14 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
                 onClick={(e) => handleSlotClick(expandedParty, casillaNumber, e)}
                 className={clsx(
                   'aspect-square rounded-lg border-2 transition-all duration-150 relative',
-                  'active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2',
+                  'focus:outline-none focus:ring-2 focus:ring-offset-2',
                   'text-sm font-medium flex items-center justify-center',
                   'min-h-[60px] sm:min-h-[70px]', // Más grande para mejor toque
                   'touch-manipulation', // Optimización para touch
                   'select-none', // Evitar selección de texto
+                  isEscrutinioClosed 
+                    ? 'opacity-50 cursor-not-allowed' // Transparente y no clickeable
+                    : 'active:scale-95', // Animación normal solo si no está cerrado
                   (isSelected || isApplied)
                     ? 'border-solid shadow-md' 
                     : 'border-dashed'
@@ -1016,6 +1022,11 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
           <div className="mb-4">
             <h2 className="text-lg font-semibold text-gray-900">
               {expandedParty ? 'Selección de Diputado' : 'Marcas por Diputado'}
+              {isEscrutinioClosed && (
+                <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                  Cerrado
+                </span>
+              )}
             </h2>
             <p className="text-sm text-gray-600">
               {diputadosData.jrv.nombre} - {diputadosData.jrv.departamento}
