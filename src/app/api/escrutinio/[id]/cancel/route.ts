@@ -51,32 +51,26 @@ export async function POST(request: Request, { params }: { params: { id: string 
       return NextResponse.json({ success: false, error: 'No autorizado para cancelar este escrutinio' }, { status: 403 });
     }
 
-    // Solo se pueden cancelar escrutinios en progreso (COMPLETED sin finalizar)
-    if (existing.status !== 'COMPLETED' || existing.completedAt !== null) {
-      console.log('❌ Escrutinio no se puede cancelar - status:', existing.status, 'completedAt:', existing.completedAt);
-      return NextResponse.json({ success: false, error: 'Solo se pueden cancelar escrutinios en progreso' }, { status: 400 });
+    // Permitir cancelar escrutinios en cualquier estado (más permisivo)
+    // Solo no permitir si ya está en estado FAILED (ya cancelado)
+    if (existing.status === 'FAILED') {
+      console.log('❌ Escrutinio ya está cancelado - status:', existing.status);
+      return NextResponse.json({ success: false, error: 'Este escrutinio ya fue cancelado' }, { status: 400 });
     }
 
-    // Eliminar todos los datos relacionados
+    // Marcar escrutinio como cancelado (FAILED) en lugar de eliminarlo
     await prisma.$transaction(async (tx) => {
-      // Eliminar votos
-      await tx.vote.deleteMany({ where: { escrutinioId } });
-      
-      // Eliminar papeletas (los votos se almacenan en votesBuffer como JSON)
-      await tx.papeleta.deleteMany({ where: { escrutinioId } });
-      
-      // Eliminar logs de auditoría
-      await tx.auditLog.deleteMany({ 
-        where: { 
-          metadata: {
-            path: ['escrutinioId'],
-            equals: escrutinioId
-          }
-        } 
+      // Marcar escrutinio como cancelado
+      await tx.escrutinio.update({
+        where: { id: escrutinioId },
+        data: {
+          status: 'FAILED',
+          completedAt: new Date(),
+          updatedAt: new Date()
+        }
       });
       
-      // Eliminar el escrutinio
-      await tx.escrutinio.delete({ where: { id: escrutinioId } });
+      console.log('✅ Escrutinio marcado como cancelado (FAILED)');
     });
 
     // Crear log de auditoría

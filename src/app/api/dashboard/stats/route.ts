@@ -39,10 +39,12 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // Obtener escrutinios en progreso (no cerrados ni finalizados)
+    // Obtener escrutinios en progreso (no cerrados, ni finalizados, ni cancelados)
     const inProgressEscrutinios = await prisma.escrutinio.findMany({
       where: {
         status: 'COMPLETED', // En progreso (no cerrado)
+        completedAt: null, // No finalizado
+        // Excluir escrutinios cancelados (FAILED)
         ...(userRole === 'ADMIN' ? {} : { userId: userId }), // Solo admins ven todos
       },
       include: {
