@@ -15,9 +15,18 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
     const escrutinioId = params.id;
     
-    // Obtener datos del cuerpo de la petición
-    const body = await request.json();
-    const { partyCounts, appliedVotes } = body;
+    // Obtener datos del cuerpo de la petición (opcional para escrutinios presidenciales)
+    let partyCounts, appliedVotes;
+    try {
+      const body = await request.json();
+      partyCounts = body.partyCounts;
+      appliedVotes = body.appliedVotes;
+    } catch (error) {
+      // Si no hay cuerpo JSON (escrutinio presidencial), usar valores por defecto
+      console.log('📝 No se recibieron datos del cuerpo - escrutinio presidencial');
+      partyCounts = null;
+      appliedVotes = null;
+    }
     
     console.log('🔄 Cerrando escrutinio con datos:', { escrutinioId, partyCounts, appliedVotes });
     const existing = await prisma.escrutinio.findUnique({ 

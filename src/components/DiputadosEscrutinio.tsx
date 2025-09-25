@@ -397,7 +397,8 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     }
     
     if (isEscrutinioClosed) {
-      setError('El escrutinio está cerrado. No se pueden hacer cambios.');
+      // Simplemente no hacer nada cuando el escrutinio está cerrado
+      console.log('🔒 Click en casilla ignorado - escrutinio cerrado');
       return;
     }
 
