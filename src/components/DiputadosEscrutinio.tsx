@@ -602,7 +602,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-          Conteo de Diputados - JRV {diputadosData.jrv.jrv}
+          Marcas por Diputado - JRV {diputadosData.jrv.jrv}
         </h1>
         <p className="text-gray-600">
           {diputadosData.jrv.nombre} • {diputadosData.jrv.departamento}
