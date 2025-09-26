@@ -96,8 +96,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         closedPapeletas,
         totalPapeletas,
         escrutinioStatus: escrutinio.status,
-        hasEdits: escrutinio.hasEdits,
-        editCount: escrutinio.editCount,
+        hasEdits: (escrutinio as any).hasEdits || false,
+        editCount: (escrutinio as any).editCount || 0,
         originalData: escrutinio.originalData || null
       }
     });
