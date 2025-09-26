@@ -120,15 +120,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
   const [showVoteLimitAlert, setShowVoteLimitAlert] = useState(false);
   const [isClosingPapeleta, setIsClosingPapeleta] = useState(false);
   const [showAnularConfirmation, setShowAnularConfirmation] = useState(false);
-  const [papeletaNumber, setPapeletaNumber] = useState(() => {
-    // Cargar número de papeleta desde localStorage (específico por JRV + nivel)
-    if (typeof window !== 'undefined' && jrvNumber) {
-      const key = `papeleta-number-${jrvNumber}-LEGISLATIVE`;
-      const stored = localStorage.getItem(key);
-      return stored ? parseInt(stored, 10) : 1;
-    }
-    return 1;
-  });
+  const [papeletaNumber, setPapeletaNumber] = useState(1); // Siempre empezar en 1 para nuevos escrutinios
   
   // Estados para control de escrutinio
   const [escrutinioStatus, setEscrutinioStatus] = useState<'COMPLETED' | 'CLOSED'>('COMPLETED');
@@ -173,14 +165,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
   //   }
   // }, [escrutinioId, loadVotesFromServer]);
 
-  // Guardar número de papeleta en localStorage (específico por JRV + nivel)
-  useEffect(() => {
-    if (jrvNumber && typeof window !== 'undefined') {
-      const key = `papeleta-number-${jrvNumber}-LEGISLATIVE`;
-      localStorage.setItem(key, papeletaNumber.toString());
-      console.log('💾 Guardando número de papeleta para JRV', jrvNumber, 'LEGISLATIVE:', papeletaNumber);
-    }
-  }, [papeletaNumber, jrvNumber]);
+  // No guardar número de papeleta en localStorage - cada escrutinio empieza en 1
 
   // Guardar partyCounts en localStorage (específico por JRV + nivel)
   useEffect(() => {
