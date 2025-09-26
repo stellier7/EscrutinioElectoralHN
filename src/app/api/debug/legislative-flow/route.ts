@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
     const result = {
       escrutinio: {
         id: recentEscrutinio.id,
-        mesaNumber: recentEscrutinio.mesaNumber,
+        mesaNumber: recentEscrutinio.mesa.number,
         mesaLocation: recentEscrutinio.mesa.location,
         status: recentEscrutinio.status,
         totalVotes,
