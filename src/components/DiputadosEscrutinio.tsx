@@ -5,12 +5,8 @@ import { ArrowLeft, ArrowRight, Loader2, AlertCircle, Check, X, FileText, Camera
 import clsx from 'clsx';
 import axios from 'axios';
 import { useLegislativeVoteStore } from '@/store/legislativeVoteStore';
-import { VoteLimitAlert } from './ui/VoteLimitAlert';
-// import { useVoteStore } from '@/store/voteStore'; // REMOVIDO TEMPORALMENTE
 
 // Utility function to generate block-based slot ranges for legislative elections
-// Input: parties[] (fixed order array), S = seatCount (number of diputados)
-// Algorithm: For each party i: start = i * S + 1, end = (i + 1) * S
 export function generatePartySlotRanges(seatCount: number, partyCount: number): Array<{ start: number; end: number; range: string; casillas: number[] }> {
   const ranges = [];
   for (let i = 0; i < partyCount; i++) {
@@ -52,16 +48,6 @@ interface DiputadosData {
   diputados: number;
 }
 
-interface PartyCounts {
-  [key: string]: number;
-}
-
-interface AppliedVotes {
-  [partyId: string]: {
-    [casillaNumber: number]: number;
-  };
-}
-
 interface AnimationState {
   show: boolean;
   x: number;
@@ -80,55 +66,15 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
   const [diputadosData, setDiputadosData] = useState<DiputadosData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [partyCounts, setPartyCounts] = useState<PartyCounts>(() => {
-    // Cargar partyCounts desde localStorage (específico por JRV + nivel)
-    if (typeof window !== 'undefined' && jrvNumber) {
-      const key = `party-counts-${jrvNumber}-LEGISLATIVE`;
-      const stored = localStorage.getItem(key);
-      const parsed = stored ? JSON.parse(stored) : {};
-      console.log('📱 Cargando partyCounts desde localStorage para JRV', jrvNumber, 'LEGISLATIVE:', parsed);
-      return parsed;
-    }
-    return {};
-  });
-  const [appliedVotes, setAppliedVotes] = useState<AppliedVotes>(() => {
-    // Cargar appliedVotes desde localStorage (específico por JRV + nivel)
-    if (typeof window !== 'undefined' && jrvNumber) {
-      const key = `applied-votes-${jrvNumber}-LEGISLATIVE`;
-      const stored = localStorage.getItem(key);
-      const parsed = stored ? JSON.parse(stored) : {};
-      console.log('📱 Cargando appliedVotes desde localStorage para JRV', jrvNumber, 'LEGISLATIVE:', parsed);
-      return parsed;
-    }
-    return {};
-  });
   const [expandedParty, setExpandedParty] = useState<string | null>(null);
-  const [animation, setAnimation] = useState<AnimationState>({
-    show: false,
-    x: 0,
-    y: 0,
-    partyId: ''
-  });
-  
-  // Estados para foto y cierre de escrutinio
+  const [animation, setAnimation] = useState<AnimationState>({ show: false, x: 0, y: 0, partyId: '' });
   const [actaImage, setActaImage] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  
-  // Estados para alerta de límite de marcas
-  const [showVoteLimitAlert, setShowVoteLimitAlert] = useState(false);
-  const [isClosingPapeleta, setIsClosingPapeleta] = useState(false);
-  const [showAnularConfirmation, setShowAnularConfirmation] = useState(false);
-  const [papeletaNumber, setPapeletaNumber] = useState(1); // Siempre empezar en 1 para nuevos escrutinios
-  
-  // Estados para control de escrutinio
-  const [escrutinioStatus, setEscrutinioStatus] = useState<'COMPLETED' | 'CLOSED'>('COMPLETED');
-  const [isEscrutinioClosed, setIsEscrutinioClosed] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
-  const [isReopening, setIsReopening] = useState(false);
-  const [hasEdits, setHasEdits] = useState(false);
-  const [editCount, setEditCount] = useState(0);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [escrutinioStatus, setEscrutinioStatus] = useState<'OPEN' | 'CLOSED' | 'COMPLETED'>('OPEN');
+  const [isEscrutinioClosed, setIsEscrutinioClosed] = useState(false);
 
   // Hook para manejar votos legislativos (como el presidencial)
   const { 
@@ -153,81 +99,10 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     }
   }, [escrutinioId, loadVotesFromServer]);
 
-  // No guardar número de papeleta en localStorage - cada escrutinio empieza en 1
-
-  // Guardar partyCounts en localStorage (específico por JRV + nivel)
-  useEffect(() => {
-    if (jrvNumber && typeof window !== 'undefined' && Object.keys(partyCounts).length > 0) {
-      const key = `party-counts-${jrvNumber}-LEGISLATIVE`;
-      localStorage.setItem(key, JSON.stringify(partyCounts));
-      console.log('💾 Guardando partyCounts para JRV', jrvNumber, 'LEGISLATIVE:', partyCounts);
-    }
-  }, [partyCounts, jrvNumber]);
-
-  // Guardar appliedVotes en localStorage (específico por JRV + nivel)
-  useEffect(() => {
-    if (jrvNumber && typeof window !== 'undefined' && Object.keys(appliedVotes).length > 0) {
-      const key = `applied-votes-${jrvNumber}-LEGISLATIVE`;
-      localStorage.setItem(key, JSON.stringify(appliedVotes));
-      console.log('💾 Guardando appliedVotes para JRV', jrvNumber, 'LEGISLATIVE:', appliedVotes);
-    }
-  }, [appliedVotes, jrvNumber]);
-
-  // Cargar datos desde localStorage al montar el componente o cambiar JRV
-  useEffect(() => {
-    if (jrvNumber && typeof window !== 'undefined') {
-      console.log('📱 Cargando datos desde localStorage para JRV', jrvNumber, 'LEGISLATIVE');
-      
-      // Cargar número de papeleta
-      const papeletaKey = `papeleta-number-${jrvNumber}-LEGISLATIVE`;
-      const storedPapeletaNumber = localStorage.getItem(papeletaKey);
-      if (storedPapeletaNumber) {
-        setPapeletaNumber(parseInt(storedPapeletaNumber, 10));
-        console.log('📱 Papeleta number cargado:', storedPapeletaNumber);
-      } else {
-        setPapeletaNumber(1);
-        console.log('📱 Iniciando papeleta en 1 para nueva JRV LEGISLATIVE');
-      }
-      
-      // Cargar party counts
-      const partyCountsKey = `party-counts-${jrvNumber}-LEGISLATIVE`;
-      const storedPartyCounts = localStorage.getItem(partyCountsKey);
-      if (storedPartyCounts) {
-        const parsed = JSON.parse(storedPartyCounts);
-        setPartyCounts(parsed);
-        console.log('📱 Party counts cargados:', parsed);
-      } else {
-        setPartyCounts({});
-        console.log('📱 Iniciando party counts vacío para nueva JRV LEGISLATIVE');
-      }
-      
-      // Cargar applied votes
-      const appliedVotesKey = `applied-votes-${jrvNumber}-LEGISLATIVE`;
-      const storedAppliedVotes = localStorage.getItem(appliedVotesKey);
-      if (storedAppliedVotes) {
-        const parsed = JSON.parse(storedAppliedVotes);
-        setAppliedVotes(parsed);
-        console.log('📱 Applied votes cargados:', parsed);
-      } else {
-        setAppliedVotes({});
-        console.log('📱 Iniciando applied votes vacío para nueva JRV LEGISLATIVE');
-      }
-    }
-  }, [jrvNumber]);
-
-  // Inicializar papeleta automáticamente cuando se carga el componente
-  useEffect(() => {
-    if (escrutinioId && userId && papeleta.status === null) {
-      console.log('🔄 Inicializando papeleta automáticamente...');
-      startPapeleta(escrutinioId, userId);
-    }
-  }, [escrutinioId, userId, papeleta.status, startPapeleta]);
-
   // Cargar datos de diputados según la JRV
   useEffect(() => {
     const loadDiputadosData = async () => {
       if (!jrvNumber) {
-        setError('Número de JRV no proporcionado');
         setLoading(false);
         return;
       }
@@ -235,94 +110,48 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
       try {
         setLoading(true);
         setError(null);
-        
-        console.log('🔍 Buscando JRV:', jrvNumber);
-        const url = `/api/jrv/${encodeURIComponent(jrvNumber)}`;
-        console.log('🌐 URL:', url);
-        
-        const response = await axios.get(url);
-        console.log('✅ Respuesta:', response.data);
-        
-        if (response.data?.success) {
-          const jrvData = response.data.data;
+
+        const response = await axios.get(`/api/mesas/${jrvNumber}`);
+        if (response.data?.success && response.data.data) {
+          const mesa = response.data.data;
+          const diputados = mesa.diputados || 0;
           
-          // Configuración base de partidos políticos (orden fijo)
-          const baseParties = [
-            {
-              id: 'pdc',
-              name: 'Demócrata Cristiano',
-              fullName: 'Demócrata Cristiano',
-              color: '#16a34a'
-            },
-            {
-              id: 'libre',
-              name: 'Libre',
-              fullName: 'Libre',
-              color: '#dc2626'
-            },
-            {
-              id: 'pinu-sd',
-              name: 'PINU',
-              fullName: 'PINU',
-              color: '#ea580c'
-            },
-            {
-              id: 'liberal',
-              name: 'Liberal',
-              fullName: 'Liberal',
-              color: '#ef4444'
-            },
-            {
-              id: 'nacional',
-              name: 'Nacional',
-              fullName: 'Nacional',
-              color: '#2563eb'
-            }
+          if (diputados === 0) {
+            setError('Esta JRV no tiene diputados asignados');
+            setLoading(false);
+            return;
+          }
+
+          // Generar datos de partidos y casillas
+          const parties = [
+            { id: 'pdc', name: 'PDC', fullName: 'Partido Demócrata Cristiano', color: '#1E40AF', slots: diputados, slotRange: '1-20', casillas: Array.from({ length: diputados }, (_, i) => i + 1) },
+            { id: 'libre', name: 'Libre', fullName: 'Partido Libertad y Refundación', color: '#DC2626', slots: diputados, slotRange: '21-40', casillas: Array.from({ length: diputados }, (_, i) => i + 21) },
+            { id: 'pinu-sd', name: 'PINU-SD', fullName: 'Partido Innovación y Unidad - Social Demócrata', color: '#059669', slots: diputados, slotRange: '41-60', casillas: Array.from({ length: diputados }, (_, i) => i + 41) },
+            { id: 'liberal', name: 'Liberal', fullName: 'Partido Liberal de Honduras', color: '#7C3AED', slots: diputados, slotRange: '61-80', casillas: Array.from({ length: diputados }, (_, i) => i + 61) },
+            { id: 'nacional', name: 'Nacional', fullName: 'Partido Nacional de Honduras', color: '#EA580C', slots: diputados, slotRange: '81-100', casillas: Array.from({ length: diputados }, (_, i) => i + 81) }
           ];
 
-          // Generar rangos de casillas por bloques
-          const slotRanges = generatePartySlotRanges(jrvData.diputados, baseParties.length);
-          
-          // Combinar datos base con rangos generados
-          const parties = baseParties.map((party, index) => ({
-            ...party,
-            slots: jrvData.diputados,
-            slotRange: slotRanges[index].range,
-            casillas: slotRanges[index].casillas
-          }));
-
-          const data = {
-            jrv: jrvData,
-            parties: parties,
-            diputados: jrvData.diputados
+          const jrvInfo: JRVInfo = {
+            jrv: mesa.number,
+            nombre: mesa.location,
+            departamento: mesa.department,
+            diputados: diputados,
+            municipio: mesa.municipality
           };
-          
-          setDiputadosData(data);
-          
-          // Solo inicializar conteos para partidos que no tienen votos
-          setPartyCounts(prevCounts => {
-            const newCounts = { ...prevCounts };
-            parties.forEach((party: Party) => {
-              if (!(party.id in newCounts)) {
-                newCounts[party.id] = 0;
-              }
-            });
-            console.log('🔄 Inicializando partyCounts (preservando votos existentes):', newCounts);
-            return newCounts;
+
+          setDiputadosData({
+            jrv: jrvInfo,
+            parties,
+            diputados
           });
+
+          console.log('✅ [LEGISLATIVE] Datos de diputados cargados:', { jrvInfo, parties });
         } else {
-          console.error('❌ Error en respuesta:', response.data);
-          setError(response.data?.error || 'Error al cargar datos de diputados');
+          setError('No se encontraron datos para esta JRV');
         }
       } catch (err: any) {
-        console.error('❌ Error loading diputados data:', err);
-        console.error('❌ Error details:', {
-          message: err.message,
-          status: err.response?.status,
-          statusText: err.response?.statusText,
-          data: err.response?.data
-        });
-        setError(err?.response?.data?.error || 'Error al cargar datos de diputados');
+        console.error('❌ [LEGISLATIVE] Error cargando datos de diputados:', err);
+        setError(err?.response?.data?.error || 'Error cargando datos de la JRV');
       } finally {
         setLoading(false);
       }
@@ -330,41 +159,6 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
 
     loadDiputadosData();
   }, [jrvNumber]);
-
-  // Cargar o iniciar papeleta cuando se cargan los datos y tenemos escrutinioId
-  useEffect(() => {
-    const loadOrStartPapeleta = async () => {
-      if (diputadosData && escrutinioId && userId) {
-        // Si ya tenemos una papeleta cargada (desde localStorage o servidor), no hacer nada
-        if (papeleta.id) {
-          console.log('✅ Papeleta ya cargada:', papeleta.id, 'status:', papeleta.status);
-          return;
-        }
-
-        // Primero intentar cargar papeleta existente desde el servidor
-        console.log('🔍 Intentando cargar papeleta desde servidor para escrutinio:', escrutinioId);
-        const loaded = await loadPapeletaFromServer(escrutinioId);
-        if (!loaded) {
-          // Si no hay papeleta existente, crear una nueva
-          console.log('🆕 No hay papeleta existente, creando nueva...');
-          await startPapeleta(escrutinioId, userId);
-        } else {
-          console.log('✅ Papeleta existente cargada desde servidor');
-          // Si la papeleta cargada está cerrada, incrementar número para la siguiente
-          if (papeleta.status === 'CLOSED') {
-            console.log('📄 Papeleta cerrada cargada, preparando para siguiente');
-            setPapeletaNumber(prev => prev + 1);
-          }
-        }
-      }
-    };
-    
-    loadOrStartPapeleta();
-  }, [diputadosData, escrutinioId, userId, papeleta.id, startPapeleta, loadPapeletaFromServer]);
-
-  // Sincronizar estado local con papeleta cuando se carga - REMOVIDO POR CAUSAR BUGS
-  // Este useEffect estaba sobrescribiendo partyCounts y appliedVotes cada vez
-  // que se cargaba una papeleta, causando duplicación y reseteo de votos
 
   // Handle party card click - expand to grid
   const handlePartyClick = useCallback((partyId: string) => {
@@ -382,7 +176,6 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     }
     
     if (isEscrutinioClosed) {
-      // Simplemente no hacer nada cuando el escrutinio está cerrado
       console.log('🔒 [LEGISLATIVE] Click en casilla ignorado - escrutinio cerrado');
       return;
     }
@@ -405,25 +198,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
       });
       
       console.log('➖ [LEGISLATIVE] Voto decrementado para:', partyId, slotNumber);
-      
-      // Show animation
-      setAnimation({
-        show: true,
-        x,
-        y,
-        partyId
-      });
     } else {
-      // Verificar límite de marcas antes de agregar
-      const voteLimit = diputadosData?.diputados || 0;
-      const totalVotes = Object.values(counts).reduce((sum, count) => sum + count, 0);
-      
-      if (voteLimit > 0 && totalVotes >= voteLimit) {
-        // Mostrar alerta de límite alcanzado
-        setShowVoteLimitAlert(true);
-        return;
-      }
-
       // Increment vote
       increment(partyId, slotNumber, {
         escrutinioId,
@@ -432,31 +207,30 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
       });
       
       console.log('➕ [LEGISLATIVE] Voto incrementado para:', partyId, slotNumber);
-      
-      // Show animation
-      setAnimation({
-        show: true,
-        x,
-        y,
-        partyId
-      });
     }
+    
+    // Show animation
+    setAnimation({
+      show: true,
+      x,
+      y,
+      partyId
+    });
 
-    // Hide animation after 200ms (más rápido)
+    // Hide animation after 200ms
     setTimeout(() => {
       setAnimation(prev => ({ ...prev, show: false }));
     }, 200);
-  }, [userId, escrutinioId, increment, decrement, getCasillaCount, diputadosData?.diputados, isEscrutinioClosed, jrvNumber]);
+  }, [userId, escrutinioId, increment, decrement, getCasillaCount, isEscrutinioClosed, jrvNumber]);
 
   // Handle back button
   const handleBack = useCallback(() => {
     setExpandedParty(null);
   }, []);
 
-  // Handle navigation between parties
+  // Navigation functions
   const handlePreviousParty = useCallback(() => {
     if (!diputadosData || !expandedParty) return;
-    
     const currentIndex = diputadosData.parties.findIndex(p => p.id === expandedParty);
     if (currentIndex > 0) {
       setExpandedParty(diputadosData.parties[currentIndex - 1].id);
@@ -465,134 +239,14 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
 
   const handleNextParty = useCallback(() => {
     if (!diputadosData || !expandedParty) return;
-    
     const currentIndex = diputadosData.parties.findIndex(p => p.id === expandedParty);
     if (currentIndex < diputadosData.parties.length - 1) {
       setExpandedParty(diputadosData.parties[currentIndex + 1].id);
     }
   }, [diputadosData, expandedParty]);
 
-  // Handle close papeleta
-  const handleClosePapeleta = useCallback(async () => {
-    if (!userId) return;
-    
-    // 1. Forzar guardado inmediato antes de cerrar
-    console.log('🔄 Forzando guardado antes de cerrar papeleta');
-    await forceSave();
-    
-    // 2. Cerrar papeleta
-    const success = await closePapeleta(userId);
-    if (success) {
-      // Aplicar marcas del buffer a las marcas aplicadas (conteo general)
-      const newAppliedVotes = { ...appliedVotes };
-      const newPartyCounts = { ...partyCounts };
-      
-      // Procesar cada marca del buffer
-      papeleta.votesBuffer.forEach((vote) => {
-        const { partyId, casillaNumber } = vote;
-        
-        // Inicializar estructura si no existe
-        if (!newAppliedVotes[partyId]) {
-          newAppliedVotes[partyId] = {};
-        }
-        if (!newAppliedVotes[partyId][casillaNumber]) {
-          newAppliedVotes[partyId][casillaNumber] = 0;
-        }
-        
-        // Incrementar conteo aplicado
-        newAppliedVotes[partyId][casillaNumber] += 1;
-      });
-      
-      // Actualizar conteos de partidos
-      Object.keys(newAppliedVotes).forEach(partyId => {
-        const partyVotes = Object.values(newAppliedVotes[partyId]);
-        newPartyCounts[partyId] = partyVotes.reduce((sum, count) => sum + count, 0);
-      });
-      
-      console.log('🔄 Actualizando appliedVotes:', newAppliedVotes);
-      console.log('🔄 Actualizando partyCounts:', newPartyCounts);
-      setAppliedVotes(newAppliedVotes);
-      setPartyCounts(newPartyCounts);
-      setExpandedParty(null);
-      
-      // Incrementar número de papeleta
-      setPapeletaNumber(prev => prev + 1);
-      
-      // Iniciar nueva papeleta
-      if (escrutinioId) {
-        startPapeleta(escrutinioId, userId);
-      }
-    }
-  }, [userId, closePapeleta, escrutinioId, startPapeleta, appliedVotes, partyCounts, papeleta.votesBuffer, forceSave]);
-
-  // Handle anular papeleta
-  const handleAnularPapeleta = useCallback(async () => {
-    if (!userId) return;
-    
-    const success = await anularPapeleta(userId, 'Anulada por usuario');
-    if (success) {
-      // Recargar votos desde servidor para obtener conteos actualizados - REMOVIDO TEMPORALMENTE
-      // console.log('🔄 Recargando votos desde servidor después de anular papeleta');
-      // await loadVotesFromServer(escrutinioId!);
-      // Solo limpiar el grid actual, mantener marcas aplicadas
-      setExpandedParty(null);
-      
-      // Incrementar número de papeleta
-      setPapeletaNumber(prev => prev + 1);
-      
-      // Iniciar nueva papeleta
-      if (escrutinioId) {
-        startPapeleta(escrutinioId, userId);
-      }
-    }
-    setShowAnularConfirmation(false);
-  }, [userId, anularPapeleta, escrutinioId, startPapeleta]);
-
-  // Mostrar confirmación de anulación
-  const handleShowAnularConfirmation = useCallback(() => {
-    setShowAnularConfirmation(true);
-  }, []);
-
-  // Handle vote limit alert
-  const handleCloseVoteLimitAlert = useCallback(() => {
-    setShowVoteLimitAlert(false);
-  }, []);
-
-  const handleClosePapeletaFromAlert = useCallback(async () => {
-    if (!userId) return;
-    
-    setIsClosingPapeleta(true);
-    try {
-      await handleClosePapeleta();
-      setShowVoteLimitAlert(false);
-    } finally {
-      setIsClosingPapeleta(false);
-    }
-  }, [userId, handleClosePapeleta]);
-
-  const handleAnularPapeletaFromAlert = useCallback(async () => {
-    if (!userId) return;
-    
-    setIsClosingPapeleta(true);
-    try {
-      await handleAnularPapeleta();
-      setShowVoteLimitAlert(false);
-    } finally {
-      setIsClosingPapeleta(false);
-    }
-  }, [userId, handleAnularPapeleta]);
-
   // Get party by ID
   const getParty = (partyId: string) => diputadosData?.parties.find(p => p.id === partyId);
-
-  // Helper functions for applied votes
-  const isCasillaApplied = useCallback((partyId: string, casillaNumber: number): boolean => {
-    return appliedVotes[partyId]?.[casillaNumber] > 0;
-  }, [appliedVotes]);
-
-  const getCasillaAppliedCount = useCallback((partyId: string, casillaNumber: number): number => {
-    return appliedVotes[partyId]?.[casillaNumber] || 0;
-  }, [appliedVotes]);
 
   const getTotalPartyCount = useCallback((partyId: string): number => {
     // Usar el store legislativo directamente (como el presidencial)
@@ -611,81 +265,65 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     const file = event.target.files?.[0];
     if (file) {
       setActaImage(file);
+      console.log('📸 [LEGISLATIVE] Acta seleccionada:', file.name);
     }
   }, []);
 
-  const computeSHA256Hex = async (file: File): Promise<string> => {
-    const buf = await file.arrayBuffer();
-    const digest = await crypto.subtle.digest('SHA-256', buf);
-    const byteArray = Array.from(new Uint8Array(digest));
-    return byteArray.map((b) => b.toString(16).padStart(2, '0')).join('');
-  };
-
-  const toDataUrl = (file: File): Promise<string> =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-
-  const uploadEvidenceIfNeeded = async (): Promise<void> => {
-    console.log('📸 [LEGISLATIVO] uploadEvidenceIfNeeded called:', { 
-      actaImage: !!actaImage, 
-      escrutinioId,
-      actaImageDetails: actaImage ? {
-        name: actaImage.name,
-        size: actaImage.size,
-        type: actaImage.type
-      } : null
-    });
-    
+  const uploadEvidenceIfNeeded = useCallback(async (): Promise<string | null> => {
     if (!actaImage || !escrutinioId) {
-      console.log('📸 [LEGISLATIVO] No actaImage or escrutinioId, returning');
-      return;
+      console.log('📸 [LEGISLATIVE] No hay acta para subir');
+      return null;
     }
-    
+
     try {
-      console.log('📸 [LEGISLATIVO] Uploading evidence:', { fileName: actaImage.name, contentType: actaImage.type });
-      const presign = await axios.post('/api/upload/presign', {
+      setIsUploading(true);
+      console.log('📸 [LEGISLATIVE] Subiendo acta...');
+
+      // Intentar subir a S3 primero
+      const presignResponse = await axios.post('/api/upload/presign', {
         escrutinioId,
         fileName: actaImage.name,
-        contentType: actaImage.type || 'image/jpeg',
+        contentType: actaImage.type
       });
-      
-      console.log('📸 [LEGISLATIVO] Presign response:', presign.data);
-      
-      if (presign.data?.success) {
-        const { uploadUrl, publicUrl } = presign.data.data as { uploadUrl: string; publicUrl: string };
-        console.log('📸 [LEGISLATIVO] Uploading to:', uploadUrl);
-        await fetch(uploadUrl, {
-          method: 'PUT',
-          headers: { 'Content-Type': actaImage.type || 'image/jpeg' },
-          body: actaImage,
+
+      if (presignResponse.data?.success && presignResponse.data.presignedUrl) {
+        const { presignedUrl, publicUrl } = presignResponse.data;
+        
+        // Subir archivo a S3
+        await axios.put(presignedUrl, actaImage, {
+          headers: { 'Content-Type': actaImage.type }
         });
-        console.log('📸 [LEGISLATIVO] Upload successful, publicUrl:', publicUrl);
-        const hash = await computeSHA256Hex(actaImage);
-        console.log('📸 [LEGISLATIVO] Saving evidence to database...');
-        await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/evidence`, { publicUrl, hash });
-        console.log('📸 [LEGISLATIVO] Evidence saved successfully');
-        return;
+
+        console.log('📸 [LEGISLATIVE] Acta subida a S3:', publicUrl);
+        return publicUrl;
       }
     } catch (error) {
-      console.error('📸 [LEGISLATIVO] S3 upload failed, trying fallback:', error);
+      console.error('📸 [LEGISLATIVE] Error subiendo a S3:', error);
     }
-    
+
+    // Fallback: convertir a dataUrl
     try {
-      console.log('📸 [LEGISLATIVO] Using fallback: converting to dataUrl');
+      console.log('📸 [LEGISLATIVE] Usando fallback: convirtiendo a dataUrl');
+      const toDataUrl = (file: File): Promise<string> => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      };
+      
       const dataUrl = await toDataUrl(actaImage);
-      const hash = await computeSHA256Hex(actaImage);
-      console.log('📸 [LEGISLATIVO] Fallback successful, dataUrl length:', dataUrl.length);
-      console.log('📸 [LEGISLATIVO] Saving fallback evidence to database...');
-      await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/evidence`, { publicUrl: dataUrl, hash });
-      console.log('📸 [LEGISLATIVO] Fallback evidence saved successfully');
+      console.log('📸 [LEGISLATIVE] Fallback exitoso, dataUrl length:', dataUrl.length);
+      return dataUrl;
     } catch (error) {
-      console.error('📸 [LEGISLATIVO] Fallback also failed:', error);
+      console.error('📸 [LEGISLATIVE] Fallback también falló:', error);
+    } finally {
+      setIsUploading(false);
     }
-  };
+
+    return null;
+  }, [actaImage, escrutinioId]);
 
   const handleCompleteEscrutinio = useCallback(async () => {
     if (!escrutinioId) {
@@ -724,189 +362,43 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
       return;
     }
     
-    console.log('🔄 Cerrando escrutinio:', escrutinioId);
+    console.log('🔄 [LEGISLATIVE] Cerrando escrutinio:', escrutinioId);
     setIsClosing(true);
-    setError(null); // Limpiar errores anteriores
+    setError(null);
     
     try {
       // Cerrar escrutinio (los votos ya están guardados por el store)
       const response = await axios.post(`/api/escrutinio/${escrutinioId}/close`);
-      console.log('✅ Escrutinio cerrado exitosamente:', response.data);
+      console.log('✅ [LEGISLATIVE] Escrutinio cerrado exitosamente:', response.data);
       
       setEscrutinioStatus('CLOSED');
       setIsEscrutinioClosed(true);
     } catch (error: any) {
-      console.error('❌ Error cerrando escrutinio:', error);
+      console.error('❌ [LEGISLATIVE] Error cerrando escrutinio:', error);
       const errorMessage = error?.response?.data?.error || error?.message || 'Error cerrando escrutinio';
       setError(errorMessage);
-      
-      // Mostrar error al usuario
       alert(`Error cerrando escrutinio: ${errorMessage}`);
     } finally {
       setIsClosing(false);
-      console.log('🔄 Estado isClosing reseteado');
     }
   }, [escrutinioId]);
 
-  // Función para reabrir escrutinio (editar)
-  const handleReopenEscrutinio = useCallback(async () => {
-    if (!escrutinioId) {
-      setError('No hay escrutinio activo');
-      return;
-    }
-    
-    console.log('🔄 Reabriendo escrutinio:', escrutinioId);
-    setIsReopening(true);
-    setError(null); // Limpiar errores anteriores
-    
-    try {
-      const response = await axios.post(`/api/escrutinio/${escrutinioId}/reopen`);
-      console.log('✅ Escrutinio reabierto exitosamente:', response.data);
-      
-      setEscrutinioStatus('COMPLETED');
-      setIsEscrutinioClosed(false);
-      
-      // Recargar los datos del escrutinio para sincronizar con el servidor
-      console.log('🔄 Recargando datos del escrutinio después de reabrir...');
-      await loadEscrutinioData();
-    } catch (error: any) {
-      console.error('❌ Error reabriendo escrutinio:', error);
-      const errorMessage = error?.response?.data?.error || error?.message || 'Error reabriendo escrutinio';
-      setError(errorMessage);
-      
-      // Mostrar error al usuario
-      alert(`Error reabriendo escrutinio: ${errorMessage}`);
-    } finally {
-      setIsReopening(false);
-      console.log('🔄 Estado isReopening reseteado');
-    }
-  }, [escrutinioId]);
-
-  // Función para cargar datos del escrutinio desde el servidor
-  const loadEscrutinioData = useCallback(async () => {
-    if (!escrutinioId) return;
-    
-    try {
-      console.log('🔄 Cargando datos del escrutinio desde servidor:', escrutinioId);
-      const response = await axios.get(`/api/escrutinio/${escrutinioId}/papeletas`);
-      
-      if (response.data.success) {
-        const data = response.data.data;
-        console.log('✅ Datos cargados del servidor:', data);
-        
-        // Actualizar estados con los datos del servidor
-        setPartyCounts(data.partyCounts || {});
-        setAppliedVotes(data.appliedVotes || {});
-        setPapeletaNumber(data.papeletaNumber || 1);
-        setEscrutinioStatus(data.escrutinioStatus || 'COMPLETED');
-        setIsEscrutinioClosed(data.escrutinioStatus === 'CLOSED');
-        setHasEdits(data.hasEdits || false);
-        setEditCount(data.editCount || 0);
-        
-        console.log('🔄 Estados actualizados desde servidor');
-      }
-    } catch (error: any) {
-      console.error('❌ Error cargando datos del escrutinio:', error);
-    }
-  }, [escrutinioId]);
-
-  // Función para limpiar datos locales al crear nuevo escrutinio
-  const clearLocalData = useCallback(() => {
-    console.log('🧹 Limpiando datos locales para nuevo escrutinio');
-    setPartyCounts({});
-    setAppliedVotes({});
-    setPapeletaNumber(1);
-    setEscrutinioStatus('COMPLETED');
-    setIsEscrutinioClosed(false);
-    setHasEdits(false);
-    setEditCount(0);
-  }, []);
-
-  // Detectar si es un nuevo escrutinio o uno existente (solo al montar el componente)
-  useEffect(() => {
-    if (!escrutinioId) return;
-    
-    // Verificar si el escrutinio ya tiene papeletas (existe) o es nuevo
-    const checkEscrutinioExists = async () => {
-      try {
-        console.log('🔍 Verificando si escrutinio existe:', escrutinioId);
-        const response = await axios.get(`/api/escrutinio/${escrutinioId}/papeletas`);
-        
-        if (response.data.success) {
-          const data = response.data.data;
-          const hasExistingData = data.totalPapeletas > 0 || data.hasEdits;
-          
-          if (hasExistingData) {
-            console.log('📂 Escrutinio existente encontrado, cargando datos...');
-            await loadEscrutinioData();
-          } else {
-            console.log('🆕 Nuevo escrutinio detectado, limpiando datos locales...');
-            clearLocalData();
-          }
-        }
-      } catch (error: any) {
-        console.log('🆕 Error al verificar escrutinio, asumiendo nuevo escrutinio:', error.message);
-        clearLocalData();
-      }
-    };
-    
-    checkEscrutinioExists();
-  }, [escrutinioId]); // Removido loadEscrutinioData y clearLocalData de dependencias para evitar loops
-
-  // Render party cards (initial view)
-  const renderPartyCards = () => {
-    if (!diputadosData) return null;
-
-    return (
-      <div className="space-y-3">
-        {diputadosData.parties.map((party) => (
-          <button
-            key={party.id}
-            onClick={() => handlePartyClick(party.id)}
-            className={clsx(
-              'w-full flex items-center rounded-lg border focus:outline-none focus:ring-2 transition-transform',
-              'active:scale-[0.98] touch-manipulation select-none',
-              'min-h-[60px]', // Altura mínima para mejor toque
-              isEscrutinioClosed 
-                ? 'bg-gray-50 opacity-60 cursor-pointer' // Transparente pero clickeable
-                : 'bg-white shadow-sm hover:shadow-md' // Normal con hover
-            )}
-            style={{ borderLeftWidth: 6, borderLeftColor: party.color }}
-          >
-            <div className="flex-1 p-3 sm:p-4 text-left">
-              <div className="flex items-center justify-between">
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm sm:text-base font-semibold text-gray-900 truncate">{party.fullName}</div>
-                  <div className="text-xs sm:text-sm text-gray-600">Casillas {party.slotRange}</div>
-                </div>
-                <div className="flex items-center gap-2 ml-3">
-                  <span className="text-xl sm:text-2xl font-bold tabular-nums" aria-live="polite">
-                    {getTotalPartyCountFormatted(party.id)}
-                  </span>
-                  <div className="text-sm text-gray-500">+</div>
-                </div>
-              </div>
-            </div>
-          </button>
-        ))}
-      </div>
-    );
-  };
-
-  // Render grid of dynamic slots based on department
+  // Render grid for expanded party
   const renderGrid = () => {
     if (!expandedParty || !diputadosData) return null;
     
     const party = getParty(expandedParty);
     if (!party) return null;
-    
-    // Calcular número de columnas responsive para el grid
-    const columns = Math.min(4, party.slots); // Máximo 4 columnas en móvil
+
+    const currentIndex = diputadosData.parties.findIndex(p => p.id === expandedParty);
+    const prevParty = currentIndex > 0 ? diputadosData.parties[currentIndex - 1] : null;
+    const nextParty = currentIndex < diputadosData.parties.length - 1 ? diputadosData.parties[currentIndex + 1] : null;
+
+    const columns = Math.min(party.slots, 8);
     const rows = Math.ceil(party.slots / columns);
     
     return (
       <div className="space-y-4">
-        {/* Header with party info and navigation - Responsive */}
         {/* Party Navigation Numbers */}
         <div className="flex justify-center mb-4">
           <div className="flex items-center gap-2">
@@ -934,8 +426,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
           </div>
         </div>
 
-        <div className="flex flex-col gap-4">
-          {/* Header con título del partido */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <button
               onClick={handleBack}
@@ -950,63 +441,59 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
             </div>
           </div>
           
-          {/* Fila con Total, Flechas centradas, y Partidos */}
-          <div className="flex items-center justify-between gap-4">
-            {/* Total a la izquierda */}
+          {/* Centered Navigation arrows */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handlePreviousParty}
+              disabled={!diputadosData || diputadosData.parties.findIndex(p => p.id === expandedParty) === 0}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              aria-label="Partido anterior"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span className="text-sm font-medium hidden sm:inline">
+                {(() => {
+                  if (!diputadosData || !expandedParty) return '';
+                  const currentIndex = diputadosData.parties.findIndex(p => p.id === expandedParty);
+                  if (currentIndex > 0) {
+                    const prevParty = diputadosData.parties[currentIndex - 1];
+                    const firstCasilla = prevParty.casillas[0];
+                    const lastCasilla = prevParty.casillas[prevParty.casillas.length - 1];
+                    return `${prevParty.fullName} (${firstCasilla}-${lastCasilla})`;
+                  }
+                  return '';
+                })()}
+              </span>
+            </button>
+            <button
+              onClick={handleNextParty}
+              disabled={!diputadosData || diputadosData.parties.findIndex(p => p.id === expandedParty) === diputadosData.parties.length - 1}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              aria-label="Siguiente partido"
+            >
+              <span className="text-sm font-medium hidden sm:inline">
+                {(() => {
+                  if (!diputadosData || !expandedParty) return '';
+                  const currentIndex = diputadosData.parties.findIndex(p => p.id === expandedParty);
+                  if (currentIndex < diputadosData.parties.length - 1) {
+                    const nextParty = diputadosData.parties[currentIndex + 1];
+                    const firstCasilla = nextParty.casillas[0];
+                    const lastCasilla = nextParty.casillas[nextParty.casillas.length - 1];
+                    return `${nextParty.fullName} (${firstCasilla}-${lastCasilla})`;
+                  }
+                  return '';
+                })()}
+              </span>
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
+          
+          <div className="flex items-center justify-between sm:justify-end gap-4">
             <div className="text-right">
               <div className="text-xl sm:text-2xl font-bold" style={{ color: party.color }}>
                 {getTotalPartyCountFormatted(expandedParty)}
               </div>
               <div className="text-xs text-gray-500">Total</div>
             </div>
-            
-            {/* Flechas centradas */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handlePreviousParty}
-                disabled={!diputadosData || diputadosData.parties.findIndex(p => p.id === expandedParty) === 0}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                aria-label="Partido anterior"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                <span className="text-sm font-medium hidden sm:inline">
-                  {(() => {
-                    if (!diputadosData || !expandedParty) return '';
-                    const currentIndex = diputadosData.parties.findIndex(p => p.id === expandedParty);
-                    if (currentIndex > 0) {
-                      const prevParty = diputadosData.parties[currentIndex - 1];
-                      const firstCasilla = prevParty.casillas[0];
-                      const lastCasilla = prevParty.casillas[prevParty.casillas.length - 1];
-                      return `${prevParty.fullName} (${firstCasilla}-${lastCasilla})`;
-                    }
-                    return '';
-                  })()}
-                </span>
-              </button>
-              <button
-                onClick={handleNextParty}
-                disabled={!diputadosData || diputadosData.parties.findIndex(p => p.id === expandedParty) === diputadosData.parties.length - 1}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                aria-label="Siguiente partido"
-              >
-                <span className="text-sm font-medium hidden sm:inline">
-                  {(() => {
-                    if (!diputadosData || !expandedParty) return '';
-                    const currentIndex = diputadosData.parties.findIndex(p => p.id === expandedParty);
-                    if (currentIndex < diputadosData.parties.length - 1) {
-                      const nextParty = diputadosData.parties[currentIndex + 1];
-                      const firstCasilla = nextParty.casillas[0];
-                      const lastCasilla = nextParty.casillas[nextParty.casillas.length - 1];
-                      return `${nextParty.fullName} (${firstCasilla}-${lastCasilla})`;
-                    }
-                    return '';
-                  })()}
-                </span>
-                <ArrowRight className="h-4 w-4" />
-              </button>
-            </div>
-            
-            {/* Botón Partidos a la derecha */}
             <button
               onClick={handleBack}
               className="px-4 py-3 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg active:bg-gray-50 transition-colors whitespace-nowrap touch-manipulation select-none min-h-[44px]"
@@ -1030,12 +517,12 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
                   'aspect-square rounded-lg border-2 transition-all duration-150 relative',
                   'focus:outline-none focus:ring-2 focus:ring-offset-2',
                   'text-sm font-medium flex items-center justify-center',
-                  'min-h-[60px] sm:min-h-[70px]', // Más grande para mejor toque
-                  'touch-manipulation', // Optimización para touch
-                  'select-none', // Evitar selección de texto
+                  'min-h-[60px] sm:min-h-[70px]',
+                  'touch-manipulation',
+                  'select-none',
                   isEscrutinioClosed 
-                    ? 'opacity-50 cursor-not-allowed' // Transparente y no clickeable
-                    : 'active:scale-95', // Animación normal solo si no está cerrado
+                    ? 'opacity-50 cursor-not-allowed'
+                    : 'active:scale-95',
                   isSelected
                     ? 'border-solid shadow-md' 
                     : 'border-dashed'
@@ -1043,11 +530,11 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
                 style={{
                   borderColor: party.color,
                   backgroundColor: isSelected
-                    ? `${party.color}25`  // Color solo para selección actual (papeleta abierta)
-                    : 'transparent',      // Sin votos en papeleta actual = transparente
+                    ? `${party.color}25`
+                    : 'transparent',
                   color: isSelected ? party.color : '#374151',
                   '--tw-ring-color': party.color,
-                  borderWidth: isSelected ? '3px' : '2px' // Borde más grueso para seleccionadas
+                  borderWidth: isSelected ? '3px' : '2px'
                 } as React.CSSProperties}
               >
                 <div className="flex flex-col items-center justify-center">
@@ -1056,14 +543,9 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
                     <div 
                       className={clsx(
                         "absolute -top-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 rounded-full text-xs font-bold text-white flex items-center justify-center shadow-lg border-2 border-white",
-                        isSelected && bufferVoteCount > 0 ? "ring-2 ring-white ring-offset-1" : ""
+                        isSelected ? "bg-blue-600" : "bg-gray-500"
                       )}
-                      style={{ 
-                        backgroundColor: party.color,
-                        boxShadow: isSelected && bufferVoteCount > 0 
-                          ? `0 0 0 3px ${party.color}60, 0 2px 8px ${party.color}40`
-                          : `0 2px 8px ${party.color}40`
-                      }}
+                      style={{ backgroundColor: party.color }}
                     >
                       {totalVoteCount}
                     </div>
@@ -1073,479 +555,222 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
             );
           })}
         </div>
-
-        {/* Instructions */}
-        <div className="text-center text-sm text-gray-500 mb-4">
-          Toca una casilla para seleccionar/deseleccionar diputado
-        </div>
-
-        {/* Papeleta Status and Controls - Moved up for mobile */}
-        {papeleta.status === 'OPEN' && (
-          <div className="mt-6 p-6 bg-blue-50 rounded-lg border border-blue-200">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-blue-600" />
-                <span className="text-sm font-medium text-blue-900">Papeleta número: {papeletaNumber}</span>
-              </div>
-              <span className="text-sm text-blue-700">
-                Marcas: {papeleta.votesBuffer.length} / {diputadosData?.diputados || 0}
-              </span>
-            </div>
-            
-            <div className="flex flex-col sm:flex-row gap-2">
-              <button
-                onClick={handleClosePapeleta}
-                disabled={papeletaLoading}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
-              >
-                <Check className="h-4 w-4" />
-                <span className="hidden sm:inline">Cerrar Papeleta</span>
-                <span className="sm:hidden">Cerrar Papeleta</span>
-              </button>
-              <button
-                onClick={handleShowAnularConfirmation}
-                disabled={papeletaLoading}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
-              >
-                <X className="h-4 w-4" />
-                <span className="hidden sm:inline">Anular Papeleta</span>
-                <span className="sm:hidden">Anular Papeleta</span>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Legend - Moved down for mobile */}
-        <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-6 text-xs text-gray-600">
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded border-2 border-dashed" style={{ borderColor: party.color }}></div>
-            <span>Sin marcas</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded border-2 border-solid" style={{ borderColor: party.color }}></div>
-            <span>Con marcas</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded border-2 border-solid" style={{ borderColor: party.color, backgroundColor: `${party.color}25` }}></div>
-            <span>Seleccionado actual</span>
-          </div>
-        </div>
-
-        {/* Papeleta Error */}
-        {papeletaError && (
-          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-sm text-red-700">{papeletaError}</p>
-          </div>
-        )}
       </div>
     );
   };
 
-  // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-primary-600 mx-auto mb-4" />
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
           <p className="text-gray-600">Cargando datos de diputados...</p>
         </div>
       </div>
     );
   }
 
-  // Error state
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto p-6">
-          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-lg font-semibold text-gray-900 mb-2">Error</h2>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-          >
-            Reintentar
-          </button>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <AlertCircle className="h-12 w-12 text-red-500" />
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Error</h3>
+            <p className="text-gray-600">{error}</p>
+          </div>
         </div>
       </div>
     );
   }
 
-  // No data state
   if (!diputadosData) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600">No se encontraron datos de diputados</p>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <AlertCircle className="h-12 w-12 text-gray-400" />
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">No hay datos</h3>
+            <p className="text-gray-600">No se encontraron datos para esta JRV</p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="max-w-7xl mx-auto p-4 sm:p-6">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-14 lg:h-16">
-            <div className="flex items-center gap-4">
-              <h1 className="text-lg lg:text-xl font-semibold text-gray-900">
-                <span className="hidden sm:inline">Escrutinio de Diputados</span>
-                <span className="sm:hidden">Diputados</span>
-              </h1>
-              {papeleta.status === 'OPEN' && (
-              <div className="flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
-                <FileText className="h-4 w-4" />
-                Papeleta #{papeletaNumber}
-                {isAutoSaving && (
-                  <div className="flex items-center gap-1 text-xs">
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    <span>Guardando...</span>
-                  </div>
-                )}
-                {lastSaveTime && !isAutoSaving && (
-                  <div className="text-xs text-green-600">
-                    <CheckCircle className="h-3 w-3 inline mr-1" />
-                    Guardado
-                  </div>
-                )}
-              </div>
-              )}
-            </div>
-            <div className="text-right">
-              <div className="text-sm text-gray-600">
-                {diputadosData.jrv.jrv}
-              </div>
-              <div className="text-xs text-gray-500">
-                {diputadosData.jrv.departamento}
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-3 sm:px-6 lg:px-8 py-4 lg:py-8 pb-20 sm:pb-8">
-        <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border">
-          <div className="mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">
-              {expandedParty ? 'Selección de Diputado' : 'Marcas por Diputado'}
-              {isEscrutinioClosed && (
-                <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                  Cerrado
-                </span>
-              )}
-              {hasEdits && (
-                <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                  Editado ({editCount}x)
-                </span>
-              )}
-            </h2>
-            <p className="text-sm text-gray-600">
-              {diputadosData.jrv.nombre} - {diputadosData.jrv.departamento}
-            </p>
-          </div>
-          
-          {papeleta.status === 'OPEN' ? (
-            expandedParty ? renderGrid() : renderPartyCards()
-          ) : (
-            <div className="text-center py-8">
-              <AlertCircle className="h-12 w-12 text-amber-500 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No hay papeleta abierta</h3>
-              <p className="text-gray-600 mb-4">
-                {papeleta.status === null ? 'Inicializando papeleta...' : 'Necesitas abrir una nueva papeleta para comenzar el conteo.'}
-              </p>
-              {papeleta.status !== null && (
-                <button
-                  onClick={() => startPapeleta(escrutinioId!, userId!)}
-                  disabled={loading}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors font-medium"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin mr-2 inline" />
-                      Abriendo...
-                    </>
-                  ) : (
-                    'Abrir Nueva Papeleta'
-                  )}
-                </button>
-              )}
-            </div>
-          )}
-          
-          {/* Sección de Foto y Cierre de Escrutinio */}
-          {!expandedParty && (
-            <div className="mt-8 space-y-4">
-              {/* Papeleta Status and Controls - Show when papeleta is open */}
-              {papeleta.status === 'OPEN' && (
-                <div className="p-6 bg-blue-50 rounded-lg border border-blue-200">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <FileText className="h-5 w-5 text-blue-600" />
-                      <span className="text-sm font-medium text-blue-900">Papeleta número: {papeletaNumber}</span>
-                    </div>
-                    <span className="text-sm text-blue-700">
-                      Marcas: {papeleta.votesBuffer.length} / {diputadosData?.diputados || 0}
-                    </span>
-                  </div>
-                  
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <button
-                      onClick={handleClosePapeleta}
-                      disabled={papeletaLoading}
-                      className="flex-1 flex items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
-                    >
-                      <Check className="h-4 w-4" />
-                      <span>Cerrar Papeleta</span>
-                    </button>
-                    <button
-                      onClick={handleShowAnularConfirmation}
-                      disabled={papeletaLoading}
-                      className="flex-1 flex items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
-                    >
-                      <X className="h-4 w-4" />
-                      <span>Anular Papeleta</span>
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Control de Escrutinio */}
-              <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
-                <h3 className="text-lg font-semibold text-blue-900 mb-3 flex items-center gap-2">
-                  <Upload className="h-5 w-5" />
-                  Control de Escrutinio
-                </h3>
-                
-                {/* Estado: En progreso - Mostrar botón Cerrar Escrutinio */}
-                {escrutinioStatus === 'COMPLETED' && !isEscrutinioClosed && (
-                  <>
-                    <p className="text-sm text-blue-700 mb-4">
-                      Una vez que hayas completado el conteo de todas las papeletas, puedes cerrar el escrutinio para pausar las ediciones.
-                    </p>
-                    <button
-                      onClick={handleCloseEscrutinio}
-                      disabled={isClosing}
-                      className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-                    >
-                      {isClosing ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Cerrando...
-                        </>
-                      ) : (
-                        <>
-                          <AlertCircle className="h-4 w-4" />
-                          Cerrar Escrutinio
-                        </>
-                      )}
-                    </button>
-                  </>
-                )}
-
-              {/* Estado: Cerrado - Mostrar solo opción para Editar */}
-              {escrutinioStatus === 'CLOSED' && (
-                <>
-                  <div className="bg-orange-100 border border-orange-300 rounded-lg p-3 mb-4">
-                    <div className="flex items-center gap-2 text-orange-800">
-                      <AlertCircle className="h-4 w-4" />
-                      <span className="font-medium">Escrutinio Cerrado</span>
-                    </div>
-                    <p className="text-sm text-orange-700 mt-1">
-                      Este escrutinio está pausado. Los votos están congelados. Puedes reabrir para editar o finalizar definitivamente después de subir la foto del acta.
-                    </p>
-                    {hasEdits && (
-                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
-                        <div className="flex items-center gap-2">
-                          <span className="text-yellow-600">⚠️</span>
-                          <span className="text-sm font-medium text-yellow-800">
-                            Este escrutinio ha sido editado {editCount} vez(es) después de cerrarse
-                          </span>
-                        </div>
-                        <p className="text-xs text-yellow-700 mt-1">
-                          Los administradores pueden ver tanto la versión original como la versión editada.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <button
-                    onClick={handleReopenEscrutinio}
-                    disabled={isReopening}
-                    className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-                  >
-                    {isReopening ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Reabriendo...
-                      </>
-                    ) : (
-                      <>
-                        <FileText className="h-4 w-4" />
-                        Editar Escrutinio
-                      </>
-                    )}
-                  </button>
-                </>
-              )}
-              </div>
-
-              {/* Subir Foto del Acta */}
-              <div className="bg-gray-50 p-6 rounded-lg border">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                  <Camera className="h-5 w-5" />
-                  Foto del Acta
-                </h3>
-                <div className="space-y-3">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleActaUpload}
-                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                  />
-                  {actaImage && (
-                    <div className="flex items-center gap-2 text-sm text-green-600">
-                      <Check className="h-4 w-4" />
-                      <span>Foto seleccionada: {actaImage.name}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Botón Finalizar Escrutinio - Cuando está en progreso o cerrado */}
-              {(escrutinioStatus === 'COMPLETED' && !isEscrutinioClosed) || (escrutinioStatus === 'CLOSED') ? (
-                <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
-                  <h3 className="text-lg font-semibold text-blue-900 mb-3 flex items-center gap-2">
-                    <Check className="h-5 w-5" />
-                    Enviar Resultados
-                  </h3>
-                  <p className="text-sm text-blue-700 mb-4">
-                    {escrutinioStatus === 'CLOSED' 
-                      ? 'El escrutinio está cerrado. Puedes finalizar definitivamente después de subir la foto del acta.'
-                      : 'Una vez que hayas subido la foto del acta, puedes finalizar definitivamente el escrutinio.'
-                    }
-                  </p>
-                  <button
-                    onClick={handleCompleteEscrutinio}
-                    disabled={isCompleting || isUploading}
-                    className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-                  >
-                    {isCompleting ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Finalizando...
-                      </>
-                    ) : (
-                      <>
-                        <Check className="h-4 w-4" />
-                        Enviar Resultados
-                      </>
-                    )}
-                  </button>
-                </div>
-              ) : null}
-            </div>
-          )}
-        </div>
+      <div className="mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+          Conteo de Diputados - JRV {diputadosData.jrv.jrv}
+        </h1>
+        <p className="text-gray-600">
+          {diputadosData.jrv.nombre} • {diputadosData.jrv.departamento}
+        </p>
+        <p className="text-sm text-gray-500">
+          {diputadosData.diputados} diputados • {diputadosData.parties.length} partidos
+        </p>
       </div>
 
-      {/* +1 Animation */}
+      {/* Animation */}
       {animation.show && (
         <div
           className="fixed pointer-events-none z-50"
           style={{
             left: animation.x - 20,
             top: animation.y - 20,
-            transform: 'translate(-50%, -50%)'
+            transform: 'translate(-50%, -50%)',
           }}
         >
-          <div
-            className={clsx(
-              'text-2xl font-bold text-white px-3 py-1 rounded-full shadow-lg',
-              'animate-pulse'
-            )}
-            style={{ backgroundColor: getParty(animation.partyId)?.color || '#10b981' }}
-          >
-            +1
+          <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold animate-ping">
+            +
           </div>
         </div>
       )}
 
-      {/* Vote Limit Alert */}
-      <VoteLimitAlert
-        isVisible={showVoteLimitAlert}
-        currentVotes={getTotalVotesInBuffer()}
-        voteLimit={diputadosData?.diputados || 0}
-        onClose={handleCloseVoteLimitAlert}
-        onClosePapeleta={handleClosePapeletaFromAlert}
-        onAnularPapeleta={handleAnularPapeletaFromAlert}
-        isClosingPapeleta={isClosingPapeleta}
-      />
-
-      {/* Modal de Confirmación de Anulación */}
-      {showAnularConfirmation && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <div className="text-center">
-              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
-                <X className="h-6 w-6 text-red-600" />
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                Confirmar Anulación
-              </h3>
-              <p className="text-sm text-gray-600 mb-6">
-                ¿Seguro que deseas anular esta papeleta?
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowAnularConfirmation(false)}
-                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleAnularPapeleta}
-                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                >
-                  Confirmar
-                </button>
+      {/* Main Content */}
+      {!expandedParty ? (
+        // Party Selection View
+        <div className="space-y-4">
+          {diputadosData.parties.map((party) => (
+            <div key={party.id}>
+              <div
+                className="w-full flex items-center rounded-lg border focus:outline-none focus:ring-2 transition-transform bg-gray-50 opacity-60 cursor-pointer"
+                onClick={() => handlePartyClick(party.id)}
+                style={{ borderLeftWidth: 6, borderLeftColor: party.color }}
+              >
+                <div className="flex-1 p-3 sm:p-4 text-left">
+                  <div className="flex items-center justify-between">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm sm:text-base font-semibold text-gray-900 truncate">{party.fullName}</div>
+                      <div className="text-xs sm:text-sm text-gray-600">Casillas {party.slotRange}</div>
+                    </div>
+                    <div className="flex items-center gap-2 ml-3">
+                      <span className="text-xl sm:text-2xl font-bold tabular-nums" aria-live="polite">
+                        {getTotalPartyCountFormatted(party.id)}
+                      </span>
+                      <div className="text-sm text-gray-500">+</div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
+          ))}
         </div>
+      ) : (
+        // Grid View
+        renderGrid()
       )}
 
-      {/* Modal de Confirmación de Envío */}
+      {/* Action Cards */}
+      <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Cerrar Escrutinio */}
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="p-2 bg-orange-100 rounded-lg">
+              <X className="h-5 w-5 text-orange-600" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-900">Cerrar Escrutinio</h3>
+              <p className="text-sm text-gray-600">Pausar temporalmente</p>
+            </div>
+          </div>
+          <button
+            onClick={handleCloseEscrutinio}
+            disabled={isClosing || isEscrutinioClosed}
+            className="w-full px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {isClosing ? <Loader2 className="h-4 w-4 animate-spin mx-auto" /> : 'Cerrar Escrutinio'}
+          </button>
+        </div>
+
+        {/* Foto del Acta */}
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <Camera className="h-5 w-5 text-blue-600" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-900">Foto del Acta</h3>
+              <p className="text-sm text-gray-600">Subir evidencia</p>
+            </div>
+          </div>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleActaUpload}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+          />
+          {actaImage && (
+            <p className="text-xs text-green-600 mt-1">✓ {actaImage.name}</p>
+          )}
+        </div>
+
+        {/* Enviar Resultados */}
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="p-2 bg-green-100 rounded-lg">
+              <Check className="h-5 w-5 text-green-600" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-900">Enviar Resultados</h3>
+              <p className="text-sm text-gray-600">Finalizar escrutinio</p>
+            </div>
+          </div>
+          <button
+            onClick={handleCompleteEscrutinio}
+            disabled={isCompleting || isEscrutinioClosed}
+            className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {isCompleting ? <Loader2 className="h-4 w-4 animate-spin mx-auto" /> : 'Enviar Resultados'}
+          </button>
+        </div>
+
+        {/* Control de Escrutinio */}
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="p-2 bg-purple-100 rounded-lg">
+              <FileText className="h-5 w-5 text-purple-600" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-900">Control</h3>
+              <p className="text-sm text-gray-600">Estado del escrutinio</p>
+            </div>
+          </div>
+          <div className="text-sm">
+            <p className="text-gray-600">Estado: <span className="font-medium">{escrutinioStatus}</span></p>
+            <p className="text-gray-600">Total votos: <span className="font-medium">{Object.values(counts).reduce((sum, count) => sum + count, 0)}</span></p>
+          </div>
+        </div>
+      </div>
+
+      {/* Success Modal */}
       {showSuccessModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <div className="text-center">
-              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-green-100 rounded-lg">
                 <CheckCircle className="h-6 w-6 text-green-600" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                ¡Envío exitoso!
-              </h3>
-              <p className="text-sm text-gray-600 mb-6">
-                El escrutinio legislativo ha sido finalizado correctamente. Los resultados han sido registrados en el sistema.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <button
-                  onClick={() => router.push('/dashboard')}
-                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-medium"
-                >
-                  Volver al Dashboard
-                </button>
-                <button
-                  onClick={handleReviewEscrutinio}
-                  className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
-                >
-                  Revisar Escrutinio
-                </button>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">¡Escrutinio Completado!</h3>
+                <p className="text-sm text-gray-600">Los resultados han sido enviados exitosamente</p>
               </div>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={handleReviewEscrutinio}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Revisar Resultados
+              </button>
+              <button
+                onClick={() => setShowSuccessModal(false)}
+                className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+              >
+                Cerrar
+              </button>
             </div>
           </div>
         </div>
