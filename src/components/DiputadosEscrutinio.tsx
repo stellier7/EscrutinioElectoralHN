@@ -579,8 +579,8 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
         {/* Dynamic Grid - Responsive */}
         <div className="grid gap-3 grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8">
           {party.casillas.map((casillaNumber, index) => {
-            const totalVoteCount = getCasillaCount(expandedParty, casillaNumber);
-            const isSelected = totalVoteCount > 0;
+            const isSelected = isCasillaSelected(expandedParty, casillaNumber);
+            const voteCount = getCasillaVoteCount(expandedParty, casillaNumber);
             
             return (
               <button
@@ -620,7 +620,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
                       )}
                       style={{ backgroundColor: party.color }}
                     >
-                      {totalVoteCount}
+                      {voteCount}
                     </div>
                   )}
                 </div>
@@ -719,7 +719,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-4 sm:p-6">
+    <div className="max-w-7xl mx-auto p-4 sm:p-6 pb-20 sm:pb-6">
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
