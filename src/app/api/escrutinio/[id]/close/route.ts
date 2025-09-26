@@ -143,7 +143,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       where: { id: escrutinioId },
       data: { 
         status: 'CLOSED',
-        ...(originalData && { originalData })
+        ...(originalData && { originalData: originalData })
       },
     });
 

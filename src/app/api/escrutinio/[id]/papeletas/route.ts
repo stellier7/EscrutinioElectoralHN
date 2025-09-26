@@ -98,7 +98,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         escrutinioStatus: escrutinio.status,
         hasEdits: escrutinio.hasEdits,
         editCount: escrutinio.editCount,
-        originalData: escrutinio.originalData
+        originalData: escrutinio.originalData || null
       }
     });
 
