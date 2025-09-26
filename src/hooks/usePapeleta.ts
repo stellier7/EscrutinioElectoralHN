@@ -159,10 +159,24 @@ export function usePapeleta(): UsePapeletaReturn {
       return false;
     }
 
-    try {
-      setIsLoading(true);
-      setError(null);
+    // 1. Actualizar estado local INMEDIATAMENTE (como el sistema presidencial)
+    const newVote: PapeletaVote = {
+      partyId,
+      casillaNumber,
+      timestamp: Date.now()
+    };
 
+    const updatedBuffer = [...papeleta.votesBuffer, newVote];
+    setPapeleta(prev => ({
+      ...prev,
+      votesBuffer: updatedBuffer
+    }));
+
+    console.log('✅ [PAPEleta] Voto agregado localmente:', newVote);
+    console.log('📊 [PAPEleta] Buffer actualizado:', updatedBuffer);
+
+    // 2. Guardar en servidor de forma asíncrona (sin bloquear UI)
+    try {
       const response = await axios.post(`/api/papeleta/${papeleta.id}/vote`, {
         partyId,
         casillaNumber,
@@ -170,27 +184,17 @@ export function usePapeleta(): UsePapeletaReturn {
       });
 
       if (response.data?.success) {
-        const newVote: PapeletaVote = {
-          partyId,
-          casillaNumber,
-          timestamp: Date.now()
-        };
-
-        setPapeleta(prev => ({
-          ...prev,
-          votesBuffer: [...prev.votesBuffer, newVote]
-        }));
+        console.log('✅ [PAPEleta] Voto guardado en servidor exitosamente');
         return true;
       } else {
-        setError(response.data?.error || 'Error al agregar marca');
-        return false;
+        console.error('❌ [PAPEleta] Error del servidor:', response.data?.error);
+        // No fallar el UI, el voto ya está en el estado local
+        return true;
       }
     } catch (err: any) {
-      console.error('Error adding mark to papeleta:', err);
-      setError(err?.response?.data?.error || 'Error al agregar marca');
-      return false;
-    } finally {
-      setIsLoading(false);
+      console.error('❌ [PAPEleta] Error guardando en servidor:', err);
+      // No fallar el UI, el voto ya está en el estado local
+      return true;
     }
   }, [papeleta.id, papeleta.status, papeleta.votesBuffer.length]);
 
@@ -204,8 +208,8 @@ export function usePapeleta(): UsePapeletaReturn {
       setIsLoading(true);
       setError(null);
 
-      console.log('🔒 Cerrando papeleta:', papeleta.id, 'con', papeleta.votesBuffer.length, 'votos');
-      console.log('🔒 VotesBuffer completo:', papeleta.votesBuffer);
+      console.log('🔒 [PAPEleta] Cerrando papeleta:', papeleta.id, 'con', papeleta.votesBuffer.length, 'votos');
+      console.log('🔒 [PAPEleta] VotesBuffer completo:', papeleta.votesBuffer);
 
       const response = await axios.post(`/api/papeleta/${papeleta.id}/close`, {
         userId,
@@ -217,7 +221,7 @@ export function usePapeleta(): UsePapeletaReturn {
           ...prev,
           status: 'CLOSED'
         }));
-        console.log('✅ Papeleta cerrada exitosamente');
+        console.log('✅ [PAPEleta] Papeleta cerrada exitosamente');
         return true;
       } else {
         setError(response.data?.error || 'Error al cerrar papeleta');
