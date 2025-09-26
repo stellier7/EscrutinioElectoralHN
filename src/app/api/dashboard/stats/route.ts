@@ -40,7 +40,9 @@ export async function GET(request: NextRequest) {
 
     const pendingEscrutinios = await prisma.escrutinio.count({
       where: { 
-        status: { not: 'COMPLETED' },
+        status: { 
+          notIn: ['COMPLETED', 'FAILED'] // Excluir completados y cancelados
+        },
         // Todos los usuarios ven estadísticas globales
       },
     });
