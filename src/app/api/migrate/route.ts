@@ -60,13 +60,47 @@ export async function POST(request: NextRequest) {
       }, { status: 500 });
     }
     
+    // Verificar si la columna originalData existe en la tabla escrutinio
+    try {
+      const testQuery = await prisma.$queryRaw`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'escrutinios' 
+        AND column_name = 'originalData'
+      `;
+      console.log('🔍 Verificando columna originalData:', testQuery);
+      
+      if (!testQuery || (testQuery as any[]).length === 0) {
+        console.log('⚠️ Columna originalData no existe, agregándola...');
+        
+        // Agregar la columna originalData
+        await prisma.$executeRaw`
+          ALTER TABLE escrutinios 
+          ADD COLUMN "originalData" JSONB
+        `;
+        console.log('✅ Columna originalData agregada exitosamente');
+      } else {
+        console.log('✅ Columna originalData ya existe');
+      }
+    } catch (error) {
+      console.error('❌ Error verificando/agregando columna originalData:', error);
+      return NextResponse.json({
+        success: false,
+        error: 'Error con columna originalData',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      }, { status: 500 });
+    }
+    
     return NextResponse.json({
       success: true,
-      message: 'Base de datos verificada exitosamente',
+      message: 'Base de datos verificada y arreglada exitosamente',
       tables: {
         escrutinio: 'OK',
         mesa: 'OK', 
         department: 'OK'
+      },
+      fixes: {
+        originalData: 'Column added/verified'
       }
     });
     
