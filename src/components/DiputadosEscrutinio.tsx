@@ -1006,7 +1006,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
                   isEscrutinioClosed 
                     ? 'opacity-50 cursor-not-allowed' // Transparente y no clickeable
                     : 'active:scale-95', // Animación normal solo si no está cerrado
-                  (isSelected || isApplied)
+                  isSelected
                     ? 'border-solid shadow-md' 
                     : 'border-dashed'
                 )}
