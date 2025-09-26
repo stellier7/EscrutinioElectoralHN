@@ -149,10 +149,10 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
             municipio: data.jrv.municipality
           };
 
-          // Usar los partidos que vienen del endpoint
+          // Usar los partidos que vienen del endpoint (mantener casillas originales)
           const parties = data.parties.map((party: any) => ({
-            ...party,
-            casillas: Array.from({ length: party.slots }, (_, i) => i + 1)
+            ...party
+            // No sobrescribir casillas - usar las que vienen del API
           }));
 
           setDiputadosData({
@@ -162,6 +162,16 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
           });
 
           console.log('✅ [LEGISLATIVE] Datos de diputados cargados desde endpoint correcto:', { jrvInfo, parties });
+          
+          // Debug: Log de cada partido y sus casillas
+          parties.forEach((party: any) => {
+            console.log(`🔍 [DEBUG] Partido ${party.fullName}:`, {
+              id: party.id,
+              slots: party.slots,
+              slotRange: party.slotRange,
+              casillas: party.casillas
+            });
+          });
         } else {
           setError('No se encontraron datos para esta JRV');
         }
