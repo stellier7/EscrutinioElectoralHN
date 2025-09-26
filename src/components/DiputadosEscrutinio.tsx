@@ -372,6 +372,19 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
         });
 
         console.log('📸 [LEGISLATIVE] Acta subida a S3:', publicUrl);
+        
+        // Guardar la URL en la base de datos
+        try {
+          const token = localStorage.getItem('token');
+          await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/evidence`, 
+            { publicUrl }, 
+            { headers: { 'Authorization': `Bearer ${token}` } }
+          );
+          console.log('📸 [LEGISLATIVE] URL guardada en base de datos');
+        } catch (error) {
+          console.error('📸 [LEGISLATIVE] Error guardando URL en DB:', error);
+        }
+        
         return publicUrl;
       }
     } catch (error) {
@@ -392,6 +405,19 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
       
       const dataUrl = await toDataUrl(actaImage);
       console.log('📸 [LEGISLATIVE] Fallback exitoso, dataUrl length:', dataUrl.length);
+      
+      // Guardar la URL en la base de datos
+      try {
+        const token = localStorage.getItem('token');
+        await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/evidence`, 
+          { publicUrl: dataUrl }, 
+          { headers: { 'Authorization': `Bearer ${token}` } }
+        );
+        console.log('📸 [LEGISLATIVE] DataURL guardada en base de datos');
+      } catch (error) {
+        console.error('📸 [LEGISLATIVE] Error guardando DataURL en DB:', error);
+      }
+      
       return dataUrl;
     } catch (error) {
       console.error('📸 [LEGISLATIVE] Fallback también falló:', error);
