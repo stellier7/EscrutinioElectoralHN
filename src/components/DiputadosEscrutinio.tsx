@@ -126,7 +126,13 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
   useEffect(() => {
     if (escrutinioId && userId && papeleta.status === null) {
       console.log('🔄 Inicializando papeleta automáticamente...');
-      startPapeleta(escrutinioId, userId);
+      console.log('📊 Estado actual de papeleta:', papeleta);
+      startPapeleta(escrutinioId, userId).then((success) => {
+        console.log('✅ Papeleta inicializada:', success);
+        console.log('📊 Nuevo estado de papeleta:', papeleta);
+      }).catch((error) => {
+        console.error('❌ Error inicializando papeleta:', error);
+      });
     }
   }, [escrutinioId, userId, papeleta.status, startPapeleta]);
 
@@ -256,18 +262,23 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
 
   // Funciones para manejo de papeletas
   const handleClosePapeleta = useCallback(async () => {
-    if (!userId) return;
+    if (!userId || !escrutinioId) return;
     
     try {
       const success = await closePapeleta(userId);
       if (success) {
         console.log('✅ Papeleta cerrada exitosamente');
         setShowVoteLimitAlert(false);
+        
+        // Crear nueva papeleta automáticamente
+        console.log('🔄 Creando nueva papeleta...');
+        await startPapeleta(escrutinioId, userId);
+        console.log('✅ Nueva papeleta creada');
       }
     } catch (error) {
       console.error('❌ Error cerrando papeleta:', error);
     }
-  }, [userId, closePapeleta]);
+  }, [userId, escrutinioId, closePapeleta, startPapeleta]);
 
   const handleAnularPapeleta = useCallback(async () => {
     if (!userId) return;
@@ -581,6 +592,9 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
           {party.casillas.map((casillaNumber, index) => {
             const isSelected = isCasillaSelected(expandedParty, casillaNumber);
             const voteCount = getCasillaVoteCount(expandedParty, casillaNumber);
+            
+            // Debug logs
+            console.log(`🔍 Casilla ${casillaNumber} (${expandedParty}): isSelected=${isSelected}, voteCount=${voteCount}`);
             
             return (
               <button
