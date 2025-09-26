@@ -907,6 +907,33 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     return (
       <div className="space-y-4">
         {/* Header with party info and navigation - Responsive */}
+        {/* Party Navigation Numbers */}
+        <div className="flex justify-center mb-4">
+          <div className="flex items-center gap-2">
+            {diputadosData?.parties.map((p, index) => {
+              const isCurrent = p.id === expandedParty;
+              const isPrevious = index === (diputadosData.parties.findIndex(party => party.id === expandedParty) - 1);
+              const isNext = index === (diputadosData.parties.findIndex(party => party.id === expandedParty) + 1);
+              
+              return (
+                <div
+                  key={p.id}
+                  className={clsx(
+                    "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors",
+                    isCurrent 
+                      ? "bg-blue-600 text-white" 
+                      : isPrevious || isNext
+                        ? "bg-gray-200 text-gray-600"
+                        : "bg-gray-100 text-gray-400"
+                  )}
+                >
+                  {index + 1}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <button
@@ -922,7 +949,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
             </div>
           </div>
           
-          {/* Navigation arrows with indicators */}
+          {/* Centered Navigation arrows */}
           <div className="flex items-center gap-2">
             <button
               onClick={handlePreviousParty}
@@ -967,6 +994,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
               <ArrowRight className="h-4 w-4" />
             </button>
           </div>
+          
           <div className="flex items-center justify-between sm:justify-end gap-4">
             <div className="text-right">
               <div className="text-xl sm:text-2xl font-bold" style={{ color: party.color }}>
