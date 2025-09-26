@@ -78,26 +78,11 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
   const [escrutinioStatus, setEscrutinioStatus] = useState<'OPEN' | 'CLOSED' | 'COMPLETED'>('OPEN');
   const [isEscrutinioClosed, setIsEscrutinioClosed] = useState(false);
   
-  // Estados para sistema de papeletas
+  // Estados para sistema de papeletas simplificado
+  const [currentPapeleta, setCurrentPapeleta] = useState(1);
+  const [papeletaVotes, setPapeletaVotes] = useState<{[key: string]: number}>({});
   const [showVoteLimitAlert, setShowVoteLimitAlert] = useState(false);
   const [showAnularConfirmation, setShowAnularConfirmation] = useState(false);
-  
-  // Hook de papeletas
-  const {
-    papeleta,
-    isLoading: papeletaLoading,
-    error: papeletaError,
-    startPapeleta,
-    addVoteToBuffer,
-    removeVoteFromBuffer,
-    closePapeleta,
-    anularPapeleta,
-    resetPapeleta,
-    isCasillaSelected,
-    getCasillaVoteCount,
-    isVoteLimitReached,
-    getTotalVotesInBuffer
-  } = usePapeleta();
 
   // Hook para manejar votos legislativos (como el presidencial)
   const { 
@@ -124,17 +109,12 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
 
   // Inicializar papeleta automáticamente cuando se carga el componente
   useEffect(() => {
-    if (escrutinioId && userId && papeleta.status === null) {
-      console.log('🔄 Inicializando papeleta automáticamente...');
-      console.log('📊 Estado actual de papeleta:', papeleta);
-      startPapeleta(escrutinioId, userId).then((success) => {
-        console.log('✅ Papeleta inicializada:', success);
-        console.log('📊 Nuevo estado de papeleta:', papeleta);
-      }).catch((error) => {
-        console.error('❌ Error inicializando papeleta:', error);
-      });
+    if (escrutinioId && userId) {
+      console.log('🔄 Inicializando papeleta simplificada...');
+      setCurrentPapeleta(1);
+      setPapeletaVotes({});
     }
-  }, [escrutinioId, userId, papeleta.status, startPapeleta]);
+  }, [escrutinioId, userId]);
 
   // Cargar datos de diputados según la JRV
   useEffect(() => {
@@ -203,7 +183,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
 
   // Handle grid slot click - toggle vote using legislative store (like presidential)
   const handleSlotClick = useCallback(async (partyId: string, slotNumber: number, event: React.MouseEvent) => {
-    console.log('🖱️ [LEGISLATIVE] Click en casilla:', partyId, slotNumber, 'userId:', userId);
+    console.log('🖱️ [LEGISLATIVE] Click en casilla:', partyId, slotNumber);
     
     if (!userId || !escrutinioId) {
       console.log('❌ [LEGISLATIVE] Click bloqueado - userId:', userId, 'escrutinioId:', escrutinioId);
@@ -221,30 +201,26 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     const x = rect.left + rect.width / 2;
     const y = rect.top + rect.height / 2;
 
-    // Check if casilla already has votes in current papeleta
-    const isSelected = isCasillaSelected(partyId, slotNumber);
+    // Check vote limit
+    const voteLimit = diputadosData?.diputados || 0;
+    const currentVotes = Object.values(papeletaVotes).reduce((sum, count) => sum + count, 0);
 
-    if (isSelected) {
-      // Remove vote from buffer
-      removeVoteFromBuffer(partyId, slotNumber);
-      console.log('➖ [LEGISLATIVE] Voto removido de papeleta:', partyId, slotNumber);
-    } else {
-      // Check vote limit before adding
-      const voteLimit = diputadosData?.diputados || 0;
-      const totalVotes = getTotalVotesInBuffer();
-      
-      if (voteLimit > 0 && totalVotes >= voteLimit) {
-        // Show vote limit alert
-        setShowVoteLimitAlert(true);
-        return;
-      }
-
-      // Add vote to buffer
-      const success = await addVoteToBuffer(partyId, slotNumber, userId, voteLimit);
-      if (success) {
-        console.log('➕ [LEGISLATIVE] Voto agregado a papeleta:', partyId, slotNumber);
-      }
+    if (currentVotes >= voteLimit) {
+      setShowVoteLimitAlert(true);
+      return;
     }
+
+    // Add vote to current papeleta
+    const voteKey = `${partyId}-${slotNumber}`;
+    setPapeletaVotes(prev => ({
+      ...prev,
+      [voteKey]: (prev[voteKey] || 0) + 1
+    }));
+
+    // Also add to main store for persistence
+    increment(partyId, slotNumber);
+
+    console.log('➕ [LEGISLATIVE] Voto agregado:', partyId, slotNumber);
     
     // Show animation
     setAnimation({
@@ -258,42 +234,28 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     setTimeout(() => {
       setAnimation(prev => ({ ...prev, show: false }));
     }, 200);
-  }, [userId, escrutinioId, isCasillaSelected, removeVoteFromBuffer, addVoteToBuffer, getTotalVotesInBuffer, diputadosData, isEscrutinioClosed, jrvNumber]);
+  }, [userId, escrutinioId, papeletaVotes, diputadosData, isEscrutinioClosed, increment]);
 
-  // Funciones para manejo de papeletas
+  // Funciones para manejo de papeletas simplificado
   const handleClosePapeleta = useCallback(async () => {
-    if (!userId || !escrutinioId) return;
+    console.log('✅ Papeleta cerrada exitosamente');
+    setShowVoteLimitAlert(false);
     
-    try {
-      const success = await closePapeleta(userId);
-      if (success) {
-        console.log('✅ Papeleta cerrada exitosamente');
-        setShowVoteLimitAlert(false);
-        
-        // Crear nueva papeleta automáticamente
-        console.log('🔄 Creando nueva papeleta...');
-        await startPapeleta(escrutinioId, userId);
-        console.log('✅ Nueva papeleta creada');
-      }
-    } catch (error) {
-      console.error('❌ Error cerrando papeleta:', error);
-    }
-  }, [userId, escrutinioId, closePapeleta, startPapeleta]);
+    // Crear nueva papeleta automáticamente
+    console.log('🔄 Creando nueva papeleta...');
+    setCurrentPapeleta(prev => prev + 1);
+    setPapeletaVotes({});
+    console.log('✅ Nueva papeleta creada');
+  }, []);
 
   const handleAnularPapeleta = useCallback(async () => {
-    if (!userId) return;
+    console.log('✅ Papeleta anulada exitosamente');
+    setShowAnularConfirmation(false);
+    setShowVoteLimitAlert(false);
     
-    try {
-      const success = await anularPapeleta(userId, 'Anulación manual');
-      if (success) {
-        console.log('✅ Papeleta anulada exitosamente');
-        setShowAnularConfirmation(false);
-        setShowVoteLimitAlert(false);
-      }
-    } catch (error) {
-      console.error('❌ Error anulando papeleta:', error);
-    }
-  }, [userId, anularPapeleta]);
+    // Limpiar votos de la papeleta actual
+    setPapeletaVotes({});
+  }, []);
 
   const handleCloseVoteLimitAlert = useCallback(() => {
     setShowVoteLimitAlert(false);
@@ -306,6 +268,16 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
   const handleAnularPapeletaFromAlert = useCallback(() => {
     setShowAnularConfirmation(true);
   }, []);
+
+  // Funciones de utilidad para conteo de votos
+  const getCasillaVoteCount = useCallback((partyId: string, slotNumber: number) => {
+    const voteKey = `${partyId}-${slotNumber}`;
+    return papeletaVotes[voteKey] || 0;
+  }, [papeletaVotes]);
+
+  const getTotalVotesInPapeleta = useCallback(() => {
+    return Object.values(papeletaVotes).reduce((sum, count) => sum + count, 0);
+  }, [papeletaVotes]);
 
   // Handle back button
   const handleBack = useCallback(() => {
@@ -591,12 +563,12 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
         {/* Dynamic Grid - Responsive */}
         <div className="grid gap-3 grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8">
           {party.casillas.map((casillaNumber, index) => {
-            const isSelected = isCasillaSelected(expandedParty, casillaNumber);
             const voteCount = getCasillaVoteCount(expandedParty, casillaNumber);
+            const isSelected = voteCount > 0;
             
             // Debug logs
             console.log(`🔍 Party: ${party.fullName}, Casillas array:`, party.casillas);
-            console.log(`🔍 Casilla ${casillaNumber} (${expandedParty}): isSelected=${isSelected}, voteCount=${voteCount}`);
+            console.log(`🔍 Casilla ${casillaNumber} (${expandedParty}): voteCount=${voteCount}`);
             
             return (
               <button
@@ -645,52 +617,50 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
           })}
         </div>
 
-        {/* Mensaje de marcas y controles de papeleta */}
-        {papeleta.status === 'OPEN' && (
-          <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <FileText className="h-4 w-4 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-blue-900">
-                    Papeleta {papeleta.id ? '#' + papeleta.id.slice(-4) : 'Nueva'}
-                  </p>
-                  <p className="text-xs text-blue-700">
-                    {getTotalVotesInBuffer()}/{diputadosData.diputados} marcas
-                  </p>
-                </div>
+        {/* Controles de papeleta - siempre visibles */}
+        <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <FileText className="h-4 w-4 text-blue-600" />
               </div>
-              <div className="text-right">
-                <p className="text-sm text-blue-700">
-                  {getTotalVotesInBuffer() > 0 ? `${getTotalVotesInBuffer()} marcas aplicadas` : 'Sin marcas'}
+              <div>
+                <p className="text-sm font-medium text-blue-900">
+                  Papeleta {currentPapeleta}
+                </p>
+                <p className="text-xs text-blue-700">
+                  {getTotalVotesInPapeleta()}/{diputadosData.diputados} marcas
                 </p>
               </div>
             </div>
-            
-            <div className="flex flex-col sm:flex-row gap-2">
-              <button
-                onClick={handleClosePapeleta}
-                disabled={papeletaLoading || getTotalVotesInBuffer() === 0}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
-              >
-                <Check className="h-4 w-4" />
-                <span className="hidden sm:inline">Cerrar Papeleta</span>
-                <span className="sm:hidden">Cerrar</span>
-              </button>
-              <button
-                onClick={handleAnularPapeletaFromAlert}
-                disabled={papeletaLoading || getTotalVotesInBuffer() === 0}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
-              >
-                <X className="h-4 w-4" />
-                <span className="hidden sm:inline">Anular Papeleta</span>
-                <span className="sm:hidden">Anular</span>
-              </button>
+            <div className="text-right">
+              <p className="text-sm text-blue-700">
+                {getTotalVotesInPapeleta() > 0 ? `${getTotalVotesInPapeleta()} marcas aplicadas` : 'Sin marcas'}
+              </p>
             </div>
           </div>
-        )}
+
+          <div className="flex flex-col sm:flex-row gap-2">
+            <button
+              onClick={handleClosePapeleta}
+              disabled={getTotalVotesInPapeleta() === 0}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+            >
+              <Check className="h-4 w-4" />
+              <span className="hidden sm:inline">Cerrar Papeleta</span>
+              <span className="sm:hidden">Cerrar</span>
+            </button>
+            <button
+              onClick={handleAnularPapeletaFromAlert}
+              disabled={getTotalVotesInPapeleta() === 0}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+            >
+              <X className="h-4 w-4" />
+              <span className="hidden sm:inline">Anular Papeleta</span>
+              <span className="sm:hidden">Anular</span>
+            </button>
+          </div>
+        </div>
       </div>
     );
   };
@@ -747,17 +717,15 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
         <p className="text-sm text-gray-500">
           {diputadosData.diputados} diputados • {diputadosData.parties.length} partidos
         </p>
-        {papeleta.status && (
-          <div className="mt-2 p-2 bg-blue-50 rounded-lg border border-blue-200">
-            <p className="text-sm text-blue-700">
-              <span className="font-medium">Papeleta {papeleta.id ? '#' + papeleta.id.slice(-4) : 'Nueva'}</span>
-              {' • '}
-              <span className="capitalize">{papeleta.status.toLowerCase()}</span>
-              {' • '}
-              {getTotalVotesInBuffer()}/{diputadosData.diputados} marcas
-            </p>
-          </div>
-        )}
+        <div className="mt-2 p-2 bg-blue-50 rounded-lg border border-blue-200">
+          <p className="text-sm text-blue-700">
+            <span className="font-medium">Papeleta {currentPapeleta}</span>
+            {' • '}
+            <span className="capitalize">abierta</span>
+            {' • '}
+            {getTotalVotesInPapeleta()}/{diputadosData.diputados} marcas
+          </p>
+        </div>
       </div>
 
       {/* Animation */}
@@ -926,12 +894,12 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
       {/* Vote Limit Alert */}
       <VoteLimitAlert
         isVisible={showVoteLimitAlert}
-        currentVotes={getTotalVotesInBuffer()}
+        currentVotes={getTotalVotesInPapeleta()}
         voteLimit={diputadosData?.diputados || 0}
         onClose={handleCloseVoteLimitAlert}
         onClosePapeleta={handleClosePapeletaFromAlert}
         onAnularPapeleta={handleAnularPapeletaFromAlert}
-        isClosingPapeleta={papeletaLoading}
+        isClosingPapeleta={false}
       />
 
       {/* Modal de Confirmación de Anulación */}
