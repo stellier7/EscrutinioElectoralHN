@@ -628,6 +628,53 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
             );
           })}
         </div>
+
+        {/* Mensaje de marcas y controles de papeleta */}
+        {papeleta.status === 'OPEN' && (
+          <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <FileText className="h-4 w-4 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-blue-900">
+                    Papeleta {papeleta.id ? '#' + papeleta.id.slice(-4) : 'Nueva'}
+                  </p>
+                  <p className="text-xs text-blue-700">
+                    {getTotalVotesInBuffer()}/{diputadosData.diputados} marcas
+                  </p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-blue-700">
+                  {getTotalVotesInBuffer() > 0 ? `${getTotalVotesInBuffer()} marcas aplicadas` : 'Sin marcas'}
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row gap-2">
+              <button
+                onClick={handleClosePapeleta}
+                disabled={papeletaLoading || getTotalVotesInBuffer() === 0}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+              >
+                <Check className="h-4 w-4" />
+                <span className="hidden sm:inline">Cerrar Papeleta</span>
+                <span className="sm:hidden">Cerrar</span>
+              </button>
+              <button
+                onClick={handleAnularPapeletaFromAlert}
+                disabled={papeletaLoading || getTotalVotesInBuffer() === 0}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+              >
+                <X className="h-4 w-4" />
+                <span className="hidden sm:inline">Anular Papeleta</span>
+                <span className="sm:hidden">Anular</span>
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     );
   };
