@@ -629,9 +629,8 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
 
   const getTotalPartyCountFormatted = useCallback((partyId: string): string => {
     const count = getTotalPartyCount(partyId);
-    const total = diputadosData?.diputados || 0;
-    return `${count} / ${total}`;
-  }, [getTotalPartyCount, diputadosData?.diputados]);
+    return count.toString();
+  }, [getTotalPartyCount]);
 
   // Funciones para manejar foto y cierre de escrutinio
   const handleActaUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
@@ -1055,7 +1054,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
                 <span className="text-sm font-medium text-blue-900">Papeleta número: {papeletaNumber}</span>
               </div>
               <span className="text-sm text-blue-700">
-                {papeleta.votesBuffer.length} marca{papeleta.votesBuffer.length !== 1 ? 's' : ''}
+                Marcas: {papeleta.votesBuffer.length} / {diputadosData?.diputados || 0}
               </span>
             </div>
             
@@ -1243,7 +1242,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
                       <span className="text-sm font-medium text-blue-900">Papeleta número: {papeletaNumber}</span>
                     </div>
                     <span className="text-sm text-blue-700">
-                      {papeleta.votesBuffer.length} marca{papeleta.votesBuffer.length !== 1 ? 's' : ''}
+                      Marcas: {papeleta.votesBuffer.length} / {diputadosData?.diputados || 0}
                     </span>
                   </div>
                   
