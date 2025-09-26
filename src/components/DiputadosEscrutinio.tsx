@@ -626,7 +626,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
               >
                 <div className="flex flex-col items-center justify-center">
                   <span className="font-semibold">{casillaNumber}</span>
-                  {totalVoteCount > 0 && (
+                  {voteCount > 0 && (
                     <div 
                       className={clsx(
                         "absolute -top-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 rounded-full text-xs font-bold text-white flex items-center justify-center shadow-lg border-2 border-white",
