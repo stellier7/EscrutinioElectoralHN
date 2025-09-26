@@ -144,7 +144,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   } catch (error) {
     console.error('Error in critical debug endpoint:', error);
     return NextResponse.json(
-      { success: false, error: 'Error interno del servidor', details: error.message },
+      { success: false, error: 'Error interno del servidor', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
