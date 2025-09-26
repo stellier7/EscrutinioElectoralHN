@@ -937,7 +937,9 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
                   const currentIndex = diputadosData.parties.findIndex(p => p.id === expandedParty);
                   if (currentIndex > 0) {
                     const prevParty = diputadosData.parties[currentIndex - 1];
-                    return `${prevParty.fullName} (${prevParty.casillas.length} casillas)`;
+                    const firstCasilla = prevParty.casillas[0];
+                    const lastCasilla = prevParty.casillas[prevParty.casillas.length - 1];
+                    return `${prevParty.fullName} (${firstCasilla}-${lastCasilla})`;
                   }
                   return '';
                 })()}
@@ -955,7 +957,9 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
                   const currentIndex = diputadosData.parties.findIndex(p => p.id === expandedParty);
                   if (currentIndex < diputadosData.parties.length - 1) {
                     const nextParty = diputadosData.parties[currentIndex + 1];
-                    return `${nextParty.fullName} (${nextParty.casillas.length} casillas)`;
+                    const firstCasilla = nextParty.casillas[0];
+                    const lastCasilla = nextParty.casillas[nextParty.casillas.length - 1];
+                    return `${nextParty.fullName} (${firstCasilla}-${lastCasilla})`;
                   }
                   return '';
                 })()}
