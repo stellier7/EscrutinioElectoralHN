@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ArrowRight, Loader2, AlertCircle, Check, X, FileText, Camera, Upload, CheckCircle } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Loader2, AlertCircle, Check, X, FileText, Camera, Upload, CheckCircle, Edit } from 'lucide-react';
 import clsx from 'clsx';
 import axios from 'axios';
 import { useLegislativeVoteStore } from '@/store/legislativeVoteStore';
@@ -77,6 +77,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [escrutinioStatus, setEscrutinioStatus] = useState<'OPEN' | 'CLOSED' | 'COMPLETED'>('OPEN');
   const [isEscrutinioClosed, setIsEscrutinioClosed] = useState(false);
+  const [isEscrutinioFrozen, setIsEscrutinioFrozen] = useState(false);
   
   // Estados para sistema de papeletas simplificado
   const [currentPapeleta, setCurrentPapeleta] = useState(1);
@@ -191,8 +192,8 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
       return;
     }
     
-    if (isEscrutinioClosed) {
-      console.log('🔒 [LEGISLATIVE] Click en casilla ignorado - escrutinio cerrado');
+    if (isEscrutinioClosed || isEscrutinioFrozen) {
+      console.log('🔒 [LEGISLATIVE] Click en casilla ignorado - escrutinio cerrado o congelado');
       return;
     }
 
@@ -471,39 +472,39 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     router.push(`/revisar/${escrutinioId}`);
   };
 
-  // Función para cerrar escrutinio (pausar)
-  const handleCloseEscrutinio = useCallback(async () => {
+  // Función para congelar escrutinio (freeze votos para tomar foto)
+  const handleFreezeEscrutinio = useCallback(async () => {
     if (!escrutinioId) {
       setError('No hay escrutinio activo');
       return;
     }
     
-    console.log('🔄 [LEGISLATIVE] Cerrando escrutinio:', escrutinioId);
+    console.log('🧊 [LEGISLATIVE] Congelando escrutinio:', escrutinioId);
     setIsClosing(true);
     setError(null);
     
     try {
-      // Cerrar escrutinio (los votos ya están guardados por el store)
-      const token = localStorage.getItem('token');
-      const response = await axios.post(`/api/escrutinio/${escrutinioId}/close`, {}, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      console.log('✅ [LEGISLATIVE] Escrutinio cerrado exitosamente:', response.data);
+      // Congelar escrutinio (no llamar al endpoint, solo cambiar estado local)
+      console.log('✅ [LEGISLATIVE] Escrutinio congelado localmente');
       
+      setIsEscrutinioFrozen(true);
       setEscrutinioStatus('CLOSED');
-      setIsEscrutinioClosed(true);
     } catch (error: any) {
-      console.error('❌ [LEGISLATIVE] Error cerrando escrutinio:', error);
-      const errorMessage = error?.response?.data?.error || error?.message || 'Error cerrando escrutinio';
+      console.error('❌ [LEGISLATIVE] Error congelando escrutinio:', error);
+      const errorMessage = error?.response?.data?.error || error?.message || 'Error congelando escrutinio';
       setError(errorMessage);
-      alert(`Error cerrando escrutinio: ${errorMessage}`);
+      alert(`Error congelando escrutinio: ${errorMessage}`);
     } finally {
       setIsClosing(false);
     }
   }, [escrutinioId]);
+
+  // Función para descongelar escrutinio (permitir editar)
+  const handleUnfreezeEscrutinio = useCallback(async () => {
+    console.log('🔥 [LEGISLATIVE] Descongelando escrutinio para editar');
+    setIsEscrutinioFrozen(false);
+    setEscrutinioStatus('OPEN');
+  }, []);
 
   // Render grid for expanded party
   const renderGrid = () => {
@@ -841,23 +842,28 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
 
       {/* Action Cards */}
       <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Cerrar Escrutinio */}
+        {/* Congelar/Editar Escrutinio */}
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <div className="flex items-center gap-3 mb-3">
             <div className="p-2 bg-orange-100 rounded-lg">
-              <X className="h-5 w-5 text-orange-600" />
+              {isEscrutinioFrozen ? <Edit className="h-5 w-5 text-orange-600" /> : <X className="h-5 w-5 text-orange-600" />}
             </div>
             <div>
-              <h3 className="font-semibold text-gray-900">Cerrar Escrutinio</h3>
-              <p className="text-sm text-gray-600">Pausar temporalmente</p>
+              <h3 className="font-semibold text-gray-900">
+                {isEscrutinioFrozen ? 'Editar Escrutinio' : 'Congelar Escrutinio'}
+              </h3>
+              <p className="text-sm text-gray-600">
+                {isEscrutinioFrozen ? 'Continuar agregando marcas' : 'Congelar para tomar foto'}
+              </p>
             </div>
           </div>
           <button
-            onClick={handleCloseEscrutinio}
+            onClick={isEscrutinioFrozen ? handleUnfreezeEscrutinio : handleFreezeEscrutinio}
             disabled={isClosing || isEscrutinioClosed}
             className="w-full px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {isClosing ? <Loader2 className="h-4 w-4 animate-spin mx-auto" /> : 'Cerrar Escrutinio'}
+            {isClosing ? <Loader2 className="h-4 w-4 animate-spin mx-auto" /> : 
+             (isEscrutinioFrozen ? 'Editar' : 'Congelar')}
           </button>
         </div>
 

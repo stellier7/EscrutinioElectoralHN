@@ -50,6 +50,7 @@ export default function PresidencialEscrutinio({
   const [isCompleting, setIsCompleting] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [isEscrutinioClosed, setIsEscrutinioClosed] = useState(false);
+  const [isEscrutinioFrozen, setIsEscrutinioFrozen] = useState(false);
   const [escrutinioStatus, setEscrutinioStatus] = useState<'COMPLETED' | 'CLOSED'>('COMPLETED');
   const [isClosing, setIsClosing] = useState(false);
   const [isReopening, setIsReopening] = useState(false);
@@ -188,28 +189,29 @@ export default function PresidencialEscrutinio({
     router.push(`/revisar/${escrutinioId}`);
   };
 
-  const handleCloseEscrutinio = async () => {
+  const handleFreezeEscrutinio = async () => {
     if (!escrutinioId) {
       alert('Error: No se encontró el ID del escrutinio');
       return;
     }
     setIsClosing(true);
     try {
-      const token = localStorage.getItem('token');
-      await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/close`, {}, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      // Congelar localmente (no llamar al endpoint)
+      console.log('🧊 [PRESIDENTIAL] Congelando escrutinio localmente');
+      setIsEscrutinioFrozen(true);
       setEscrutinioStatus('CLOSED');
-      setIsEscrutinioClosed(true);
     } catch (error) {
-      console.error('Error cerrando escrutinio:', error);
-      alert(`Error al cerrar el escrutinio: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+      console.error('Error congelando escrutinio:', error);
+      alert(`Error al congelar el escrutinio: ${error instanceof Error ? error.message : 'Error desconocido'}`);
     } finally {
       setIsClosing(false);
     }
+  };
+
+  const handleUnfreezeEscrutinio = async () => {
+    console.log('🔥 [PRESIDENTIAL] Descongelando escrutinio para editar');
+    setIsEscrutinioFrozen(false);
+    setEscrutinioStatus('COMPLETED');
   };
 
   const handleReopenEscrutinio = async () => {
@@ -299,14 +301,14 @@ export default function PresidencialEscrutinio({
                 number={c.number}
                 count={counts[c.id] || 0}
                 isPending={false} // Sin indicadores de pending - conteo instantáneo
-                disabled={isEscrutinioClosed} // Deshabilitado cuando el escrutinio esté cerrado
+                disabled={isEscrutinioClosed || isEscrutinioFrozen} // Deshabilitado cuando el escrutinio esté cerrado o congelado
                 onIncrement={() => {
-                  if (!isEscrutinioClosed) {
+                  if (!isEscrutinioClosed && !isEscrutinioFrozen) {
                     increment(c.id, { escrutinioId, userId, mesaId, gps: gps || undefined, deviceId });
                   }
                 }}
                 onDecrement={() => {
-                  if (!isEscrutinioClosed) {
+                  if (!isEscrutinioClosed && !isEscrutinioFrozen) {
                     decrement(c.id, { escrutinioId, userId, mesaId, gps: gps || undefined, deviceId });
                   }
                 }}
@@ -328,22 +330,25 @@ export default function PresidencialEscrutinio({
             {escrutinioStatus === 'COMPLETED' && !isEscrutinioClosed && (
               <>
                 <p className="text-sm text-blue-700 mb-4">
-                  Una vez que hayas completado el conteo de todos los votos, puedes cerrar el escrutinio para pausar las ediciones.
+                  {isEscrutinioFrozen 
+                    ? 'El escrutinio está congelado. Puedes tomar la foto del acta o editar para continuar agregando marcas.'
+                    : 'Una vez que hayas completado el conteo de todos los votos, puedes congelar el escrutinio para tomar la foto.'
+                  }
                 </p>
                 <button
-                  onClick={handleCloseEscrutinio}
+                  onClick={isEscrutinioFrozen ? handleUnfreezeEscrutinio : handleFreezeEscrutinio}
                   disabled={isClosing}
                   className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
                 >
                   {isClosing ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      Cerrando...
+                      {isEscrutinioFrozen ? 'Descongelando...' : 'Congelando...'}
                     </>
                   ) : (
                     <>
                       <AlertCircle className="h-4 w-4" />
-                      Cerrar Escrutinio
+                      {isEscrutinioFrozen ? 'Editar Escrutinio' : 'Congelar Escrutinio'}
                     </>
                   )}
                 </button>
