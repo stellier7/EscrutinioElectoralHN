@@ -106,11 +106,28 @@ export default function PresidencialEscrutinio({
         return publicUrl;
       }
     } catch (error) {
-      console.error('Error subiendo acta:', error);
-      return null;
+      console.error('📸 S3 upload failed, trying fallback:', error);
+      // Fallback: convertir a dataUrl como en legislativo
     }
     
-    return null;
+    try {
+      console.log('📸 Using fallback: converting to dataUrl');
+      const toDataUrl = (file: File): Promise<string> => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      };
+      
+      const dataUrl = await toDataUrl(actaImage);
+      console.log('📸 Fallback successful, dataUrl length:', dataUrl.length);
+      return dataUrl;
+    } catch (error) {
+      console.error('📸 Fallback also failed:', error);
+      return null;
+    }
   };
 
   // Función para finalizar escrutinio
