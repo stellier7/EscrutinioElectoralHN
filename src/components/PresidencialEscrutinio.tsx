@@ -151,22 +151,22 @@ export default function PresidencialEscrutinio({
       const evidenceUrl = await uploadEvidenceIfNeeded();
       console.log('📸 handleSendResults - evidenceUrl result:', evidenceUrl);
       
-      // Si se subió acta, guardar la URL en la base de datos
-      if (evidenceUrl) {
-        console.log('📸 Guardando URL de acta:', evidenceUrl);
-        try {
-          const actaResponse = await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/acta`, {
-            publicUrl: evidenceUrl,
-            hash: null // Podríamos calcular el hash si es necesario
-          });
-          console.log('📸 Acta saved response:', actaResponse.data);
-        } catch (actaError) {
-          console.error('📸 Error saving acta:', actaError);
-          // Continuar aunque falle el guardado de acta
+        // Si se subió acta, guardar la URL en la base de datos
+        if (evidenceUrl) {
+          console.log('📸 Guardando URL de acta:', evidenceUrl);
+          try {
+            const evidenceResponse = await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/evidence`, {
+              publicUrl: evidenceUrl,
+              hash: null // Podríamos calcular el hash si es necesario
+            });
+            console.log('📸 Evidence saved response:', evidenceResponse.data);
+          } catch (evidenceError) {
+            console.error('📸 Error saving evidence:', evidenceError);
+            // Continuar aunque falle el guardado de evidence
+          }
+        } else {
+          console.log('📸 No evidence URL to save - actaImage was null or upload failed');
         }
-      } else {
-        console.log('📸 No evidence URL to save - actaImage was null or upload failed');
-      }
       
       // Marcar el escrutinio como completado definitivamente
       await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/complete`);
