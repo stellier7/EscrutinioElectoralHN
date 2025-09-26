@@ -93,76 +93,47 @@ export async function GET(
       });
       totalVotes = Array.from(candidatesMap.values()).reduce((sum, candidate) => sum + candidate.votes, 0);
     } else if (escrutinio.electionLevel === 'LEGISLATIVE') {
-      // Procesar votos legislativos (parties from papeletas)
-      console.log('🔄 Procesando votos legislativos...');
-      console.log('📊 Número de papeletas:', escrutinio.papeletas.length);
-      console.log('📊 Papeletas completas:', escrutinio.papeletas.map(p => ({
-        id: p.id,
-        status: p.status,
-        votesBufferLength: Array.isArray(p.votesBuffer) ? p.votesBuffer.length : 0,
-        votesBuffer: p.votesBuffer
+      // Procesar votos legislativos (desde tabla votes directamente)
+      console.log('🔄 Procesando votos legislativos desde tabla votes...');
+      console.log('📊 Número de votos en DB:', escrutinio.votes.length);
+      console.log('📊 Votos en DB:', escrutinio.votes.map(v => ({
+        id: v.id,
+        candidateId: v.candidateId,
+        count: v.count,
+        candidate: v.candidate
       })));
       
-      // Crear un mapa para agrupar votos por partido y casilla
-      const partyVotesMap = new Map();
-      
-      escrutinio.papeletas.forEach((papeleta, papeletaIndex) => {
-        console.log(`📄 Papeleta ${papeletaIndex + 1}:`, {
-          id: papeleta.id,
-          status: papeleta.status,
-          votesBuffer: papeleta.votesBuffer
-        });
-        
-        if (papeleta.votesBuffer && Array.isArray(papeleta.votesBuffer)) {
-          papeleta.votesBuffer.forEach((vote: any) => {
-            if (vote.partyId && vote.casillaNumber) {
-              const partyKey = vote.partyId;
-              const casillaKey = vote.casillaNumber;
-              
-              if (!partyVotesMap.has(partyKey)) {
-                partyVotesMap.set(partyKey, new Map());
-              }
-              
-              const casillasMap = partyVotesMap.get(partyKey);
-              if (!casillasMap.has(casillaKey)) {
-                casillasMap.set(casillaKey, 0);
-              }
-              
-              casillasMap.set(casillaKey, casillasMap.get(casillaKey) + 1);
-              totalVotes += 1;
-            }
+      // Procesar votos directamente desde la tabla votes
+      escrutinio.votes.forEach((vote) => {
+        if (vote.candidate && vote.candidate.electionLevel === 'LEGISLATIVE') {
+          const candidateId = vote.candidateId;
+          const partyId = vote.candidate.party;
+          const casillaNumber = vote.candidate.number;
+          
+          console.log(`📊 Procesando voto legislativo:`, {
+            candidateId,
+            partyId,
+            casillaNumber,
+            count: vote.count
           });
-        }
-      });
-      
-      console.log('📊 PartyVotesMap procesado:', Object.fromEntries(partyVotesMap));
-      
-      // Convertir el mapa de partidos a candidatos para el componente LegislativeReview
-      // Necesitamos crear un candidato por cada casilla que tenga votos
-      partyVotesMap.forEach((casillasMap, partyId) => {
-        casillasMap.forEach((votes: number, casillaNumber: number) => {
-          const candidateId = `${partyId}_${casillaNumber}`;
+          
           candidatesMap.set(candidateId, {
             id: candidateId,
-            name: `Casilla ${casillaNumber}`, // El componente mostrará esto como nombre del candidato
+            name: `Casilla ${casillaNumber}`,
             party: partyId,
             partyColor: '#e5e7eb', // Color por defecto
             number: casillaNumber,
-            votes: votes
+            votes: vote.count
           });
-        });
+          
+          totalVotes += vote.count;
+        }
       });
       
-      console.log('📊 CandidatesMap final:', Object.fromEntries(candidatesMap));
-      
-      console.log('📊 Votos legislativos procesados:', {
+      console.log('📊 Votos legislativos procesados desde DB:', {
         totalVotes,
         candidatesCount: candidatesMap.size,
-        candidates: Array.from(candidatesMap.values()),
-        partyVotesMapSize: partyVotesMap.size,
-        partyVotesMapEntries: Array.from(partyVotesMap.entries()),
-        papeletasWithVotes: escrutinio.papeletas.filter(p => Array.isArray(p.votesBuffer) && p.votesBuffer.length > 0).length,
-        totalPapeletas: escrutinio.papeletas.length
+        candidates: Array.from(candidatesMap.values())
       });
     }
 
