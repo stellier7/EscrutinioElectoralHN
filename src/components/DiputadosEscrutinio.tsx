@@ -583,12 +583,13 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
         {/* Dynamic Grid - Responsive */}
         <div className="grid gap-3 grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8">
           {party.casillas.map((casillaNumber, index) => {
-            const voteCount = getCasillaVoteCount(expandedParty, casillaNumber);
-            const isSelected = voteCount > 0;
+            const totalVoteCount = getCasillaCount(expandedParty, casillaNumber);
+            const currentPapeletaVotes = getCasillaVoteCount(expandedParty, casillaNumber);
+            const isSelected = currentPapeletaVotes > 0;
             
             // Debug logs
             console.log(`🔍 Party: ${party.fullName}, Casillas array:`, party.casillas);
-            console.log(`🔍 Casilla ${casillaNumber} (${expandedParty}): voteCount=${voteCount}`);
+            console.log(`🔍 Casilla ${casillaNumber} (${expandedParty}): total=${totalVoteCount}, current=${currentPapeletaVotes}`);
             
             return (
               <button
@@ -620,7 +621,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
               >
                 <div className="flex flex-col items-center justify-center">
                   <span className="font-semibold">{casillaNumber}</span>
-                  {voteCount > 0 && (
+                  {totalVoteCount > 0 && (
                     <div 
                       className={clsx(
                         "absolute -top-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 rounded-full text-xs font-bold text-white flex items-center justify-center shadow-lg border-2 border-white",
@@ -628,7 +629,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
                       )}
                       style={{ backgroundColor: party.color }}
                     >
-                      {voteCount}
+                      {totalVoteCount}
                     </div>
                   )}
                 </div>
@@ -637,50 +638,6 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
           })}
         </div>
 
-        {/* Controles de papeleta - siempre visibles */}
-        <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <FileText className="h-4 w-4 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-blue-900">
-                  Papeleta {currentPapeleta}
-                </p>
-                <p className="text-xs text-blue-700">
-                  {getTotalVotesInPapeleta()}/{diputadosData.diputados} marcas
-                </p>
-              </div>
-            </div>
-            <div className="text-right">
-              <p className="text-sm text-blue-700">
-                {getTotalVotesInPapeleta() > 0 ? `${getTotalVotesInPapeleta()} marcas aplicadas` : 'Sin marcas'}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-2">
-            <button
-              onClick={handleClosePapeleta}
-              disabled={getTotalVotesInPapeleta() === 0}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
-            >
-              <Check className="h-4 w-4" />
-              <span className="hidden sm:inline">Cerrar Papeleta</span>
-              <span className="sm:hidden">Cerrar</span>
-            </button>
-            <button
-              onClick={handleAnularPapeletaFromAlert}
-              disabled={getTotalVotesInPapeleta() === 0}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
-            >
-              <X className="h-4 w-4" />
-              <span className="hidden sm:inline">Anular Papeleta</span>
-              <span className="sm:hidden">Anular</span>
-            </button>
-          </div>
-        </div>
       </div>
     );
   };
@@ -877,6 +834,51 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
             <p className="text-gray-600">Estado: <span className="font-medium">{escrutinioStatus}</span></p>
             <p className="text-gray-600">Total votos: <span className="font-medium">{Object.values(counts).reduce((sum, count) => sum + count, 0)}</span></p>
           </div>
+        </div>
+      </div>
+
+      {/* Controles de papeleta - debajo de los botones de conteo */}
+      <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <FileText className="h-4 w-4 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-blue-900">
+                Papeleta {currentPapeleta}
+              </p>
+              <p className="text-xs text-blue-700">
+                {getTotalVotesInPapeleta()}/{diputadosData.diputados} marcas
+              </p>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-sm text-blue-700">
+              {getTotalVotesInPapeleta() > 0 ? `${getTotalVotesInPapeleta()} marcas aplicadas` : 'Sin marcas'}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-2">
+          <button
+            onClick={handleClosePapeleta}
+            disabled={getTotalVotesInPapeleta() === 0}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+          >
+            <Check className="h-4 w-4" />
+            <span className="hidden sm:inline">Cerrar Papeleta</span>
+            <span className="sm:hidden">Cerrar</span>
+          </button>
+          <button
+            onClick={handleAnularPapeletaFromAlert}
+            disabled={getTotalVotesInPapeleta() === 0}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+          >
+            <X className="h-4 w-4" />
+            <span className="hidden sm:inline">Anular Papeleta</span>
+            <span className="sm:hidden">Anular</span>
+          </button>
         </div>
       </div>
 
