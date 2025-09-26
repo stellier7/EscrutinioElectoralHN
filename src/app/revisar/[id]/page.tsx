@@ -246,7 +246,7 @@ export default function RevisarEscrutinioPage() {
               ) : (
                 // Mostrar votos presidenciales como antes (ordenados por número)
                 escrutinioData.candidates
-                  .sort((a, b) => a.number - b.number)
+                  .sort((a: any, b: any) => a.number - b.number)
                   .map((candidate) => (
                   <div 
                     key={candidate.id}
