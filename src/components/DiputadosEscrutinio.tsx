@@ -919,7 +919,8 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex flex-col gap-4">
+          {/* Header con título del partido */}
           <div className="flex items-center gap-3">
             <button
               onClick={handleBack}
@@ -934,59 +935,63 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
             </div>
           </div>
           
-          {/* Centered Navigation arrows */}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handlePreviousParty}
-              disabled={!diputadosData || diputadosData.parties.findIndex(p => p.id === expandedParty) === 0}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              aria-label="Partido anterior"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              <span className="text-sm font-medium hidden sm:inline">
-                {(() => {
-                  if (!diputadosData || !expandedParty) return '';
-                  const currentIndex = diputadosData.parties.findIndex(p => p.id === expandedParty);
-                  if (currentIndex > 0) {
-                    const prevParty = diputadosData.parties[currentIndex - 1];
-                    const firstCasilla = prevParty.casillas[0];
-                    const lastCasilla = prevParty.casillas[prevParty.casillas.length - 1];
-                    return `${prevParty.fullName} (${firstCasilla}-${lastCasilla})`;
-                  }
-                  return '';
-                })()}
-              </span>
-            </button>
-            <button
-              onClick={handleNextParty}
-              disabled={!diputadosData || diputadosData.parties.findIndex(p => p.id === expandedParty) === diputadosData.parties.length - 1}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              aria-label="Siguiente partido"
-            >
-              <span className="text-sm font-medium hidden sm:inline">
-                {(() => {
-                  if (!diputadosData || !expandedParty) return '';
-                  const currentIndex = diputadosData.parties.findIndex(p => p.id === expandedParty);
-                  if (currentIndex < diputadosData.parties.length - 1) {
-                    const nextParty = diputadosData.parties[currentIndex + 1];
-                    const firstCasilla = nextParty.casillas[0];
-                    const lastCasilla = nextParty.casillas[nextParty.casillas.length - 1];
-                    return `${nextParty.fullName} (${firstCasilla}-${lastCasilla})`;
-                  }
-                  return '';
-                })()}
-              </span>
-              <ArrowRight className="h-4 w-4" />
-            </button>
-          </div>
-          
-          <div className="flex items-center justify-between sm:justify-end gap-4">
+          {/* Fila con Total, Flechas centradas, y Partidos */}
+          <div className="flex items-center justify-between gap-4">
+            {/* Total a la izquierda */}
             <div className="text-right">
               <div className="text-xl sm:text-2xl font-bold" style={{ color: party.color }}>
                 {getTotalPartyCountFormatted(expandedParty)}
               </div>
               <div className="text-xs text-gray-500">Total</div>
             </div>
+            
+            {/* Flechas centradas */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handlePreviousParty}
+                disabled={!diputadosData || diputadosData.parties.findIndex(p => p.id === expandedParty) === 0}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                aria-label="Partido anterior"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span className="text-sm font-medium hidden sm:inline">
+                  {(() => {
+                    if (!diputadosData || !expandedParty) return '';
+                    const currentIndex = diputadosData.parties.findIndex(p => p.id === expandedParty);
+                    if (currentIndex > 0) {
+                      const prevParty = diputadosData.parties[currentIndex - 1];
+                      const firstCasilla = prevParty.casillas[0];
+                      const lastCasilla = prevParty.casillas[prevParty.casillas.length - 1];
+                      return `${prevParty.fullName} (${firstCasilla}-${lastCasilla})`;
+                    }
+                    return '';
+                  })()}
+                </span>
+              </button>
+              <button
+                onClick={handleNextParty}
+                disabled={!diputadosData || diputadosData.parties.findIndex(p => p.id === expandedParty) === diputadosData.parties.length - 1}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                aria-label="Siguiente partido"
+              >
+                <span className="text-sm font-medium hidden sm:inline">
+                  {(() => {
+                    if (!diputadosData || !expandedParty) return '';
+                    const currentIndex = diputadosData.parties.findIndex(p => p.id === expandedParty);
+                    if (currentIndex < diputadosData.parties.length - 1) {
+                      const nextParty = diputadosData.parties[currentIndex + 1];
+                      const firstCasilla = nextParty.casillas[0];
+                      const lastCasilla = nextParty.casillas[nextParty.casillas.length - 1];
+                      return `${nextParty.fullName} (${firstCasilla}-${lastCasilla})`;
+                    }
+                    return '';
+                  })()}
+                </span>
+                <ArrowRight className="h-4 w-4" />
+              </button>
+            </div>
+            
+            {/* Botón Partidos a la derecha */}
             <button
               onClick={handleBack}
               className="px-4 py-3 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg active:bg-gray-50 transition-colors whitespace-nowrap touch-manipulation select-none min-h-[44px]"
