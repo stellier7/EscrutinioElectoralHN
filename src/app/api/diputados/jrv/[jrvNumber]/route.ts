@@ -135,11 +135,18 @@ export async function GET(
           code: department.code,
           diputados: department.diputados,
         },
-        parties: parties.map(party => ({
-          ...party,
-          slots: department.diputados, // Número de casillas por partido
-          slotRange: `1-${department.diputados}` // Rango de casillas
-        }))
+        parties: parties.map((party, index) => {
+          const startSlot = index * department.diputados + 1;
+          const endSlot = (index + 1) * department.diputados;
+          const casillas = Array.from({ length: department.diputados }, (_, i) => startSlot + i);
+          
+          return {
+            ...party,
+            slots: department.diputados, // Número de casillas por partido
+            slotRange: `${startSlot}-${endSlot}`, // Rango de casillas consecutivo
+            casillas: casillas // Array de números de casillas
+          };
+        })
       }
     });
 
