@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { AuthUtils } from '@/lib/auth';
 import { z } from 'zod';
 
 const LegislativeVoteDeltaSchema = z.object({
@@ -28,6 +29,13 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
+    // Verificar autenticación
+    const authHeader = request.headers.get('authorization') || undefined;
+    const token = AuthUtils.extractTokenFromHeader(authHeader);
+    if (!token) return NextResponse.json({ success: false, error: 'No autorizado' }, { status: 401 });
+    const payload = AuthUtils.verifyToken(token);
+    if (!payload) return NextResponse.json({ success: false, error: 'Token inválido' }, { status: 401 });
+
     const escrutinioId = params.id;
     const body = await request.json();
     

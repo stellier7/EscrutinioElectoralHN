@@ -181,7 +181,10 @@ export const useLegislativeVoteStore = create<State & Actions>()(
 
       loadFromServer: async (escrutinioId: string) => {
         try {
-          const response = await axios.get(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/votes`);
+          const token = localStorage.getItem('token');
+          const response = await axios.get(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/votes`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
           if (response.data?.success && response.data.data) {
             const serverCounts = response.data.data.reduce((acc: Record<string, number>, vote: any) => {
               // Para votos legislativos, necesitamos mapear candidateId a partyId_casillaNumber
@@ -261,7 +264,16 @@ async function syncLegislativeVotesForEscrutinio(
   let retries = 0;
   while (retries < MAX_RETRIES) {
     try {
-      await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/legislative-votes`, payload);
+      // Obtener token de autenticación
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.error('❌ No hay token de autenticación para sincronizar votos');
+        return;
+      }
+
+      await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/legislative-votes`, payload, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       
       // Éxito: remover votos sincronizados del estado
       const { pendingVotes } = useLegislativeVoteStore.getState();
