@@ -46,7 +46,8 @@ export async function GET(
     console.log('🔍 [DEBUG] Mesa department:', mesa.department);
     console.log('🔍 [DEBUG] Extracted department name:', departmentName);
     
-    const department = await prisma.department.findFirst({
+    // Buscar departamento con múltiples estrategias
+    let department = await prisma.department.findFirst({
       where: {
         name: {
           contains: departmentName,
@@ -61,6 +62,25 @@ export async function GET(
         diputados: true,
       }
     });
+
+    // Si no encuentra, intentar buscar por "Atlántida" específicamente
+    if (!department && departmentName.toUpperCase() === 'ATLANTIDA') {
+      department = await prisma.department.findFirst({
+        where: {
+          name: {
+            contains: 'Atlántida',
+            mode: 'insensitive'
+          },
+          isActive: true
+        },
+        select: {
+          id: true,
+          name: true,
+          code: true,
+          diputados: true,
+        }
+      });
+    }
 
     if (!department) {
       return NextResponse.json(
