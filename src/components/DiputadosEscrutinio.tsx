@@ -641,32 +641,61 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     });
 
   const uploadEvidenceIfNeeded = async (): Promise<void> => {
-    if (!actaImage || !escrutinioId) return;
+    console.log('📸 [LEGISLATIVO] uploadEvidenceIfNeeded called:', { 
+      actaImage: !!actaImage, 
+      escrutinioId,
+      actaImageDetails: actaImage ? {
+        name: actaImage.name,
+        size: actaImage.size,
+        type: actaImage.type
+      } : null
+    });
+    
+    if (!actaImage || !escrutinioId) {
+      console.log('📸 [LEGISLATIVO] No actaImage or escrutinioId, returning');
+      return;
+    }
+    
     try {
+      console.log('📸 [LEGISLATIVO] Uploading evidence:', { fileName: actaImage.name, contentType: actaImage.type });
       const presign = await axios.post('/api/upload/presign', {
         escrutinioId,
         fileName: actaImage.name,
         contentType: actaImage.type || 'image/jpeg',
       });
+      
+      console.log('📸 [LEGISLATIVO] Presign response:', presign.data);
+      
       if (presign.data?.success) {
         const { uploadUrl, publicUrl } = presign.data.data as { uploadUrl: string; publicUrl: string };
+        console.log('📸 [LEGISLATIVO] Uploading to:', uploadUrl);
         await fetch(uploadUrl, {
           method: 'PUT',
           headers: { 'Content-Type': actaImage.type || 'image/jpeg' },
           body: actaImage,
         });
+        console.log('📸 [LEGISLATIVO] Upload successful, publicUrl:', publicUrl);
         const hash = await computeSHA256Hex(actaImage);
+        console.log('📸 [LEGISLATIVO] Saving evidence to database...');
         await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/evidence`, { publicUrl, hash });
+        console.log('📸 [LEGISLATIVO] Evidence saved successfully');
         return;
       }
-    } catch {
-      // fallback below
+    } catch (error) {
+      console.error('📸 [LEGISLATIVO] S3 upload failed, trying fallback:', error);
     }
+    
     try {
+      console.log('📸 [LEGISLATIVO] Using fallback: converting to dataUrl');
       const dataUrl = await toDataUrl(actaImage);
       const hash = await computeSHA256Hex(actaImage);
+      console.log('📸 [LEGISLATIVO] Fallback successful, dataUrl length:', dataUrl.length);
+      console.log('📸 [LEGISLATIVO] Saving fallback evidence to database...');
       await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/evidence`, { publicUrl: dataUrl, hash });
-    } catch {}
+      console.log('📸 [LEGISLATIVO] Fallback evidence saved successfully');
+    } catch (error) {
+      console.error('📸 [LEGISLATIVO] Fallback also failed:', error);
+    }
   };
 
   const handleCompleteEscrutinio = useCallback(async () => {

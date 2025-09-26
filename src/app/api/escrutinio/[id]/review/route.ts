@@ -135,6 +135,8 @@ export async function GET(
         }
       });
       
+      console.log('📊 PartyVotesMap procesado:', Object.fromEntries(partyVotesMap));
+      
       // Convertir el mapa de partidos a candidatos para el componente LegislativeReview
       // Necesitamos crear un candidato por cada casilla que tenga votos
       partyVotesMap.forEach((casillasMap, partyId) => {
@@ -150,6 +152,8 @@ export async function GET(
           });
         });
       });
+      
+      console.log('📊 CandidatesMap final:', Object.fromEntries(candidatesMap));
       
       console.log('📊 Votos legislativos procesados:', {
         totalVotes,
