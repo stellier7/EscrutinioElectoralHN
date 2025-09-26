@@ -516,31 +516,32 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleBack}
-              className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
-              aria-label="Volver a partidos"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </button>
-            <div className="min-w-0 flex-1">
-              <h3 className="text-base sm:text-lg font-semibold text-gray-900 truncate">{party.fullName}</h3>
-              <p className="text-sm text-gray-600">Selecciona diputado</p>
-            </div>
+        {/* Header con navegación centrada */}
+        <div className="flex items-center justify-between gap-4 mb-4">
+          <button
+            onClick={handleBack}
+            className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
+            aria-label="Volver a partidos"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+          
+          <div className="flex-1 text-center">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 truncate">{party.fullName}</h3>
+            <p className="text-sm text-gray-600">Selecciona diputado</p>
           </div>
           
-          <div className="flex items-center justify-between gap-4">
-            <div className="text-right">
-              <div className="text-xl sm:text-2xl font-bold" style={{ color: party.color }}>
-                {getTotalPartyCountFormatted(expandedParty)}
-              </div>
-              <div className="text-xs text-gray-500">Total</div>
+          <div className="text-right">
+            <div className="text-xl sm:text-2xl font-bold" style={{ color: party.color }}>
+              {getTotalPartyCountFormatted(expandedParty)}
             </div>
-            
-            {/* Centered Navigation arrows */}
-            <div className="flex items-center gap-2">
+            <div className="text-xs text-gray-500">Total</div>
+          </div>
+        </div>
+
+        {/* Navegación entre partidos centrada */}
+        <div className="flex items-center justify-center gap-4 mb-6">
+          <div className="flex items-center gap-2">
               <button
                 onClick={handlePreviousParty}
                 disabled={!diputadosData || diputadosData.parties.findIndex(p => p.id === expandedParty) === 0}
@@ -594,6 +595,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
             const voteCount = getCasillaVoteCount(expandedParty, casillaNumber);
             
             // Debug logs
+            console.log(`🔍 Party: ${party.fullName}, Casillas array:`, party.casillas);
             console.log(`🔍 Casilla ${casillaNumber} (${expandedParty}): isSelected=${isSelected}, voteCount=${voteCount}`);
             
             return (
