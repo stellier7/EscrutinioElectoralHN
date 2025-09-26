@@ -131,13 +131,13 @@ export default function PresidencialEscrutinio({
       if (evidenceUrl) {
         console.log('📸 Guardando URL de acta:', evidenceUrl);
         try {
-          const evidenceResponse = await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/evidence`, {
+          const actaResponse = await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/acta`, {
             publicUrl: evidenceUrl,
             hash: null // Podríamos calcular el hash si es necesario
           });
-          console.log('📸 Evidence saved response:', evidenceResponse.data);
-        } catch (evidenceError) {
-          console.error('📸 Error saving evidence:', evidenceError);
+          console.log('📸 Acta saved response:', actaResponse.data);
+        } catch (actaError) {
+          console.error('📸 Error saving acta:', actaError);
           // Continuar aunque falle el guardado de acta
         }
       } else {
