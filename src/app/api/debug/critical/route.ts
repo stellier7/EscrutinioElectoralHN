@@ -52,7 +52,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         mesa: {
           select: {
             number: true,
-            name: true
+            location: true
           }
         }
       },
@@ -97,7 +97,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       return {
         id: escrutinio.id,
         mesaNumber: escrutinio.mesa.number,
-        mesaName: escrutinio.mesa.name,
+        mesaLocation: escrutinio.mesa.location,
         status: escrutinio.status,
         createdAt: escrutinio.createdAt,
         completedAt: escrutinio.completedAt,
