@@ -46,11 +46,26 @@ export async function GET(
     console.log('🔍 [DEBUG] Mesa department:', mesa.department);
     console.log('🔍 [DEBUG] Extracted department name:', departmentName);
     
-    // Buscar departamento con múltiples estrategias
-    let department = await prisma.department.findFirst({
+    // Buscar departamento - mapeo directo para casos conocidos
+    let department;
+    
+    // Mapeo directo para casos específicos
+    const departmentMap: { [key: string]: string } = {
+      'ATLANTIDA': 'Atlántida',
+      'CORTES': 'Cortés',
+      'FRANCISCO MORAZAN': 'Francisco Morazán',
+      'GRACIAS A DIOS': 'Gracias a Dios',
+      'ISLAS DE LA BAHIA': 'Islas de la Bahía',
+      'LA PAZ': 'La Paz',
+      'SANTA BARBARA': 'Santa Bárbara'
+    };
+    
+    const searchName = departmentMap[departmentName.toUpperCase()] || departmentName;
+    
+    department = await prisma.department.findFirst({
       where: {
         name: {
-          contains: departmentName,
+          contains: searchName,
           mode: 'insensitive'
         },
         isActive: true
@@ -62,25 +77,6 @@ export async function GET(
         diputados: true,
       }
     });
-
-    // Si no encuentra, intentar buscar por "Atlántida" específicamente
-    if (!department && departmentName.toUpperCase() === 'ATLANTIDA') {
-      department = await prisma.department.findFirst({
-        where: {
-          name: {
-            contains: 'Atlántida',
-            mode: 'insensitive'
-          },
-          isActive: true
-        },
-        select: {
-          id: true,
-          name: true,
-          code: true,
-          diputados: true,
-        }
-      });
-    }
 
     if (!department) {
       return NextResponse.json(
