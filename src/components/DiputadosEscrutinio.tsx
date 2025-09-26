@@ -822,7 +822,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     setEditCount(0);
   }, []);
 
-  // Detectar si es un nuevo escrutinio o uno existente
+  // Detectar si es un nuevo escrutinio o uno existente (solo al montar el componente)
   useEffect(() => {
     if (!escrutinioId) return;
     
@@ -851,7 +851,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     };
     
     checkEscrutinioExists();
-  }, [escrutinioId, loadEscrutinioData, clearLocalData]);
+  }, [escrutinioId]); // Removido loadEscrutinioData y clearLocalData de dependencias para evitar loops
 
   // Render party cards (initial view)
   const renderPartyCards = () => {
