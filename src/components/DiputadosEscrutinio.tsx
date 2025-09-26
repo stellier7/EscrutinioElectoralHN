@@ -439,8 +439,21 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
       // 1. Subir foto si existe
       await uploadEvidenceIfNeeded();
       
-      // 2. Finalizar escrutinio definitivamente
-      await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/complete`);
+      // 2. Guardar snapshot del conteo actual antes de completar
+      const token = localStorage.getItem('token');
+      const snapshotData = {
+        partyCounts: counts, // El conteo actual del store
+        timestamp: Date.now(),
+        source: 'legislative_store'
+      };
+      
+      console.log('📊 [LEGISLATIVE] Guardando snapshot del conteo:', snapshotData);
+      
+      await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/complete`, {
+        originalData: snapshotData
+      }, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       
       // 3. Mostrar modal de éxito
       setShowSuccessModal(true);
@@ -450,7 +463,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     } finally {
       setIsCompleting(false);
     }
-  }, [escrutinioId, uploadEvidenceIfNeeded]);
+  }, [escrutinioId, uploadEvidenceIfNeeded, counts]);
 
   // Función para revisar escrutinio
   const handleReviewEscrutinio = () => {

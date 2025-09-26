@@ -93,48 +93,74 @@ export async function GET(
       });
       totalVotes = Array.from(candidatesMap.values()).reduce((sum, candidate) => sum + candidate.votes, 0);
     } else if (escrutinio.electionLevel === 'LEGISLATIVE') {
-      // Procesar votos legislativos - SIMPLIFICADO
-      console.log('🔄 Procesando votos legislativos (modo simplificado)...');
+      // Procesar votos legislativos - SNAPSHOT del conteo actual
+      console.log('🔄 Procesando votos legislativos (snapshot del conteo)...');
       console.log('📊 Número de votos en DB:', escrutinio.votes.length);
-      console.log('📊 Número de papeletas:', escrutinio.papeletas.length);
       
-      // Crear candidatos de ejemplo basados en los partidos conocidos
-      const parties = ['pdc', 'libre', 'pinu-sd', 'liberal', 'nacional'];
-      const diputadosPerParty = 8; // Asumiendo 8 diputados por partido
+      // Leer el snapshot del conteo desde originalData si existe
+      let snapshotData = null;
+      if (escrutinio.originalData && typeof escrutinio.originalData === 'object') {
+        snapshotData = escrutinio.originalData as any;
+        console.log('📊 Snapshot encontrado en originalData:', snapshotData);
+      }
       
-      parties.forEach((partyId, partyIndex) => {
-        for (let casilla = 1; casilla <= diputadosPerParty; casilla++) {
-          const casillaNumber = partyIndex * diputadosPerParty + casilla;
-          const candidateId = `${partyId}_${casillaNumber}`;
-          
-          // Buscar voto en la base de datos
-          const vote = escrutinio.votes.find(v => 
-            v.candidate && 
-            v.candidate.electionLevel === 'LEGISLATIVE' &&
-            v.candidate.party === partyId &&
-            v.candidate.number === casillaNumber
-          );
-          
-          const voteCount = vote ? vote.count : 0;
-          
-          if (voteCount > 0) {
-            console.log(`📊 Voto encontrado: ${partyId} casilla ${casillaNumber} = ${voteCount}`);
+      // Si no hay snapshot, usar los votos de la base de datos
+      if (!snapshotData || !snapshotData.partyCounts) {
+        console.log('📊 No hay snapshot, usando votos de DB...');
+        
+        // Crear candidatos basados en los partidos conocidos
+        const parties = ['pdc', 'libre', 'pinu-sd', 'liberal', 'nacional'];
+        const diputadosPerParty = 8;
+        
+        parties.forEach((partyId, partyIndex) => {
+          for (let casilla = 1; casilla <= diputadosPerParty; casilla++) {
+            const casillaNumber = partyIndex * diputadosPerParty + casilla;
+            const candidateId = `${partyId}_${casillaNumber}`;
+            
+            // Buscar voto en la base de datos
+            const vote = escrutinio.votes.find(v => 
+              v.candidate && 
+              v.candidate.electionLevel === 'LEGISLATIVE' &&
+              v.candidate.party === partyId &&
+              v.candidate.number === casillaNumber
+            );
+            
+            const voteCount = vote ? vote.count : 0;
+            
+            candidatesMap.set(candidateId, {
+              id: candidateId,
+              name: `Casilla ${casillaNumber}`,
+              party: partyId,
+              partyColor: '#e5e7eb',
+              number: casillaNumber,
+              votes: voteCount
+            });
+            
+            totalVotes += voteCount;
           }
+        });
+      } else {
+        // Usar el snapshot del conteo
+        console.log('📊 Usando snapshot del conteo:', snapshotData.partyCounts);
+        
+        Object.entries(snapshotData.partyCounts).forEach(([key, count]) => {
+          const [partyId, casillaNumber] = key.split('_');
+          const candidateId = key;
           
           candidatesMap.set(candidateId, {
             id: candidateId,
             name: `Casilla ${casillaNumber}`,
             party: partyId,
             partyColor: '#e5e7eb',
-            number: casillaNumber,
-            votes: voteCount
+            number: parseInt(casillaNumber),
+            votes: count as number
           });
           
-          totalVotes += voteCount;
-        }
-      });
+          totalVotes += count as number;
+        });
+      }
       
-      console.log('📊 Votos legislativos procesados (simplificado):', {
+      console.log('📊 Votos legislativos procesados:', {
         totalVotes,
         candidatesCount: candidatesMap.size,
         candidatesWithVotes: Array.from(candidatesMap.values()).filter(c => c.votes > 0)
