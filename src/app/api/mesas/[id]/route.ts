@@ -11,10 +11,6 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     const mesa = await prisma.mesa.findFirst({
       where: {
         number: mesaId
-      },
-      include: {
-        department: true,
-        municipality: true
       }
     });
 
@@ -34,8 +30,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         id: mesa.id,
         number: mesa.number,
         location: mesa.location,
-        department: mesa.department?.name || '',
-        municipality: mesa.municipality?.name || '',
+        department: mesa.department,
+        municipality: mesa.municipality,
         diputados: diputados,
         isActive: mesa.isActive,
         createdAt: mesa.createdAt,
