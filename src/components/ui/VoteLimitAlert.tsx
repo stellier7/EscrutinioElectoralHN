@@ -1,5 +1,5 @@
 "use client";
-import React from 'react';
+import React, { useState } from 'react';
 import { AlertCircle, X, CheckCircle } from 'lucide-react';
 import Button from './Button';
 
@@ -22,6 +22,8 @@ export function VoteLimitAlert({
   onAnularPapeleta,
   isClosingPapeleta = false
 }: VoteLimitAlertProps) {
+  const [showAnularConfirmation, setShowAnularConfirmation] = useState(false);
+
   if (!isVisible) return null;
 
   return (
@@ -78,7 +80,7 @@ export function VoteLimitAlert({
             <Button
               variant="danger"
               size="md"
-              onClick={onAnularPapeleta}
+              onClick={() => setShowAnularConfirmation(true)}
               disabled={isClosingPapeleta}
               className="flex-1"
             >
@@ -98,5 +100,45 @@ export function VoteLimitAlert({
         </div>
       </div>
     </div>
+
+    {/* Modal de Confirmación de Anulación */}
+    {showAnularConfirmation && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+          <div className="text-center">
+            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+              <X className="h-6 w-6 text-red-600" />
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              Confirmar Anulación
+            </h3>
+            <p className="text-sm text-gray-600 mb-6">
+              ¿Seguro que deseas anular esta papeleta?
+            </p>
+            <div className="flex gap-3">
+              <Button
+                variant="secondary"
+                size="md"
+                onClick={() => setShowAnularConfirmation(false)}
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="danger"
+                size="md"
+                onClick={() => {
+                  onAnularPapeleta();
+                  setShowAnularConfirmation(false);
+                }}
+                className="flex-1"
+              >
+                Confirmar
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
   );
 }
