@@ -21,8 +21,14 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       }, { status: 404 });
     }
 
-    // Obtener datos de diputados para esta mesa
-    const diputados = mesa.diputados || 0;
+    // Obtener datos de diputados del departamento
+    const department = await prisma.department.findFirst({
+      where: {
+        name: mesa.department
+      }
+    });
+
+    const diputados = department?.diputados || 0;
 
     return NextResponse.json({
       success: true,
