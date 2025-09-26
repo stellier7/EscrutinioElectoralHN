@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Loader2, AlertCircle, Check, X, FileText, Camera, Upload, CheckCircle } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Loader2, AlertCircle, Check, X, FileText, Camera, Upload, CheckCircle } from 'lucide-react';
 import clsx from 'clsx';
 import axios from 'axios';
 import { usePapeleta } from '@/hooks/usePapeleta';
@@ -474,6 +474,25 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     setExpandedParty(null);
   }, []);
 
+  // Handle navigation between parties
+  const handlePreviousParty = useCallback(() => {
+    if (!diputadosData || !expandedParty) return;
+    
+    const currentIndex = diputadosData.parties.findIndex(p => p.id === expandedParty);
+    if (currentIndex > 0) {
+      setExpandedParty(diputadosData.parties[currentIndex - 1].id);
+    }
+  }, [diputadosData, expandedParty]);
+
+  const handleNextParty = useCallback(() => {
+    if (!diputadosData || !expandedParty) return;
+    
+    const currentIndex = diputadosData.parties.findIndex(p => p.id === expandedParty);
+    if (currentIndex < diputadosData.parties.length - 1) {
+      setExpandedParty(diputadosData.parties[currentIndex + 1].id);
+    }
+  }, [diputadosData, expandedParty]);
+
   // Handle close papeleta
   const handleClosePapeleta = useCallback(async () => {
     if (!userId) return;
@@ -888,7 +907,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     
     return (
       <div className="space-y-4">
-        {/* Header with party info and back button - Responsive */}
+        {/* Header with party info and navigation - Responsive */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <button
@@ -902,6 +921,26 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
               <h3 className="text-base sm:text-lg font-semibold text-gray-900 truncate">{party.fullName}</h3>
               <p className="text-sm text-gray-600">Selecciona diputado</p>
             </div>
+          </div>
+          
+          {/* Navigation arrows */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handlePreviousParty}
+              disabled={!diputadosData || diputadosData.parties.findIndex(p => p.id === expandedParty) === 0}
+              className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              aria-label="Partido anterior"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </button>
+            <button
+              onClick={handleNextParty}
+              disabled={!diputadosData || diputadosData.parties.findIndex(p => p.id === expandedParty) === diputadosData.parties.length - 1}
+              className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              aria-label="Siguiente partido"
+            >
+              <ArrowRight className="h-4 w-4" />
+            </button>
           </div>
           <div className="flex items-center justify-between sm:justify-end gap-4">
             <div className="text-right">
@@ -920,7 +959,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
         </div>
 
         {/* Dynamic Grid - Responsive */}
-        <div className="grid gap-3 grid-cols-3 sm:grid-cols-4 md:grid-cols-5">
+        <div className="grid gap-3 grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8">
           {party.casillas.map((casillaNumber, index) => {
             const isSelected = isCasillaSelected(expandedParty, casillaNumber);
             const isApplied = isCasillaApplied(expandedParty, casillaNumber);

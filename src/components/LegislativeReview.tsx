@@ -18,6 +18,9 @@ export default function LegislativeReview({ candidates }: LegislativeReviewProps
 
   console.log('📊 LegislativeReview recibió candidates:', candidates);
 
+  // Orden fijo de partidos (mismo que en DiputadosEscrutinio)
+  const partyOrder = ['pdc', 'libre', 'pinu', 'psh', 'dc', 'lph', 'vamos', 'ud'];
+
   // Agrupar candidatos por partido
   const partiesData = candidates.reduce((acc: Record<string, {
     party: string;
@@ -49,8 +52,10 @@ export default function LegislativeReview({ candidates }: LegislativeReviewProps
 
   return (
     <div className="space-y-4">
-      {/* Mostrar partidos como tarjetas */}
-      {Object.entries(partiesData).map(([partyId, partyData]) => {
+      {/* Mostrar partidos como tarjetas en orden fijo */}
+      {partyOrder.map((partyId) => {
+        const partyData = partiesData[partyId];
+        if (!partyData) return null; // Skip si no hay datos para este partido
         const partyConfig = getPartyConfig(partyId);
         const totalCasillas = partyData.casillas.length;
         const casillaRange = totalCasillas > 1 
