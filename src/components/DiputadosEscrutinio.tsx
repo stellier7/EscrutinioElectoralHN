@@ -261,7 +261,11 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     Object.entries(papeletaVotes).forEach(([voteKey, count]) => {
       const [partyId, slotNumber] = voteKey.split('-');
       for (let i = 0; i < count; i++) {
-        decrement(partyId, parseInt(slotNumber));
+        decrement(partyId, parseInt(slotNumber), {
+          escrutinioId: escrutinioId!,
+          userId: userId!,
+          mesaId: diputadosData?.jrv.jrv
+        });
       }
     });
     
