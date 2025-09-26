@@ -29,13 +29,19 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
+    console.log('📸 Presign request body:', body);
     const { escrutinioId, fileName, contentType } = body as { escrutinioId: string; fileName: string; contentType: string };
+    console.log('📸 Parsed parameters:', { escrutinioId, fileName, contentType });
+    
     if (!escrutinioId || !fileName || !contentType) {
+      console.log('❌ Parámetros inválidos:', { hasEscrutinioId: !!escrutinioId, hasFileName: !!fileName, hasContentType: !!contentType });
       return NextResponse.json({ success: false, error: 'Parámetros inválidos' }, { status: 400 });
     }
 
     // Basic content-type validation
+    console.log('📸 Validating content-type:', contentType);
     if (!/^image\/(png|jpe?g)$/i.test(contentType)) {
+      console.log('❌ Tipo de archivo no permitido:', contentType);
       return NextResponse.json({ success: false, error: 'Tipo de archivo no permitido' }, { status: 400 });
     }
 
