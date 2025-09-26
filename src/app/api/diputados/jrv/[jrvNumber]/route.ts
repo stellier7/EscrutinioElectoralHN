@@ -41,10 +41,13 @@ export async function GET(
     }
 
     // Buscar información del departamento
+    // Extraer solo el nombre del departamento (remover código numérico)
+    const departmentName = mesa.department.replace(/^\d+-/, '').trim();
+    
     const department = await prisma.department.findFirst({
       where: {
         name: {
-          contains: mesa.department,
+          contains: departmentName,
           mode: 'insensitive'
         },
         isActive: true
