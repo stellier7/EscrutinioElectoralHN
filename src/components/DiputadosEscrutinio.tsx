@@ -5,6 +5,8 @@ import { ArrowLeft, ArrowRight, Loader2, AlertCircle, Check, X, FileText, Camera
 import clsx from 'clsx';
 import axios from 'axios';
 import { useLegislativeVoteStore } from '@/store/legislativeVoteStore';
+import { usePapeleta } from '@/hooks/usePapeleta';
+import { VoteLimitAlert } from './ui/VoteLimitAlert';
 
 // Utility function to generate block-based slot ranges for legislative elections
 export function generatePartySlotRanges(seatCount: number, partyCount: number): Array<{ start: number; end: number; range: string; casillas: number[] }> {
@@ -75,6 +77,27 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [escrutinioStatus, setEscrutinioStatus] = useState<'OPEN' | 'CLOSED' | 'COMPLETED'>('OPEN');
   const [isEscrutinioClosed, setIsEscrutinioClosed] = useState(false);
+  
+  // Estados para sistema de papeletas
+  const [showVoteLimitAlert, setShowVoteLimitAlert] = useState(false);
+  const [showAnularConfirmation, setShowAnularConfirmation] = useState(false);
+  
+  // Hook de papeletas
+  const {
+    papeleta,
+    isLoading: papeletaLoading,
+    error: papeletaError,
+    startPapeleta,
+    addVoteToBuffer,
+    removeVoteFromBuffer,
+    closePapeleta,
+    anularPapeleta,
+    resetPapeleta,
+    isCasillaSelected,
+    getCasillaVoteCount,
+    isVoteLimitReached,
+    getTotalVotesInBuffer
+  } = usePapeleta();
 
   // Hook para manejar votos legislativos (como el presidencial)
   const { 
@@ -98,6 +121,14 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
       });
     }
   }, [escrutinioId, loadVotesFromServer]);
+
+  // Inicializar papeleta automáticamente cuando se carga el componente
+  useEffect(() => {
+    if (escrutinioId && userId && papeleta.status === null) {
+      console.log('🔄 Inicializando papeleta automáticamente...');
+      startPapeleta(escrutinioId, userId);
+    }
+  }, [escrutinioId, userId, papeleta.status, startPapeleta]);
 
   // Cargar datos de diputados según la JRV
   useEffect(() => {
@@ -184,28 +215,29 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     const x = rect.left + rect.width / 2;
     const y = rect.top + rect.height / 2;
 
-    // Check if casilla already has votes
-    const currentCount = getCasillaCount(partyId, slotNumber);
-    const isSelected = currentCount > 0;
+    // Check if casilla already has votes in current papeleta
+    const isSelected = isCasillaSelected(partyId, slotNumber);
 
     if (isSelected) {
-      // Decrement vote
-      decrement(partyId, slotNumber, {
-        escrutinioId,
-        userId,
-        mesaId: jrvNumber
-      });
-      
-      console.log('➖ [LEGISLATIVE] Voto decrementado para:', partyId, slotNumber);
+      // Remove vote from buffer
+      removeVoteFromBuffer(partyId, slotNumber);
+      console.log('➖ [LEGISLATIVE] Voto removido de papeleta:', partyId, slotNumber);
     } else {
-      // Increment vote
-      increment(partyId, slotNumber, {
-        escrutinioId,
-        userId,
-        mesaId: jrvNumber
-      });
+      // Check vote limit before adding
+      const voteLimit = diputadosData?.diputados || 0;
+      const totalVotes = getTotalVotesInBuffer();
       
-      console.log('➕ [LEGISLATIVE] Voto incrementado para:', partyId, slotNumber);
+      if (voteLimit > 0 && totalVotes >= voteLimit) {
+        // Show vote limit alert
+        setShowVoteLimitAlert(true);
+        return;
+      }
+
+      // Add vote to buffer
+      const success = await addVoteToBuffer(partyId, slotNumber, userId, voteLimit);
+      if (success) {
+        console.log('➕ [LEGISLATIVE] Voto agregado a papeleta:', partyId, slotNumber);
+      }
     }
     
     // Show animation
@@ -220,7 +252,49 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     setTimeout(() => {
       setAnimation(prev => ({ ...prev, show: false }));
     }, 200);
-  }, [userId, escrutinioId, increment, decrement, getCasillaCount, isEscrutinioClosed, jrvNumber]);
+  }, [userId, escrutinioId, isCasillaSelected, removeVoteFromBuffer, addVoteToBuffer, getTotalVotesInBuffer, diputadosData, isEscrutinioClosed, jrvNumber]);
+
+  // Funciones para manejo de papeletas
+  const handleClosePapeleta = useCallback(async () => {
+    if (!userId) return;
+    
+    try {
+      const success = await closePapeleta(userId);
+      if (success) {
+        console.log('✅ Papeleta cerrada exitosamente');
+        setShowVoteLimitAlert(false);
+      }
+    } catch (error) {
+      console.error('❌ Error cerrando papeleta:', error);
+    }
+  }, [userId, closePapeleta]);
+
+  const handleAnularPapeleta = useCallback(async () => {
+    if (!userId) return;
+    
+    try {
+      const success = await anularPapeleta(userId, 'Anulación manual');
+      if (success) {
+        console.log('✅ Papeleta anulada exitosamente');
+        setShowAnularConfirmation(false);
+        setShowVoteLimitAlert(false);
+      }
+    } catch (error) {
+      console.error('❌ Error anulando papeleta:', error);
+    }
+  }, [userId, anularPapeleta]);
+
+  const handleCloseVoteLimitAlert = useCallback(() => {
+    setShowVoteLimitAlert(false);
+  }, []);
+
+  const handleClosePapeletaFromAlert = useCallback(() => {
+    handleClosePapeleta();
+  }, [handleClosePapeleta]);
+
+  const handleAnularPapeletaFromAlert = useCallback(() => {
+    setShowAnularConfirmation(true);
+  }, []);
 
   // Handle back button
   const handleBack = useCallback(() => {
@@ -610,6 +684,17 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
         <p className="text-sm text-gray-500">
           {diputadosData.diputados} diputados • {diputadosData.parties.length} partidos
         </p>
+        {papeleta.status && (
+          <div className="mt-2 p-2 bg-blue-50 rounded-lg border border-blue-200">
+            <p className="text-sm text-blue-700">
+              <span className="font-medium">Papeleta {papeleta.id ? '#' + papeleta.id.slice(-4) : 'Nueva'}</span>
+              {' • '}
+              <span className="capitalize">{papeleta.status.toLowerCase()}</span>
+              {' • '}
+              {getTotalVotesInBuffer()}/{diputadosData.diputados} marcas
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Animation */}
@@ -770,6 +855,50 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
               >
                 Cerrar
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Vote Limit Alert */}
+      <VoteLimitAlert
+        isVisible={showVoteLimitAlert}
+        currentVotes={getTotalVotesInBuffer()}
+        voteLimit={diputadosData?.diputados || 0}
+        onClose={handleCloseVoteLimitAlert}
+        onClosePapeleta={handleClosePapeletaFromAlert}
+        onAnularPapeleta={handleAnularPapeletaFromAlert}
+        isClosingPapeleta={papeletaLoading}
+      />
+
+      {/* Modal de Confirmación de Anulación */}
+      {showAnularConfirmation && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <div className="text-center">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+                <X className="h-6 w-6 text-red-600" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                Confirmar Anulación
+              </h3>
+              <p className="text-sm text-gray-600 mb-6">
+                ¿Seguro que deseas anular esta papeleta? Se perderán todas las marcas.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowAnularConfirmation(false)}
+                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleAnularPapeleta}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  Confirmar
+                </button>
+              </div>
             </div>
           </div>
         </div>

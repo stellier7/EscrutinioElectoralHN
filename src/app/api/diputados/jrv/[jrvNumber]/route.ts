@@ -90,31 +90,31 @@ export async function GET(
       {
         id: 'pdc',
         name: 'Demócrata Cristiano',
-        fullName: 'Partido Demócrata Cristiano',
+        fullName: 'Demócrata Cristiano',
         color: '#16a34a'
       },
       {
         id: 'libre',
-        name: 'Libre',
-        fullName: 'Partido Libertad y Refundación (LIBRE)',
+        name: 'LIBRE',
+        fullName: 'LIBRE',
         color: '#dc2626'
       },
       {
         id: 'pinu-sd',
-        name: 'PINU-SD',
-        fullName: 'Partido Innovación y Unidad Social Demócrata (PINU-SD)',
+        name: 'PINU',
+        fullName: 'PINU',
         color: '#7c3aed'
       },
       {
         id: 'liberal',
-        name: 'Liberal',
-        fullName: 'Partido Liberal de Honduras',
+        name: 'Partido Liberal',
+        fullName: 'Partido Liberal',
         color: '#ef4444'
       },
       {
         id: 'nacional',
-        name: 'Nacional',
-        fullName: 'Partido Nacional de Honduras',
+        name: 'Partido Nacional',
+        fullName: 'Partido Nacional',
         color: '#2563eb'
       }
     ];
