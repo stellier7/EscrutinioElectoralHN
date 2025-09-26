@@ -31,6 +31,7 @@ interface CandidateResult {
   party: string;
   votes: number;
   percentage: number;
+  number: number;
 }
 
 interface MesaOption {
