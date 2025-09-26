@@ -195,7 +195,13 @@ export default function PresidencialEscrutinio({
     }
     setIsClosing(true);
     try {
-      await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/close`);
+      const token = localStorage.getItem('token');
+      await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/close`, {}, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       setEscrutinioStatus('CLOSED');
       setIsEscrutinioClosed(true);
     } catch (error) {

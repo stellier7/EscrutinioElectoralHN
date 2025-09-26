@@ -367,7 +367,13 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     
     try {
       // Cerrar escrutinio (los votos ya están guardados por el store)
-      const response = await axios.post(`/api/escrutinio/${escrutinioId}/close`);
+      const token = localStorage.getItem('token');
+      const response = await axios.post(`/api/escrutinio/${escrutinioId}/close`, {}, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       console.log('✅ [LEGISLATIVE] Escrutinio cerrado exitosamente:', response.data);
       
       setEscrutinioStatus('CLOSED');
