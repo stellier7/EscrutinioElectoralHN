@@ -19,7 +19,7 @@ export default function LegislativeReview({ candidates }: LegislativeReviewProps
   console.log('📊 LegislativeReview recibió candidates:', candidates);
 
   // Orden fijo de partidos para elecciones 2025 (solo los 5 principales)
-  const partyOrder = ['pdc', 'libre', 'pinu', 'liberal', 'nacional'];
+  const partyOrder = ['pdc', 'libre', 'pinu-sd', 'liberal', 'nacional'];
 
   // Agrupar candidatos por partido
   const partiesData = candidates.reduce((acc: Record<string, {
