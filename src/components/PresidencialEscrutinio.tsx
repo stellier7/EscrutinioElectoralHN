@@ -74,7 +74,12 @@ export default function PresidencialEscrutinio({
       } : null
     });
     if (!actaImage || !escrutinioId) {
-      console.log('📸 No actaImage or escrutinioId, returning null');
+      console.log('📸 No actaImage or escrutinioId, returning null', { 
+        hasActaImage: !!actaImage, 
+        hasEscrutinioId: !!escrutinioId,
+        actaImage,
+        escrutinioId
+      });
       return null;
     }
     
@@ -120,7 +125,9 @@ export default function PresidencialEscrutinio({
     try {
       console.log('📸 handleSendResults - Iniciando proceso:', { 
         escrutinioId, 
-        actaImage: actaImage ? { name: actaImage.name, size: actaImage.size, type: actaImage.type } : null 
+        actaImage: actaImage ? { name: actaImage.name, size: actaImage.size, type: actaImage.type } : null,
+        hasActaImage: !!actaImage,
+        actaImageFile: actaImage
       });
       
       // Subir acta si existe (opcional)
