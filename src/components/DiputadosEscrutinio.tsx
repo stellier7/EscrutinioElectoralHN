@@ -221,7 +221,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     increment(partyId, slotNumber, {
       escrutinioId: escrutinioId!,
       userId: userId!,
-      mesaId: diputadosData?.jrv.id
+      mesaId: diputadosData?.jrv.jrv
     });
 
     console.log('➕ [LEGISLATIVE] Voto agregado:', partyId, slotNumber);
