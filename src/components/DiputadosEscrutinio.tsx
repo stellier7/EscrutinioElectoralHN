@@ -253,9 +253,22 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     setShowAnularConfirmation(false);
     setShowVoteLimitAlert(false);
     
+    // Remover votos de la papeleta actual del store principal
+    Object.entries(papeletaVotes).forEach(([voteKey, count]) => {
+      const [partyId, slotNumber] = voteKey.split('-');
+      for (let i = 0; i < count; i++) {
+        decrement(partyId, parseInt(slotNumber));
+      }
+    });
+    
     // Limpiar votos de la papeleta actual
     setPapeletaVotes({});
-  }, []);
+    
+    // Crear nueva papeleta automáticamente
+    console.log('🔄 Creando nueva papeleta después de anular...');
+    setCurrentPapeleta(prev => prev + 1);
+    console.log('✅ Nueva papeleta creada');
+  }, [papeletaVotes, decrement]);
 
   const handleCloseVoteLimitAlert = useCallback(() => {
     setShowVoteLimitAlert(false);
