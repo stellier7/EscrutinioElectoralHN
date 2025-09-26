@@ -527,48 +527,48 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
         {/* Navegación entre partidos centrada */}
         <div className="flex items-center justify-center gap-4 mb-6">
           <div className="flex items-center gap-2">
-              <button
-                onClick={handlePreviousParty}
-                disabled={!diputadosData || diputadosData.parties.findIndex(p => p.id === expandedParty) === 0}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                aria-label="Partido anterior"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                <span className="text-sm font-medium hidden sm:inline">
-                  {(() => {
-                    if (!diputadosData || !expandedParty) return '';
-                    const currentIndex = diputadosData.parties.findIndex(p => p.id === expandedParty);
-                    if (currentIndex > 0) {
-                      const prevParty = diputadosData.parties[currentIndex - 1];
-                      const firstCasilla = prevParty.casillas[0];
-                      const lastCasilla = prevParty.casillas[prevParty.casillas.length - 1];
-                      return `${prevParty.fullName} (${firstCasilla}-${lastCasilla})`;
-                    }
-                    return '';
-                  })()}
-                </span>
-              </button>
-              <button
-                onClick={handleNextParty}
-                disabled={!diputadosData || diputadosData.parties.findIndex(p => p.id === expandedParty) === diputadosData.parties.length - 1}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                aria-label="Siguiente partido"
-              >
-                <span className="text-sm font-medium hidden sm:inline">
-                  {(() => {
-                    if (!diputadosData || !expandedParty) return '';
-                    const currentIndex = diputadosData.parties.findIndex(p => p.id === expandedParty);
-                    if (currentIndex < diputadosData.parties.length - 1) {
-                      const nextParty = diputadosData.parties[currentIndex + 1];
-                      const firstCasilla = nextParty.casillas[0];
-                      const lastCasilla = nextParty.casillas[nextParty.casillas.length - 1];
-                      return `${nextParty.fullName} (${firstCasilla}-${lastCasilla})`;
-                    }
-                    return '';
-                  })()}
-                </span>
-                <ArrowRight className="h-4 w-4" />
-              </button>
+            <button
+              onClick={handlePreviousParty}
+              disabled={!diputadosData || diputadosData.parties.findIndex(p => p.id === expandedParty) === 0}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              aria-label="Partido anterior"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span className="text-sm font-medium hidden sm:inline">
+                {(() => {
+                  if (!diputadosData || !expandedParty) return '';
+                  const currentIndex = diputadosData.parties.findIndex(p => p.id === expandedParty);
+                  if (currentIndex > 0) {
+                    const prevParty = diputadosData.parties[currentIndex - 1];
+                    const firstCasilla = prevParty.casillas[0];
+                    const lastCasilla = prevParty.casillas[prevParty.casillas.length - 1];
+                    return `${prevParty.fullName} (${firstCasilla}-${lastCasilla})`;
+                  }
+                  return '';
+                })()}
+              </span>
+            </button>
+            <button
+              onClick={handleNextParty}
+              disabled={!diputadosData || diputadosData.parties.findIndex(p => p.id === expandedParty) === diputadosData.parties.length - 1}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              aria-label="Siguiente partido"
+            >
+              <span className="text-sm font-medium hidden sm:inline">
+                {(() => {
+                  if (!diputadosData || !expandedParty) return '';
+                  const currentIndex = diputadosData.parties.findIndex(p => p.id === expandedParty);
+                  if (currentIndex < diputadosData.parties.length - 1) {
+                    const nextParty = diputadosData.parties[currentIndex + 1];
+                    const firstCasilla = nextParty.casillas[0];
+                    const lastCasilla = nextParty.casillas[nextParty.casillas.length - 1];
+                    return `${nextParty.fullName} (${firstCasilla}-${lastCasilla})`;
+                  }
+                  return '';
+                })()}
+              </span>
+              <ArrowRight className="h-4 w-4" />
+            </button>
             </div>
           </div>
         </div>
