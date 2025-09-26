@@ -5,7 +5,6 @@ import { ArrowLeft, ArrowRight, Loader2, AlertCircle, Check, X, FileText, Camera
 import clsx from 'clsx';
 import axios from 'axios';
 import { useLegislativeVoteStore } from '@/store/legislativeVoteStore';
-import { usePapeleta } from '@/hooks/usePapeleta';
 import { VoteLimitAlert } from './ui/VoteLimitAlert';
 
 // Utility function to generate block-based slot ranges for legislative elections
@@ -129,7 +128,12 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
         setError(null);
 
         // USAR EL ENDPOINT CORRECTO QUE YA EXISTÍA Y FUNCIONABA
-        const response = await axios.get(`/api/diputados/jrv/${jrvNumber}`);
+        const token = localStorage.getItem('token');
+        const response = await axios.get(`/api/diputados/jrv/${jrvNumber}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
         if (response.data?.success && response.data.data) {
           const data = response.data.data;
           const diputados = data.department.diputados || 0;
@@ -317,7 +321,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
 
   // Navigation functions
   const handlePreviousParty = useCallback(() => {
-    if (!diputadosData || !expandedParty) return;
+    if (!diputadosData || !expandedParty || !diputadosData.parties) return;
     const currentIndex = diputadosData.parties.findIndex(p => p.id === expandedParty);
     if (currentIndex > 0) {
       setExpandedParty(diputadosData.parties[currentIndex - 1].id);
@@ -325,7 +329,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
   }, [diputadosData, expandedParty]);
 
   const handleNextParty = useCallback(() => {
-    if (!diputadosData || !expandedParty) return;
+    if (!diputadosData || !expandedParty || !diputadosData.parties) return;
     const currentIndex = diputadosData.parties.findIndex(p => p.id === expandedParty);
     if (currentIndex < diputadosData.parties.length - 1) {
       setExpandedParty(diputadosData.parties[currentIndex + 1].id);
@@ -481,66 +485,37 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     router.push(`/revisar/${escrutinioId}`);
   };
 
-  // Función para cerrar escrutinio (pausar)
-  const handleCloseEscrutinio = useCallback(async () => {
+  // Función para congelar/descongelar escrutinio
+  const handleToggleFreeze = useCallback(async () => {
     if (!escrutinioId) {
       setError('No hay escrutinio activo');
       return;
     }
     
-    console.log('🔄 [LEGISLATIVE] Cerrando escrutinio:', escrutinioId);
+    console.log('🔄 [LEGISLATIVE] Toggle freeze escrutinio:', escrutinioId, 'Current state:', isEscrutinioClosed);
     setIsClosing(true);
     setError(null);
     
     try {
-      // Cerrar escrutinio (los votos ya están guardados por el store)
-      const token = localStorage.getItem('token');
-      const response = await axios.post(`/api/escrutinio/${escrutinioId}/close`, {}, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      console.log('✅ [LEGISLATIVE] Escrutinio cerrado exitosamente:', response.data);
-      
-      setEscrutinioStatus('CLOSED');
-      setIsEscrutinioClosed(true);
+      if (isEscrutinioClosed) {
+        // Descongelar - solo cambiar estado local
+        console.log('✅ [LEGISLATIVE] Descongelando escrutinio localmente');
+        setEscrutinioStatus('OPEN');
+        setIsEscrutinioClosed(false);
+      } else {
+        // Congelar - solo cambiar estado local
+        console.log('✅ [LEGISLATIVE] Congelando escrutinio localmente');
+        setEscrutinioStatus('CLOSED');
+        setIsEscrutinioClosed(true);
+      }
     } catch (error: any) {
-      console.error('❌ [LEGISLATIVE] Error cerrando escrutinio:', error);
-      const errorMessage = error?.response?.data?.error || error?.message || 'Error cerrando escrutinio';
+      console.error('❌ [LEGISLATIVE] Error toggle freeze:', error);
+      const errorMessage = error?.response?.data?.error || error?.message || 'Error cambiando estado';
       setError(errorMessage);
-      alert(`Error cerrando escrutinio: ${errorMessage}`);
     } finally {
       setIsClosing(false);
     }
-  }, [escrutinioId]);
-
-  // Función para reabrir escrutinio (permitir editar)
-  const handleReopenEscrutinio = useCallback(async () => {
-    if (!escrutinioId) {
-      setError('No hay escrutinio activo');
-      return;
-    }
-    
-    console.log('🔄 [LEGISLATIVE] Reabriendo escrutinio para editar:', escrutinioId);
-    setIsClosing(true);
-    setError(null);
-    
-    try {
-      // Reabrir escrutinio (cambiar estado local)
-      console.log('✅ [LEGISLATIVE] Escrutinio reabierto localmente');
-      
-      setEscrutinioStatus('OPEN');
-      setIsEscrutinioClosed(false);
-    } catch (error: any) {
-      console.error('❌ [LEGISLATIVE] Error reabriendo escrutinio:', error);
-      const errorMessage = error?.response?.data?.error || error?.message || 'Error reabriendo escrutinio';
-      setError(errorMessage);
-      alert(`Error reabriendo escrutinio: ${errorMessage}`);
-    } finally {
-      setIsClosing(false);
-    }
-  }, [escrutinioId]);
+  }, [escrutinioId, isEscrutinioClosed]);
 
   // Render grid for expanded party
   const renderGrid = () => {
@@ -561,7 +536,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
         {/* Party Navigation Numbers */}
         <div className="flex justify-center mb-4">
           <div className="flex items-center gap-2">
-            {diputadosData?.parties.map((p, index) => {
+            {diputadosData?.parties?.map((p, index) => {
               const isCurrent = p.id === expandedParty;
               const isPrevious = index === (diputadosData.parties.findIndex(party => party.id === expandedParty) - 1);
               const isNext = index === (diputadosData.parties.findIndex(party => party.id === expandedParty) + 1);
@@ -613,14 +588,14 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
           <div className="flex items-center gap-2">
             <button
               onClick={handlePreviousParty}
-              disabled={!diputadosData || diputadosData.parties.findIndex(p => p.id === expandedParty) === 0}
+              disabled={!diputadosData || !diputadosData.parties || diputadosData.parties.findIndex(p => p.id === expandedParty) === 0}
               className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               aria-label="Partido anterior"
             >
               <ArrowLeft className="h-4 w-4" />
               <span className="text-sm font-medium hidden sm:inline">
                 {(() => {
-                  if (!diputadosData || !expandedParty) return '';
+                  if (!diputadosData || !diputadosData.parties || !expandedParty) return '';
                   const currentIndex = diputadosData.parties.findIndex(p => p.id === expandedParty);
                   if (currentIndex > 0) {
                     const prevParty = diputadosData.parties[currentIndex - 1];
@@ -634,13 +609,13 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
             </button>
             <button
               onClick={handleNextParty}
-              disabled={!diputadosData || diputadosData.parties.findIndex(p => p.id === expandedParty) === diputadosData.parties.length - 1}
+              disabled={!diputadosData || !diputadosData.parties || diputadosData.parties.findIndex(p => p.id === expandedParty) === diputadosData.parties.length - 1}
               className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               aria-label="Siguiente partido"
             >
               <span className="text-sm font-medium hidden sm:inline">
                 {(() => {
-                  if (!diputadosData || !expandedParty) return '';
+                  if (!diputadosData || !diputadosData.parties || !expandedParty) return '';
                   const currentIndex = diputadosData.parties.findIndex(p => p.id === expandedParty);
                   if (currentIndex < diputadosData.parties.length - 1) {
                     const nextParty = diputadosData.parties[currentIndex + 1];
@@ -894,7 +869,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
             </div>
           </div>
           <button
-            onClick={isEscrutinioClosed ? handleReopenEscrutinio : handleCloseEscrutinio}
+            onClick={handleToggleFreeze}
             disabled={isClosing}
             className="w-full px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
@@ -939,7 +914,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
           </div>
           <button
             onClick={handleCompleteEscrutinio}
-            disabled={isCompleting || isEscrutinioClosed}
+            disabled={isCompleting}
             className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {isCompleting ? <Loader2 className="h-4 w-4 animate-spin mx-auto" /> : 'Enviar Resultados'}

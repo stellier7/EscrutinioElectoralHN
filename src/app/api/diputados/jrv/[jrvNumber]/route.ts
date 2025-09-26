@@ -1,11 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { AuthUtils } from '@/lib/auth';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { jrvNumber: string } }
 ) {
   try {
+    // Check authentication
+    const authHeader = request.headers.get('authorization') || undefined;
+    const token = AuthUtils.extractTokenFromHeader(authHeader);
+    if (!token) {
+      return NextResponse.json({ success: false, error: 'No autorizado' }, { status: 401 });
+    }
+    const payload = AuthUtils.verifyToken(token);
+    if (!payload) {
+      return NextResponse.json({ success: false, error: 'Token inválido' }, { status: 401 });
+    }
+
     const { jrvNumber } = params;
 
     if (!jrvNumber) {
@@ -52,6 +64,7 @@ export async function GET(
     // Mapeo directo para casos específicos
     const departmentMap: { [key: string]: string } = {
       'ATLANTIDA': 'Atlántida',
+      'COLON': 'Colón',
       'CORTES': 'Cortés',
       'FRANCISCO MORAZAN': 'Francisco Morazán',
       'GRACIAS A DIOS': 'Gracias a Dios',
