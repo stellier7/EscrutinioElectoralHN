@@ -50,7 +50,6 @@ export default function PresidencialEscrutinio({
   const [isCompleting, setIsCompleting] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [isEscrutinioClosed, setIsEscrutinioClosed] = useState(false);
-  const [isEscrutinioFrozen, setIsEscrutinioFrozen] = useState(false);
   const [escrutinioStatus, setEscrutinioStatus] = useState<'COMPLETED' | 'CLOSED'>('COMPLETED');
   const [isClosing, setIsClosing] = useState(false);
   const [isReopening, setIsReopening] = useState(false);
@@ -189,29 +188,28 @@ export default function PresidencialEscrutinio({
     router.push(`/revisar/${escrutinioId}`);
   };
 
-  const handleFreezeEscrutinio = async () => {
+  const handleCloseEscrutinio = async () => {
     if (!escrutinioId) {
       alert('Error: No se encontró el ID del escrutinio');
       return;
     }
     setIsClosing(true);
     try {
-      // Congelar localmente (no llamar al endpoint)
-      console.log('🧊 [PRESIDENTIAL] Congelando escrutinio localmente');
-      setIsEscrutinioFrozen(true);
+      const token = localStorage.getItem('token');
+      await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/close`, {}, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       setEscrutinioStatus('CLOSED');
+      setIsEscrutinioClosed(true);
     } catch (error) {
-      console.error('Error congelando escrutinio:', error);
-      alert(`Error al congelar el escrutinio: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+      console.error('Error cerrando escrutinio:', error);
+      alert(`Error al cerrar el escrutinio: ${error instanceof Error ? error.message : 'Error desconocido'}`);
     } finally {
       setIsClosing(false);
     }
-  };
-
-  const handleUnfreezeEscrutinio = async () => {
-    console.log('🔥 [PRESIDENTIAL] Descongelando escrutinio para editar');
-    setIsEscrutinioFrozen(false);
-    setEscrutinioStatus('COMPLETED');
   };
 
   const handleReopenEscrutinio = async () => {
@@ -221,7 +219,8 @@ export default function PresidencialEscrutinio({
     }
     setIsReopening(true);
     try {
-      await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/reopen`);
+      // Reabrir localmente (cambiar estado)
+      console.log('🔄 [PRESIDENTIAL] Reabriendo escrutinio localmente');
       setEscrutinioStatus('COMPLETED');
       setIsEscrutinioClosed(false);
     } catch (error) {
@@ -231,6 +230,7 @@ export default function PresidencialEscrutinio({
       setIsReopening(false);
     }
   };
+
 
   // Función para volver a la pantalla principal
   const handleGoBack = () => {
@@ -301,14 +301,14 @@ export default function PresidencialEscrutinio({
                 number={c.number}
                 count={counts[c.id] || 0}
                 isPending={false} // Sin indicadores de pending - conteo instantáneo
-                disabled={isEscrutinioClosed || isEscrutinioFrozen} // Deshabilitado cuando el escrutinio esté cerrado o congelado
+                disabled={isEscrutinioClosed} // Deshabilitado cuando el escrutinio esté cerrado
                 onIncrement={() => {
-                  if (!isEscrutinioClosed && !isEscrutinioFrozen) {
+                  if (!isEscrutinioClosed) {
                     increment(c.id, { escrutinioId, userId, mesaId, gps: gps || undefined, deviceId });
                   }
                 }}
                 onDecrement={() => {
-                  if (!isEscrutinioClosed && !isEscrutinioFrozen) {
+                  if (!isEscrutinioClosed) {
                     decrement(c.id, { escrutinioId, userId, mesaId, gps: gps || undefined, deviceId });
                   }
                 }}
@@ -330,25 +330,25 @@ export default function PresidencialEscrutinio({
             {escrutinioStatus === 'COMPLETED' && !isEscrutinioClosed && (
               <>
                 <p className="text-sm text-blue-700 mb-4">
-                  {isEscrutinioFrozen 
-                    ? 'El escrutinio está congelado. Puedes tomar la foto del acta o editar para continuar agregando marcas.'
-                    : 'Una vez que hayas completado el conteo de todos los votos, puedes congelar el escrutinio para tomar la foto.'
+                  {isEscrutinioClosed 
+                    ? 'El escrutinio está cerrado. Puedes editar para continuar agregando marcas.'
+                    : 'Una vez que hayas completado el conteo de todos los votos, puedes cerrar el escrutinio para tomar la foto.'
                   }
                 </p>
                 <button
-                  onClick={isEscrutinioFrozen ? handleUnfreezeEscrutinio : handleFreezeEscrutinio}
-                  disabled={isClosing}
+                  onClick={isEscrutinioClosed ? handleReopenEscrutinio : handleCloseEscrutinio}
+                  disabled={isClosing || isReopening}
                   className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
                 >
-                  {isClosing ? (
+                  {(isClosing || isReopening) ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      {isEscrutinioFrozen ? 'Descongelando...' : 'Congelando...'}
+                      {isReopening ? 'Reabriendo...' : 'Cerrando...'}
                     </>
                   ) : (
                     <>
                       <AlertCircle className="h-4 w-4" />
-                      {isEscrutinioFrozen ? 'Editar Escrutinio' : 'Congelar Escrutinio'}
+                      {isEscrutinioClosed ? 'Editar Escrutinio' : 'Cerrar Escrutinio'}
                     </>
                   )}
                 </button>
@@ -400,7 +400,8 @@ export default function PresidencialEscrutinio({
                   type="file"
                   accept="image/*"
                   onChange={handleActaUpload}
-                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  disabled={isEscrutinioClosed}
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 {actaImage && (
                   <div className="flex items-center gap-2 text-sm text-green-600">

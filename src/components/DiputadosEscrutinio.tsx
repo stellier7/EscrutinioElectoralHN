@@ -77,7 +77,6 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [escrutinioStatus, setEscrutinioStatus] = useState<'OPEN' | 'CLOSED' | 'COMPLETED'>('OPEN');
   const [isEscrutinioClosed, setIsEscrutinioClosed] = useState(false);
-  const [isEscrutinioFrozen, setIsEscrutinioFrozen] = useState(false);
   
   // Estados para sistema de papeletas simplificado
   const [currentPapeleta, setCurrentPapeleta] = useState(1);
@@ -192,8 +191,8 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
       return;
     }
     
-    if (isEscrutinioClosed || isEscrutinioFrozen) {
-      console.log('🔒 [LEGISLATIVE] Click en casilla ignorado - escrutinio cerrado o congelado');
+    if (isEscrutinioClosed) {
+      console.log('🔒 [LEGISLATIVE] Click en casilla ignorado - escrutinio cerrado');
       return;
     }
 
@@ -472,39 +471,66 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     router.push(`/revisar/${escrutinioId}`);
   };
 
-  // Función para congelar escrutinio (freeze votos para tomar foto)
-  const handleFreezeEscrutinio = useCallback(async () => {
+  // Función para cerrar escrutinio (pausar)
+  const handleCloseEscrutinio = useCallback(async () => {
     if (!escrutinioId) {
       setError('No hay escrutinio activo');
       return;
     }
     
-    console.log('🧊 [LEGISLATIVE] Congelando escrutinio:', escrutinioId);
+    console.log('🔄 [LEGISLATIVE] Cerrando escrutinio:', escrutinioId);
     setIsClosing(true);
     setError(null);
     
     try {
-      // Congelar escrutinio (no llamar al endpoint, solo cambiar estado local)
-      console.log('✅ [LEGISLATIVE] Escrutinio congelado localmente');
+      // Cerrar escrutinio (los votos ya están guardados por el store)
+      const token = localStorage.getItem('token');
+      const response = await axios.post(`/api/escrutinio/${escrutinioId}/close`, {}, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      console.log('✅ [LEGISLATIVE] Escrutinio cerrado exitosamente:', response.data);
       
-      setIsEscrutinioFrozen(true);
       setEscrutinioStatus('CLOSED');
+      setIsEscrutinioClosed(true);
     } catch (error: any) {
-      console.error('❌ [LEGISLATIVE] Error congelando escrutinio:', error);
-      const errorMessage = error?.response?.data?.error || error?.message || 'Error congelando escrutinio';
+      console.error('❌ [LEGISLATIVE] Error cerrando escrutinio:', error);
+      const errorMessage = error?.response?.data?.error || error?.message || 'Error cerrando escrutinio';
       setError(errorMessage);
-      alert(`Error congelando escrutinio: ${errorMessage}`);
+      alert(`Error cerrando escrutinio: ${errorMessage}`);
     } finally {
       setIsClosing(false);
     }
   }, [escrutinioId]);
 
-  // Función para descongelar escrutinio (permitir editar)
-  const handleUnfreezeEscrutinio = useCallback(async () => {
-    console.log('🔥 [LEGISLATIVE] Descongelando escrutinio para editar');
-    setIsEscrutinioFrozen(false);
-    setEscrutinioStatus('OPEN');
-  }, []);
+  // Función para reabrir escrutinio (permitir editar)
+  const handleReopenEscrutinio = useCallback(async () => {
+    if (!escrutinioId) {
+      setError('No hay escrutinio activo');
+      return;
+    }
+    
+    console.log('🔄 [LEGISLATIVE] Reabriendo escrutinio para editar:', escrutinioId);
+    setIsClosing(true);
+    setError(null);
+    
+    try {
+      // Reabrir escrutinio (cambiar estado local)
+      console.log('✅ [LEGISLATIVE] Escrutinio reabierto localmente');
+      
+      setEscrutinioStatus('OPEN');
+      setIsEscrutinioClosed(false);
+    } catch (error: any) {
+      console.error('❌ [LEGISLATIVE] Error reabriendo escrutinio:', error);
+      const errorMessage = error?.response?.data?.error || error?.message || 'Error reabriendo escrutinio';
+      setError(errorMessage);
+      alert(`Error reabriendo escrutinio: ${errorMessage}`);
+    } finally {
+      setIsClosing(false);
+    }
+  }, [escrutinioId]);
 
   // Render grid for expanded party
   const renderGrid = () => {
@@ -842,28 +868,28 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
 
       {/* Action Cards */}
       <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Congelar/Editar Escrutinio */}
+        {/* Cerrar/Editar Escrutinio */}
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <div className="flex items-center gap-3 mb-3">
             <div className="p-2 bg-orange-100 rounded-lg">
-              {isEscrutinioFrozen ? <Edit className="h-5 w-5 text-orange-600" /> : <X className="h-5 w-5 text-orange-600" />}
+              {isEscrutinioClosed ? <Edit className="h-5 w-5 text-orange-600" /> : <X className="h-5 w-5 text-orange-600" />}
             </div>
             <div>
               <h3 className="font-semibold text-gray-900">
-                {isEscrutinioFrozen ? 'Editar Escrutinio' : 'Congelar Escrutinio'}
+                {isEscrutinioClosed ? 'Editar Escrutinio' : 'Cerrar Escrutinio'}
               </h3>
               <p className="text-sm text-gray-600">
-                {isEscrutinioFrozen ? 'Continuar agregando marcas' : 'Congelar para tomar foto'}
+                {isEscrutinioClosed ? 'Continuar agregando marcas' : 'Cerrar para tomar foto'}
               </p>
             </div>
           </div>
           <button
-            onClick={isEscrutinioFrozen ? handleUnfreezeEscrutinio : handleFreezeEscrutinio}
-            disabled={isClosing || isEscrutinioClosed}
+            onClick={isEscrutinioClosed ? handleReopenEscrutinio : handleCloseEscrutinio}
+            disabled={isClosing}
             className="w-full px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {isClosing ? <Loader2 className="h-4 w-4 animate-spin mx-auto" /> : 
-             (isEscrutinioFrozen ? 'Editar' : 'Congelar')}
+             (isEscrutinioClosed ? 'Editar' : 'Cerrar')}
           </button>
         </div>
 
@@ -882,7 +908,8 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
             type="file"
             accept="image/*"
             onChange={handleActaUpload}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            disabled={isEscrutinioClosed}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           />
           {actaImage && (
             <p className="text-xs text-green-600 mt-1">✓ {actaImage.name}</p>
