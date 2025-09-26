@@ -119,6 +119,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
   // Estados para alerta de límite de marcas
   const [showVoteLimitAlert, setShowVoteLimitAlert] = useState(false);
   const [isClosingPapeleta, setIsClosingPapeleta] = useState(false);
+  const [showAnularConfirmation, setShowAnularConfirmation] = useState(false);
   const [papeletaNumber, setPapeletaNumber] = useState(() => {
     // Cargar número de papeleta desde localStorage (específico por JRV + nivel)
     if (typeof window !== 'undefined' && jrvNumber) {
@@ -545,7 +546,13 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
         startPapeleta(escrutinioId, userId);
       }
     }
+    setShowAnularConfirmation(false);
   }, [userId, anularPapeleta, escrutinioId, startPapeleta]);
+
+  // Mostrar confirmación de anulación
+  const handleShowAnularConfirmation = useCallback(() => {
+    setShowAnularConfirmation(true);
+  }, []);
 
   // Handle vote limit alert
   const handleCloseVoteLimitAlert = useCallback(() => {
@@ -600,6 +607,12 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     // Retornar votos aplicados + votos del buffer actual
     return appliedCount + bufferCount;
   }, [papeleta.votesBuffer, partyCounts]);
+
+  const getTotalPartyCountFormatted = useCallback((partyId: string): string => {
+    const count = getTotalPartyCount(partyId);
+    const total = diputadosData?.diputados || 0;
+    return `${count} / ${total}`;
+  }, [getTotalPartyCount, diputadosData?.diputados]);
 
   // Funciones para manejar foto y cierre de escrutinio
   const handleActaUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
@@ -850,7 +863,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
                 </div>
                 <div className="flex items-center gap-2 ml-3">
                   <span className="text-xl sm:text-2xl font-bold tabular-nums" aria-live="polite">
-                    {getTotalPartyCount(party.id)}
+                    {getTotalPartyCountFormatted(party.id)}
                   </span>
                   <div className="text-sm text-gray-500">+</div>
                 </div>
@@ -893,7 +906,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
           <div className="flex items-center justify-between sm:justify-end gap-4">
             <div className="text-right">
               <div className="text-xl sm:text-2xl font-bold" style={{ color: party.color }}>
-                {getTotalPartyCount(expandedParty)}
+                {getTotalPartyCountFormatted(expandedParty)}
               </div>
               <div className="text-xs text-gray-500">Total</div>
             </div>
@@ -935,9 +948,9 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
                 )}
                 style={{
                   borderColor: party.color,
-                  backgroundColor: (isSelected || isApplied)
-                    ? `${party.color}25`  // Color para selección actual Y casillas con votos
-                    : 'transparent',      // Sin votos = transparente
+                  backgroundColor: isSelected
+                    ? `${party.color}25`  // Color solo para selección actual (papeleta abierta)
+                    : 'transparent',      // Sin votos en papeleta actual = transparente
                   color: isSelected ? party.color : '#374151',
                   '--tw-ring-color': party.color,
                   borderWidth: isSelected ? '3px' : '2px' // Borde más grueso para seleccionadas
@@ -996,7 +1009,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
                 <span className="sm:hidden">Cerrar Papeleta</span>
               </button>
               <button
-                onClick={handleAnularPapeleta}
+                onClick={handleShowAnularConfirmation}
                 disabled={papeletaLoading}
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
               >
@@ -1183,7 +1196,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
                       <span>Cerrar Papeleta</span>
                     </button>
                     <button
-                      onClick={handleAnularPapeleta}
+                      onClick={handleShowAnularConfirmation}
                       disabled={papeletaLoading}
                       className="flex-1 flex items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
                     >
@@ -1365,6 +1378,39 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
         onAnularPapeleta={handleAnularPapeletaFromAlert}
         isClosingPapeleta={isClosingPapeleta}
       />
+
+      {/* Modal de Confirmación de Anulación */}
+      {showAnularConfirmation && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <div className="text-center">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+                <X className="h-6 w-6 text-red-600" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                Confirmar Anulación
+              </h3>
+              <p className="text-sm text-gray-600 mb-6">
+                ¿Seguro que deseas anular esta papeleta?
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowAnularConfirmation(false)}
+                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleAnularPapeleta}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  Confirmar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal de Confirmación de Envío */}
       {showSuccessModal && (

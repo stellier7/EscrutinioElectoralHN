@@ -61,7 +61,7 @@ export default function PresidencialEscrutinio({
     }
   }, []);
 
-  // Función para subir evidencia si existe
+  // Función para subir acta si existe
   const uploadEvidenceIfNeeded = async (): Promise<string | null> => {
     console.log('📸 uploadEvidenceIfNeeded called:', { 
       actaImage: !!actaImage, 
@@ -101,7 +101,7 @@ export default function PresidencialEscrutinio({
         return publicUrl;
       }
     } catch (error) {
-      console.error('Error subiendo evidencia:', error);
+      console.error('Error subiendo acta:', error);
       return null;
     }
     
@@ -123,13 +123,13 @@ export default function PresidencialEscrutinio({
         actaImage: actaImage ? { name: actaImage.name, size: actaImage.size, type: actaImage.type } : null 
       });
       
-      // Subir evidencia si existe (opcional)
+      // Subir acta si existe (opcional)
       const evidenceUrl = await uploadEvidenceIfNeeded();
       console.log('📸 handleSendResults - evidenceUrl result:', evidenceUrl);
       
-      // Si se subió evidencia, guardar la URL en la base de datos
+      // Si se subió acta, guardar la URL en la base de datos
       if (evidenceUrl) {
-        console.log('📸 Guardando URL de evidencia:', evidenceUrl);
+        console.log('📸 Guardando URL de acta:', evidenceUrl);
         try {
           const evidenceResponse = await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/evidence`, {
             publicUrl: evidenceUrl,
@@ -138,7 +138,7 @@ export default function PresidencialEscrutinio({
           console.log('📸 Evidence saved response:', evidenceResponse.data);
         } catch (evidenceError) {
           console.error('📸 Error saving evidence:', evidenceError);
-          // Continuar aunque falle el guardado de evidencia
+          // Continuar aunque falle el guardado de acta
         }
       } else {
         console.log('📸 No evidence URL to save - actaImage was null or upload failed');
@@ -381,7 +381,7 @@ export default function PresidencialEscrutinio({
               <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
                 <h3 className="text-lg font-semibold text-blue-900 mb-3 flex items-center gap-2">
                   <CheckCircle className="h-5 w-5" />
-                  Finalizar Escrutinio
+                  Enviar Resultados
                 </h3>
                 <p className="text-sm text-blue-700 mb-4">
                   {escrutinioStatus === 'CLOSED' 
@@ -402,7 +402,7 @@ export default function PresidencialEscrutinio({
                   ) : (
                     <>
                       <CheckCircle className="h-4 w-4" />
-                      Finalizar Escrutinio
+                      Enviar Resultados
                     </>
                   )}
                 </button>

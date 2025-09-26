@@ -343,7 +343,7 @@ export default function RevisarEscrutinioPage() {
             <div className="p-6">
               <div className="flex items-center gap-3 mb-4">
                 <Camera className="h-6 w-6 text-primary-600" />
-                <h2 className="text-xl font-semibold text-gray-900">Evidencia Fotográfica</h2>
+                <h2 className="text-xl font-semibold text-gray-900">Acta Fotográfica</h2>
               </div>
               <div className="bg-gray-50 rounded-lg p-4">
                 <img 
@@ -359,10 +359,10 @@ export default function RevisarEscrutinioPage() {
             <div className="p-6">
               <div className="flex items-center gap-3 mb-4">
                 <Camera className="h-6 w-6 text-gray-400" />
-                <h2 className="text-xl font-semibold text-gray-900">Evidencia Fotográfica</h2>
+                <h2 className="text-xl font-semibold text-gray-900">Acta Fotográfica</h2>
               </div>
               <div className="bg-gray-50 rounded-lg p-4 text-center">
-                <p className="text-gray-500">No se encontró evidencia fotográfica</p>
+                <p className="text-gray-500">No se encontró acta fotográfica</p>
                 <p className="text-sm text-gray-400 mt-2">Debug: actaUrl = {escrutinioData.actaUrl || 'null'}</p>
               </div>
             </div>
