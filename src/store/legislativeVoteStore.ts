@@ -98,8 +98,7 @@ export const useLegislativeVoteStore = create<State & Actions>()(
           userId: meta.userId,
           mesaId: meta.mesaId,
           escrutinioId: meta.escrutinioId,
-          partyId,
-          casillaNumber,
+          candidateId: `${partyId}_${casillaNumber}`, // Combinar partyId y casillaNumber
           delta: +1,
           timestamp: delta.timestamp,
           gps: meta.gps,
@@ -142,8 +141,7 @@ export const useLegislativeVoteStore = create<State & Actions>()(
           userId: meta.userId,
           mesaId: meta.mesaId,
           escrutinioId: meta.escrutinioId,
-          partyId,
-          casillaNumber,
+          candidateId: `${partyId}_${casillaNumber}`, // Combinar partyId y casillaNumber
           delta: -1,
           timestamp: delta.timestamp,
           gps: meta.gps,
