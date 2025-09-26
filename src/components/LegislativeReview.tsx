@@ -58,31 +58,35 @@ export default function LegislativeReview({ candidates }: LegislativeReviewProps
         if (!partyData) return null; // Skip si no hay datos para este partido
         const partyConfig = getPartyConfig(partyId);
         const totalCasillas = partyData.casillas.length;
+        const firstCasilla = partyData.casillas[0]?.number || 1;
+        const lastCasilla = partyData.casillas[totalCasillas - 1]?.number || totalCasillas;
         const casillaRange = totalCasillas > 1 
-          ? `Casillas 1-${totalCasillas}` 
-          : `Casilla ${String(partyData.casillas[0]?.number || '1')}`;
+          ? `Casillas ${firstCasilla}-${lastCasilla}` 
+          : `Casilla ${firstCasilla}`;
 
         return (
           <div key={partyId}>
-            {/* Tarjeta del partido */}
+            {/* Tarjeta del partido - Estilo como conteo congelado */}
             <div
-              className="bg-white border border-gray-200 rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow"
+              className="w-full flex items-center rounded-lg border focus:outline-none focus:ring-2 transition-transform bg-gray-50 opacity-60 cursor-pointer"
               onClick={() => handlePartyClick(partyId)}
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div 
-                    className="w-4 h-12 rounded"
-                    style={{ backgroundColor: partyConfig.color }}
-                  />
-                  <div>
-                    <h3 className="font-semibold text-gray-900">{partyConfig.name}</h3>
-                    <p className="text-sm text-gray-600">{casillaRange}</p>
+              <div 
+                className="w-4 h-16 rounded-l-lg"
+                style={{ backgroundColor: partyConfig.color }}
+              />
+              <div className="flex-1 p-4">
+                <div className="flex items-center justify-between">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm sm:text-base font-semibold text-gray-900 truncate">{partyConfig.name}</div>
+                    <div className="text-xs sm:text-sm text-gray-600">{casillaRange}</div>
                   </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-2xl font-bold text-gray-900">{partyData.votes}</p>
-                  <p className="text-sm text-gray-500">+</p>
+                  <div className="flex items-center gap-2 ml-3">
+                    <span className="text-xl sm:text-2xl font-bold tabular-nums" aria-live="polite">
+                      {partyData.votes}
+                    </span>
+                    <div className="text-sm text-gray-500">+</div>
+                  </div>
                 </div>
               </div>
             </div>
