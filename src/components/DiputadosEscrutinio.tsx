@@ -4,8 +4,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, ArrowRight, Loader2, AlertCircle, Check, X, FileText, Camera, Upload, CheckCircle } from 'lucide-react';
 import clsx from 'clsx';
 import axios from 'axios';
-import { usePapeleta } from '@/hooks/usePapeleta';
-import { usePapeletaAutoSave } from '@/hooks/usePapeletaAutoSave';
+import { useLegislativeVoteStore } from '@/store/legislativeVoteStore';
 import { VoteLimitAlert } from './ui/VoteLimitAlert';
 // import { useVoteStore } from '@/store/voteStore'; // REMOVIDO TEMPORALMENTE
 
@@ -131,56 +130,28 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
   const [hasEdits, setHasEdits] = useState(false);
   const [editCount, setEditCount] = useState(0);
 
-  // Hook para manejar papeletas
+  // Hook para manejar votos legislativos (como el presidencial)
   const { 
-    papeleta, 
-    isLoading: papeletaLoading, 
-    error: papeletaError, 
-    startPapeleta, 
-    addVoteToBuffer, 
-    removeVoteFromBuffer,
-    closePapeleta, 
-    anularPapeleta, 
-    resetPapeleta,
-    isCasillaSelected,
-    getCasillaVoteCount,
-    isVoteLimitReached,
-    getTotalVotesInBuffer,
-    loadPapeletaFromServer
-  } = usePapeleta();
+    counts, 
+    increment, 
+    decrement, 
+    loadFromServer: loadVotesFromServer,
+    getPartyCount,
+    getCasillaCount,
+    clear: clearVotes
+  } = useLegislativeVoteStore();
 
-  // Hook para auto-save de papeletas
-  const { 
-    isAutoSaving, 
-    lastSaveTime, 
-    error: autoSaveError, 
-    forceSave 
-  } = usePapeletaAutoSave(
-    papeleta?.id || null,
-    papeleta?.votesBuffer || [],
-    {
-      interval: 3000, // Auto-save cada 3 segundos
-      maxRetries: 3,
-      retryDelay: 1000
+  // Cargar votos desde servidor al montar el componente (como el presidencial)
+  useEffect(() => {
+    if (escrutinioId) {
+      console.log('📊 [LEGISLATIVE] Cargando votos desde servidor para escrutinio:', escrutinioId);
+      loadVotesFromServer(escrutinioId).then(() => {
+        console.log('✅ [LEGISLATIVE] Votos cargados desde servidor');
+      }).catch((error) => {
+        console.error('❌ [LEGISLATIVE] Error cargando votos desde servidor:', error);
+      });
     }
-  );
-
-  // Hook para manejar votos globales (como en presidencial) - REMOVIDO TEMPORALMENTE
-  // const { counts, loadFromServer: loadVotesFromServer } = useVoteStore();
-
-  // Cargar votos desde servidor al montar el componente - REMOVIDO TEMPORALMENTE
-  // useEffect(() => {
-  //   if (escrutinioId) {
-  //     console.log('📊 Cargando votos desde servidor para escrutinio:', escrutinioId);
-  //     loadVotesFromServer(escrutinioId).then(() => {
-  //       console.log('📊 Votos cargados desde servidor:', counts);
-  //       console.log('📊 Detalle de votos del servidor:');
-  //       Object.entries(counts).forEach(([candidateId, count]) => {
-  //         console.log(`  ${candidateId}: ${count}`);
-  //       });
-  //     });
-  //   }
-  // }, [escrutinioId, loadVotesFromServer]);
+  }, [escrutinioId, loadVotesFromServer]);
 
   // No guardar número de papeleta en localStorage - cada escrutinio empieza en 1
 
@@ -400,19 +371,19 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     setExpandedParty(partyId);
   }, []);
 
-  // Handle grid slot click - toggle vote in buffer and animate (optimized for touch)
+  // Handle grid slot click - toggle vote using legislative store (like presidential)
   const handleSlotClick = useCallback(async (partyId: string, slotNumber: number, event: React.MouseEvent) => {
-    console.log('🖱️ Click en casilla:', partyId, slotNumber, 'papeleta.status:', papeleta.status, 'userId:', userId);
+    console.log('🖱️ [LEGISLATIVE] Click en casilla:', partyId, slotNumber, 'userId:', userId);
     
-    if (!userId || papeleta.status !== 'OPEN') {
-      console.log('❌ Click bloqueado - userId:', userId, 'papeleta.status:', papeleta.status);
-      setError('No hay papeleta abierta');
+    if (!userId || !escrutinioId) {
+      console.log('❌ [LEGISLATIVE] Click bloqueado - userId:', userId, 'escrutinioId:', escrutinioId);
+      setError('No hay usuario o escrutinio válido');
       return;
     }
     
     if (isEscrutinioClosed) {
       // Simplemente no hacer nada cuando el escrutinio está cerrado
-      console.log('🔒 Click en casilla ignorado - escrutinio cerrado');
+      console.log('🔒 [LEGISLATIVE] Click en casilla ignorado - escrutinio cerrado');
       return;
     }
 
@@ -421,15 +392,21 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     const x = rect.left + rect.width / 2;
     const y = rect.top + rect.height / 2;
 
-    // Check if casilla is already selected
-    const isSelected = isCasillaSelected(partyId, slotNumber);
+    // Check if casilla already has votes
+    const currentCount = getCasillaCount(partyId, slotNumber);
+    const isSelected = currentCount > 0;
 
     if (isSelected) {
-      // Deseleccionar - remover del buffer localmente
-      removeVoteFromBuffer(partyId, slotNumber);
+      // Decrement vote
+      decrement(partyId, slotNumber, {
+        escrutinioId,
+        userId,
+        mesaId: jrvNumber
+      });
       
-      // No actualizar partyCounts aquí - el hook ya maneja el buffer
-      // Solo mostrar animación
+      console.log('➖ [LEGISLATIVE] Voto decrementado para:', partyId, slotNumber);
+      
+      // Show animation
       setAnimation({
         show: true,
         x,
@@ -439,37 +416,37 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     } else {
       // Verificar límite de marcas antes de agregar
       const voteLimit = diputadosData?.diputados || 0;
-      if (voteLimit > 0 && isVoteLimitReached(voteLimit)) {
+      const totalVotes = Object.values(counts).reduce((sum, count) => sum + count, 0);
+      
+      if (voteLimit > 0 && totalVotes >= voteLimit) {
         // Mostrar alerta de límite alcanzado
         setShowVoteLimitAlert(true);
         return;
       }
 
-      // Seleccionar - agregar al buffer con límite
-      const success = await addVoteToBuffer(partyId, slotNumber, userId, voteLimit);
+      // Increment vote
+      increment(partyId, slotNumber, {
+        escrutinioId,
+        userId,
+        mesaId: jrvNumber
+      });
       
-      if (success) {
-        // No actualizar partyCounts aquí - el hook ya maneja el buffer
-        // Solo mostrar animación
-        setAnimation({
-          show: true,
-          x,
-          y,
-          partyId
-        });
-
-        // Verificar si se alcanzó el límite después de agregar la marca
-        if (voteLimit > 0 && isVoteLimitReached(voteLimit)) {
-          setShowVoteLimitAlert(true);
-        }
-      }
+      console.log('➕ [LEGISLATIVE] Voto incrementado para:', partyId, slotNumber);
+      
+      // Show animation
+      setAnimation({
+        show: true,
+        x,
+        y,
+        partyId
+      });
     }
 
     // Hide animation after 200ms (más rápido)
     setTimeout(() => {
       setAnimation(prev => ({ ...prev, show: false }));
     }, 200);
-  }, [userId, papeleta.status, addVoteToBuffer, removeVoteFromBuffer, isCasillaSelected, diputadosData?.diputados, isVoteLimitReached, isEscrutinioClosed]);
+  }, [userId, escrutinioId, increment, decrement, getCasillaCount, diputadosData?.diputados, isEscrutinioClosed, jrvNumber]);
 
   // Handle back button
   const handleBack = useCallback(() => {
@@ -618,17 +595,11 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
   }, [appliedVotes]);
 
   const getTotalPartyCount = useCallback((partyId: string): number => {
-    // Contar votos del buffer actual (papeleta abierta)
-    const bufferCount = papeleta.votesBuffer.filter(vote => vote.partyId === partyId).length;
-    
-    // Contar votos aplicados (papeletas cerradas) desde el estado local
-    const appliedCount = partyCounts[partyId] || 0;
-    
-    console.log(`📊 Partido ${partyId}: buffer=${bufferCount}, applied=${appliedCount}, total=${appliedCount + bufferCount}`);
-    
-    // Retornar votos aplicados + votos del buffer actual
-    return appliedCount + bufferCount;
-  }, [papeleta.votesBuffer, partyCounts]);
+    // Usar el store legislativo directamente (como el presidencial)
+    const count = getPartyCount(partyId);
+    console.log(`📊 [LEGISLATIVE] Partido ${partyId}: total=${count}`);
+    return count;
+  }, [getPartyCount]);
 
   const getTotalPartyCountFormatted = useCallback((partyId: string): string => {
     const count = getTotalPartyCount(partyId);
@@ -724,19 +695,13 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
 
     setIsCompleting(true);
     try {
-      // 1. Cerrar papeleta abierta automáticamente si existe
-      if (papeleta && papeleta.status === 'OPEN' && papeleta.votesBuffer.length > 0) {
-        console.log('🔄 Cerrando papeleta abierta automáticamente antes de finalizar escrutinio');
-        await closePapeleta(userId || '');
-      }
-      
-      // 2. Subir foto si existe
+      // 1. Subir foto si existe
       await uploadEvidenceIfNeeded();
       
-      // 3. Finalizar escrutinio definitivamente
+      // 2. Finalizar escrutinio definitivamente
       await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/complete`);
       
-      // 4. Mostrar modal de éxito
+      // 3. Mostrar modal de éxito
       setShowSuccessModal(true);
     } catch (error: any) {
       console.error('Error completando escrutinio:', error);
@@ -744,7 +709,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     } finally {
       setIsCompleting(false);
     }
-  }, [escrutinioId, actaImage, uploadEvidenceIfNeeded, papeleta, closePapeleta, userId]);
+  }, [escrutinioId, uploadEvidenceIfNeeded]);
 
   // Función para revisar escrutinio
   const handleReviewEscrutinio = () => {
@@ -764,11 +729,8 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     setError(null); // Limpiar errores anteriores
     
     try {
-      // Enviar los votos actuales al cerrar el escrutinio
-      const response = await axios.post(`/api/escrutinio/${escrutinioId}/close`, {
-        partyCounts,
-        appliedVotes
-      });
+      // Cerrar escrutinio (los votos ya están guardados por el store)
+      const response = await axios.post(`/api/escrutinio/${escrutinioId}/close`);
       console.log('✅ Escrutinio cerrado exitosamente:', response.data);
       
       setEscrutinioStatus('CLOSED');
@@ -1057,11 +1019,8 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
         {/* Dynamic Grid - Responsive */}
         <div className="grid gap-3 grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8">
           {party.casillas.map((casillaNumber, index) => {
-            const isSelected = isCasillaSelected(expandedParty, casillaNumber);
-            const isApplied = isCasillaApplied(expandedParty, casillaNumber);
-            const bufferVoteCount = getCasillaVoteCount(expandedParty, casillaNumber);
-            const appliedVoteCount = getCasillaAppliedCount(expandedParty, casillaNumber);
-            const totalVoteCount = bufferVoteCount + appliedVoteCount;
+            const totalVoteCount = getCasillaCount(expandedParty, casillaNumber);
+            const isSelected = totalVoteCount > 0;
             
             return (
               <button
