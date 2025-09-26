@@ -341,7 +341,7 @@ export default function ResultadosPage() {
                 onClick={loadEvidence}
                 className="text-sm px-3 py-2 bg-primary-600 text-white rounded hover:bg-primary-700 transition-colors"
               >
-                Ver evidencia
+                Ver acta
               </button>
               <button
                 onClick={loadRecentMesas}
@@ -454,11 +454,11 @@ export default function ResultadosPage() {
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4" onClick={() => setShowEvidence(false)}>
             <div className="bg-white rounded-lg shadow-lg max-w-4xl w-full p-4" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between mb-3">
-                <h4 className="text-lg font-semibold">Evidencia fotográfica</h4>
+                <h4 className="text-lg font-semibold">Acta fotográfica</h4>
                 <button className="text-sm text-gray-600" onClick={() => setShowEvidence(false)}>Cerrar</button>
               </div>
               {evidence.length === 0 ? (
-                <p className="text-sm text-gray-600">No hay evidencia para los filtros seleccionados.</p>
+                <p className="text-sm text-gray-600">No hay actas para los filtros seleccionados.</p>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 max-h-[70vh] overflow-auto">
                   {evidence.map((img) => (

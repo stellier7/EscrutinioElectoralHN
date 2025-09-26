@@ -337,7 +337,7 @@ export default function RevisarEscrutinioPage() {
           </div>
         </div>
 
-        {/* Evidencia (si existe) */}
+        {/* Acta (si existe) */}
         {escrutinioData.actaUrl ? (
           <div className="bg-white rounded-lg shadow-sm border">
             <div className="p-6">
