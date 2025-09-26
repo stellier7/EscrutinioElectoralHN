@@ -1406,7 +1406,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
                 <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
                   <h3 className="text-lg font-semibold text-blue-900 mb-3 flex items-center gap-2">
                     <Check className="h-5 w-5" />
-                    Finalizar Escrutinio
+                    Enviar Resultados
                   </h3>
                   <p className="text-sm text-blue-700 mb-4">
                     {escrutinioStatus === 'CLOSED' 
@@ -1427,7 +1427,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
                     ) : (
                       <>
                         <Check className="h-4 w-4" />
-                        Finalizar Escrutinio
+                        Enviar Resultados
                       </>
                     )}
                   </button>
