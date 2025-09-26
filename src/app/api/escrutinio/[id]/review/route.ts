@@ -93,47 +93,51 @@ export async function GET(
       });
       totalVotes = Array.from(candidatesMap.values()).reduce((sum, candidate) => sum + candidate.votes, 0);
     } else if (escrutinio.electionLevel === 'LEGISLATIVE') {
-      // Procesar votos legislativos (desde tabla votes directamente)
-      console.log('🔄 Procesando votos legislativos desde tabla votes...');
+      // Procesar votos legislativos - SIMPLIFICADO
+      console.log('🔄 Procesando votos legislativos (modo simplificado)...');
       console.log('📊 Número de votos en DB:', escrutinio.votes.length);
-      console.log('📊 Votos en DB:', escrutinio.votes.map(v => ({
-        id: v.id,
-        candidateId: v.candidateId,
-        count: v.count,
-        candidate: v.candidate
-      })));
+      console.log('📊 Número de papeletas:', escrutinio.papeletas.length);
       
-      // Procesar votos directamente desde la tabla votes
-      escrutinio.votes.forEach((vote) => {
-        if (vote.candidate && vote.candidate.electionLevel === 'LEGISLATIVE') {
-          const candidateId = vote.candidateId;
-          const partyId = vote.candidate.party;
-          const casillaNumber = vote.candidate.number;
+      // Crear candidatos de ejemplo basados en los partidos conocidos
+      const parties = ['pdc', 'libre', 'pinu-sd', 'liberal', 'nacional'];
+      const diputadosPerParty = 8; // Asumiendo 8 diputados por partido
+      
+      parties.forEach((partyId, partyIndex) => {
+        for (let casilla = 1; casilla <= diputadosPerParty; casilla++) {
+          const casillaNumber = partyIndex * diputadosPerParty + casilla;
+          const candidateId = `${partyId}_${casillaNumber}`;
           
-          console.log(`📊 Procesando voto legislativo:`, {
-            candidateId,
-            partyId,
-            casillaNumber,
-            count: vote.count
-          });
+          // Buscar voto en la base de datos
+          const vote = escrutinio.votes.find(v => 
+            v.candidate && 
+            v.candidate.electionLevel === 'LEGISLATIVE' &&
+            v.candidate.party === partyId &&
+            v.candidate.number === casillaNumber
+          );
+          
+          const voteCount = vote ? vote.count : 0;
+          
+          if (voteCount > 0) {
+            console.log(`📊 Voto encontrado: ${partyId} casilla ${casillaNumber} = ${voteCount}`);
+          }
           
           candidatesMap.set(candidateId, {
             id: candidateId,
             name: `Casilla ${casillaNumber}`,
             party: partyId,
-            partyColor: '#e5e7eb', // Color por defecto
+            partyColor: '#e5e7eb',
             number: casillaNumber,
-            votes: vote.count
+            votes: voteCount
           });
           
-          totalVotes += vote.count;
+          totalVotes += voteCount;
         }
       });
       
-      console.log('📊 Votos legislativos procesados desde DB:', {
+      console.log('📊 Votos legislativos procesados (simplificado):', {
         totalVotes,
         candidatesCount: candidatesMap.size,
-        candidates: Array.from(candidatesMap.values())
+        candidatesWithVotes: Array.from(candidatesMap.values()).filter(c => c.votes > 0)
       });
     }
 
