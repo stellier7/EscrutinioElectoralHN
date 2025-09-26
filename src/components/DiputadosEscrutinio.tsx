@@ -5,6 +5,7 @@ import { ArrowLeft, ArrowRight, Loader2, AlertCircle, Check, X, FileText, Camera
 import clsx from 'clsx';
 import axios from 'axios';
 import { usePapeleta } from '@/hooks/usePapeleta';
+import { usePapeletaAutoSave } from '@/hooks/usePapeletaAutoSave';
 import { VoteLimitAlert } from './ui/VoteLimitAlert';
 // import { useVoteStore } from '@/store/voteStore'; // REMOVIDO TEMPORALMENTE
 
@@ -147,6 +148,22 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     getTotalVotesInBuffer,
     loadPapeletaFromServer
   } = usePapeleta();
+
+  // Hook para auto-save de papeletas
+  const { 
+    isAutoSaving, 
+    lastSaveTime, 
+    error: autoSaveError, 
+    forceSave 
+  } = usePapeletaAutoSave(
+    papeleta?.id || null,
+    papeleta?.votesBuffer || [],
+    {
+      interval: 3000, // Auto-save cada 3 segundos
+      maxRetries: 3,
+      retryDelay: 1000
+    }
+  );
 
   // Hook para manejar votos globales (como en presidencial) - REMOVIDO TEMPORALMENTE
   // const { counts, loadFromServer: loadVotesFromServer } = useVoteStore();
@@ -482,12 +499,13 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
   const handleClosePapeleta = useCallback(async () => {
     if (!userId) return;
     
+    // 1. Forzar guardado inmediato antes de cerrar
+    console.log('🔄 Forzando guardado antes de cerrar papeleta');
+    await forceSave();
+    
+    // 2. Cerrar papeleta
     const success = await closePapeleta(userId);
     if (success) {
-      // Recargar votos desde servidor para obtener conteos actualizados - REMOVIDO TEMPORALMENTE
-      // console.log('🔄 Recargando votos desde servidor después de cerrar papeleta');
-      // await loadVotesFromServer(escrutinioId!);
-      // console.log('📊 Votos recargados después de cerrar papeleta:', counts);
       // Aplicar marcas del buffer a las marcas aplicadas (conteo general)
       const newAppliedVotes = { ...appliedVotes };
       const newPartyCounts = { ...partyCounts };
@@ -528,7 +546,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
         startPapeleta(escrutinioId, userId);
       }
     }
-  }, [userId, closePapeleta, escrutinioId, startPapeleta, appliedVotes, partyCounts, papeleta.votesBuffer]);
+  }, [userId, closePapeleta, escrutinioId, startPapeleta, appliedVotes, partyCounts, papeleta.votesBuffer, forceSave]);
 
   // Handle anular papeleta
   const handleAnularPapeleta = useCallback(async () => {
@@ -706,13 +724,19 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
 
     setIsCompleting(true);
     try {
-      // Subir foto si existe
+      // 1. Cerrar papeleta abierta automáticamente si existe
+      if (papeleta && papeleta.status === 'OPEN' && papeleta.votesBuffer.length > 0) {
+        console.log('🔄 Cerrando papeleta abierta automáticamente antes de finalizar escrutinio');
+        await closePapeleta(userId || '');
+      }
+      
+      // 2. Subir foto si existe
       await uploadEvidenceIfNeeded();
       
-      // Finalizar escrutinio definitivamente
+      // 3. Finalizar escrutinio definitivamente
       await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/complete`);
       
-      // Mostrar modal de éxito
+      // 4. Mostrar modal de éxito
       setShowSuccessModal(true);
     } catch (error: any) {
       console.error('Error completando escrutinio:', error);
@@ -720,7 +744,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     } finally {
       setIsCompleting(false);
     }
-  }, [escrutinioId, actaImage, uploadEvidenceIfNeeded]);
+  }, [escrutinioId, actaImage, uploadEvidenceIfNeeded, papeleta, closePapeleta, userId]);
 
   // Función para revisar escrutinio
   const handleReviewEscrutinio = () => {
@@ -1213,10 +1237,22 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
                 <span className="sm:hidden">Diputados</span>
               </h1>
               {papeleta.status === 'OPEN' && (
-                <div className="flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
-                  <FileText className="h-4 w-4" />
-                  Papeleta #{papeletaNumber}
-                </div>
+              <div className="flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+                <FileText className="h-4 w-4" />
+                Papeleta #{papeletaNumber}
+                {isAutoSaving && (
+                  <div className="flex items-center gap-1 text-xs">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    <span>Guardando...</span>
+                  </div>
+                )}
+                {lastSaveTime && !isAutoSaving && (
+                  <div className="text-xs text-green-600">
+                    <CheckCircle className="h-3 w-3 inline mr-1" />
+                    Guardado
+                  </div>
+                )}
+              </div>
               )}
             </div>
             <div className="text-right">
