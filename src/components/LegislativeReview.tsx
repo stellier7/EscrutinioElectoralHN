@@ -55,11 +55,18 @@ export default function LegislativeReview({ candidates }: LegislativeReviewProps
       {/* Mostrar partidos como tarjetas en orden fijo */}
       {partyOrder.map((partyId) => {
         const partyData = partiesData[partyId];
-        if (!partyData) return null; // Skip si no hay datos para este partido
         const partyConfig = getPartyConfig(partyId);
-        const totalCasillas = partyData.casillas.length;
-        const firstCasilla = partyData.casillas[0]?.number || 1;
-        const lastCasilla = partyData.casillas[totalCasillas - 1]?.number || totalCasillas;
+        
+        // Si no hay datos para este partido, crear estructura vacía
+        const safePartyData = partyData || {
+          party: partyId,
+          votes: 0,
+          casillas: []
+        };
+        
+        const totalCasillas = safePartyData.casillas.length;
+        const firstCasilla = safePartyData.casillas[0]?.number || 1;
+        const lastCasilla = safePartyData.casillas[totalCasillas - 1]?.number || totalCasillas;
         const casillaRange = totalCasillas > 1 
           ? `Casillas ${firstCasilla}-${lastCasilla}` 
           : `Casilla ${firstCasilla}`;
@@ -83,7 +90,7 @@ export default function LegislativeReview({ candidates }: LegislativeReviewProps
                   </div>
                   <div className="flex items-center gap-2 ml-3">
                     <span className="text-xl sm:text-2xl font-bold tabular-nums" aria-live="polite">
-                      {partyData.votes}
+                      {safePartyData.votes}
                     </span>
                     <div className="text-sm text-gray-500">+</div>
                   </div>
@@ -95,7 +102,7 @@ export default function LegislativeReview({ candidates }: LegislativeReviewProps
             {expandedParty === partyId && (
               <div className="mt-3 bg-gray-50 rounded-lg p-4">
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                  {partyData.casillas.map((casilla, index) => (
+                  {safePartyData.casillas.map((casilla, index) => (
                     <div
                       key={index}
                       className="bg-white border border-gray-200 rounded-lg p-3 text-center"
