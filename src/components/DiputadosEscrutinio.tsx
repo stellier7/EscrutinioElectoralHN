@@ -218,7 +218,11 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     }));
 
     // Also add to main store for persistence
-    increment(partyId, slotNumber);
+    increment(partyId, slotNumber, {
+      escrutinioId: escrutinioId!,
+      userId: userId!,
+      mesaId: diputadosData?.jrv.id
+    });
 
     console.log('➕ [LEGISLATIVE] Voto agregado:', partyId, slotNumber);
     
