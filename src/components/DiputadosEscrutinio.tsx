@@ -111,10 +111,11 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
         setLoading(true);
         setError(null);
 
-        const response = await axios.get(`/api/mesas/${jrvNumber}`);
+        // USAR EL ENDPOINT CORRECTO QUE YA EXISTÍA Y FUNCIONABA
+        const response = await axios.get(`/api/diputados/jrv/${jrvNumber}`);
         if (response.data?.success && response.data.data) {
-          const mesa = response.data.data;
-          const diputados = mesa.diputados || 0;
+          const data = response.data.data;
+          const diputados = data.department.diputados || 0;
           
           if (diputados === 0) {
             setError('Esta JRV no tiene diputados asignados');
@@ -122,22 +123,20 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
             return;
           }
 
-          // Generar datos de partidos y casillas
-          const parties = [
-            { id: 'pdc', name: 'PDC', fullName: 'Partido Demócrata Cristiano', color: '#1E40AF', slots: diputados, slotRange: '1-20', casillas: Array.from({ length: diputados }, (_, i) => i + 1) },
-            { id: 'libre', name: 'Libre', fullName: 'Partido Libertad y Refundación', color: '#DC2626', slots: diputados, slotRange: '21-40', casillas: Array.from({ length: diputados }, (_, i) => i + 21) },
-            { id: 'pinu-sd', name: 'PINU-SD', fullName: 'Partido Innovación y Unidad - Social Demócrata', color: '#059669', slots: diputados, slotRange: '41-60', casillas: Array.from({ length: diputados }, (_, i) => i + 41) },
-            { id: 'liberal', name: 'Liberal', fullName: 'Partido Liberal de Honduras', color: '#7C3AED', slots: diputados, slotRange: '61-80', casillas: Array.from({ length: diputados }, (_, i) => i + 61) },
-            { id: 'nacional', name: 'Nacional', fullName: 'Partido Nacional de Honduras', color: '#EA580C', slots: diputados, slotRange: '81-100', casillas: Array.from({ length: diputados }, (_, i) => i + 81) }
-          ];
-
+          // Usar los datos que vienen del endpoint correcto
           const jrvInfo: JRVInfo = {
-            jrv: mesa.number,
-            nombre: mesa.location,
-            departamento: mesa.department,
+            jrv: data.jrv.number,
+            nombre: data.jrv.location,
+            departamento: data.jrv.department,
             diputados: diputados,
-            municipio: mesa.municipality
+            municipio: data.jrv.municipality
           };
+
+          // Usar los partidos que vienen del endpoint
+          const parties = data.parties.map((party: any) => ({
+            ...party,
+            casillas: Array.from({ length: party.slots }, (_, i) => i + 1)
+          }));
 
           setDiputadosData({
             jrv: jrvInfo,
@@ -145,7 +144,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
             diputados
           });
 
-          console.log('✅ [LEGISLATIVE] Datos de diputados cargados:', { jrvInfo, parties });
+          console.log('✅ [LEGISLATIVE] Datos de diputados cargados desde endpoint correcto:', { jrvInfo, parties });
         } else {
           setError('No se encontraron datos para esta JRV');
         }
