@@ -82,10 +82,9 @@ export async function POST(request: NextRequest) {
                if (!testQuery || (testQuery as any[]).length === 0) {
                  console.log(`⚠️ Columna ${column.name} no existe, agregándola...`);
                  
-                 await prisma.$executeRaw`
-                   ALTER TABLE escrutinios
-                   ADD COLUMN "${column.name}" ${column.type}
-                 `;
+                 await prisma.$executeRawUnsafe(
+                   `ALTER TABLE escrutinios ADD COLUMN "${column.name}" ${column.type}`
+                 );
                  
                  missingColumns.push(column.name);
                  console.log(`✅ Columna ${column.name} agregada exitosamente`);
