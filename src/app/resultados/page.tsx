@@ -404,7 +404,9 @@ export default function ResultadosPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {currentResults.candidates.map((candidate, index) => (
+                {currentResults.candidates
+                  .sort((a, b) => a.number - b.number)
+                  .map((candidate, index) => (
                   <tr key={index} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
@@ -585,8 +587,10 @@ export default function ResultadosPage() {
                           ))}
                         </div>
                       ) : (
-                        // Mostrar votos presidenciales como antes
-                        data.candidates.map((candidate: CandidateResult, index: number) => (
+                        // Mostrar votos presidenciales como antes (ordenados por número)
+                        data.candidates
+                          .sort((a, b) => a.number - b.number)
+                          .map((candidate: CandidateResult, index: number) => (
                           <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
                             <div className="flex items-center gap-3">
                               <div className="w-6 h-6 bg-primary-100 rounded-full flex items-center justify-center text-xs font-medium text-primary-600">

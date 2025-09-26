@@ -244,8 +244,10 @@ export default function RevisarEscrutinioPage() {
                   return <LegislativeReview candidates={escrutinioData.candidates} />;
                 })()
               ) : (
-                // Mostrar votos presidenciales como antes
-                escrutinioData.candidates.map((candidate) => (
+                // Mostrar votos presidenciales como antes (ordenados por número)
+                escrutinioData.candidates
+                  .sort((a, b) => a.number - b.number)
+                  .map((candidate) => (
                   <div 
                     key={candidate.id}
                     className="flex items-center justify-between p-4 rounded-lg border"
