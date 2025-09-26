@@ -923,22 +923,44 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
             </div>
           </div>
           
-          {/* Navigation arrows */}
+          {/* Navigation arrows with indicators */}
           <div className="flex items-center gap-2">
             <button
               onClick={handlePreviousParty}
               disabled={!diputadosData || diputadosData.parties.findIndex(p => p.id === expandedParty) === 0}
-              className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               aria-label="Partido anterior"
             >
               <ArrowLeft className="h-4 w-4" />
+              <span className="text-sm font-medium hidden sm:inline">
+                {(() => {
+                  if (!diputadosData || !expandedParty) return '';
+                  const currentIndex = diputadosData.parties.findIndex(p => p.id === expandedParty);
+                  if (currentIndex > 0) {
+                    const prevParty = diputadosData.parties[currentIndex - 1];
+                    return `${prevParty.fullName} (${prevParty.casillas.length} casillas)`;
+                  }
+                  return '';
+                })()}
+              </span>
             </button>
             <button
               onClick={handleNextParty}
               disabled={!diputadosData || diputadosData.parties.findIndex(p => p.id === expandedParty) === diputadosData.parties.length - 1}
-              className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               aria-label="Siguiente partido"
             >
+              <span className="text-sm font-medium hidden sm:inline">
+                {(() => {
+                  if (!diputadosData || !expandedParty) return '';
+                  const currentIndex = diputadosData.parties.findIndex(p => p.id === expandedParty);
+                  if (currentIndex < diputadosData.parties.length - 1) {
+                    const nextParty = diputadosData.parties[currentIndex + 1];
+                    return `${nextParty.fullName} (${nextParty.casillas.length} casillas)`;
+                  }
+                  return '';
+                })()}
+              </span>
               <ArrowRight className="h-4 w-4" />
             </button>
           </div>
