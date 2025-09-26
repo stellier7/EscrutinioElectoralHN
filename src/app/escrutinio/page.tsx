@@ -206,9 +206,10 @@ function EscrutinioPageContent() {
       
       // Solo cargar votos si estamos continuando un escrutinio existente
       // Los escrutinios nuevos ya se limpian con voteStore.clear() en handleGetLocation
+      const isStoreEmpty = Object.keys(voteStore.counts).length === 0;
       const isContinuingExisting = escrutinioState.currentStep === 2 && 
                                    escrutinioState.escrutinioId && 
-                                   !voteStore.isEmpty();
+                                   !isStoreEmpty;
       
       if (!isContinuingExisting) {
         console.log('🆕 Nuevo escrutinio detectado, no cargando votos existentes');
