@@ -21,7 +21,7 @@ export default function LegislativeReview({ candidates }: LegislativeReviewProps
   // Orden fijo de partidos para elecciones 2025 (solo los 5 principales)
   const partyOrder = ['pdc', 'libre', 'pinu-sd', 'liberal', 'nacional'];
 
-  // Agrupar candidatos por partido
+  // Agrupar candidatos por partido - EXACTAMENTE como en el conteo
   const partiesData = candidates.reduce((acc: Record<string, {
     party: string;
     votes: number;
@@ -51,8 +51,8 @@ export default function LegislativeReview({ candidates }: LegislativeReviewProps
   };
 
   return (
-    <div className="space-y-4">
-      {/* Mostrar partidos como tarjetas en orden fijo */}
+    <div className="space-y-3">
+      {/* Mostrar partidos como tarjetas - EXACTAMENTE como en el conteo */}
       {partyOrder.map((partyId) => {
         const partyData = partiesData[partyId];
         const partyConfig = getPartyConfig(partyId);
@@ -73,16 +73,13 @@ export default function LegislativeReview({ candidates }: LegislativeReviewProps
 
         return (
           <div key={partyId}>
-            {/* Tarjeta del partido - Estilo como conteo congelado */}
+            {/* Tarjeta del partido - EXACTAMENTE como en el conteo */}
             <div
               className="w-full flex items-center rounded-lg border focus:outline-none focus:ring-2 transition-transform bg-gray-50 opacity-60 cursor-pointer"
               onClick={() => handlePartyClick(partyId)}
+              style={{ borderLeftWidth: 6, borderLeftColor: partyConfig.color }}
             >
-              <div 
-                className="w-4 h-16 rounded-l-lg"
-                style={{ backgroundColor: partyConfig.color }}
-              />
-              <div className="flex-1 p-4">
+              <div className="flex-1 p-3 sm:p-4 text-left">
                 <div className="flex items-center justify-between">
                   <div className="min-w-0 flex-1">
                     <div className="text-sm sm:text-base font-semibold text-gray-900 truncate">{partyConfig.name}</div>
