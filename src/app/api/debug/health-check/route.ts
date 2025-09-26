@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
           current_database() as database_name,
           version() as postgres_version,
           pg_database_size(current_database()) as database_size_bytes
-      `;
+      ` as any[];
       
       // Get table counts
       const tableCounts = await prisma.$queryRaw`
@@ -43,12 +43,12 @@ export async function GET(request: NextRequest) {
         FROM pg_stat_user_tables 
         ORDER BY n_live_tup DESC
         LIMIT 10
-      `;
+      ` as any[];
 
       healthCheck.services.database = {
         status: 'healthy',
         responseTime: `${dbResponseTime}ms`,
-        info: dbInfo[0],
+        info: dbInfo[0] || {},
         tableStats: tableCounts,
         connectionPool: {
           // Prisma connection pool info
@@ -106,20 +106,23 @@ export async function GET(request: NextRequest) {
       console.log('🔍 [HEALTH CHECK] Testing AWS S3 connection...');
       
       // Test S3 by trying to generate a presigned URL
-      const AWS = require('aws-sdk');
-      const s3 = new AWS.S3({
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-        region: process.env.AWS_REGION
+      const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3');
+      const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
+      
+      const s3Client = new S3Client({
+        region: process.env.AWS_REGION,
+        credentials: {
+          accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+        }
       });
 
-      const testParams = {
+      const command = new GetObjectCommand({
         Bucket: process.env.AWS_S3_BUCKET_NAME,
-        Key: 'health-check-test.txt',
-        Expires: 60
-      };
+        Key: 'health-check-test.txt'
+      });
 
-      const presignedUrl = s3.getSignedUrl('putObject', testParams);
+      const presignedUrl = await getSignedUrl(s3Client, command, { expiresIn: 60 });
       
       healthCheck.services.aws_s3 = {
         status: 'healthy',
