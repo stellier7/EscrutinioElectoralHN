@@ -205,6 +205,7 @@ export function usePapeleta(): UsePapeletaReturn {
       setError(null);
 
       console.log('🔒 Cerrando papeleta:', papeleta.id, 'con', papeleta.votesBuffer.length, 'votos');
+      console.log('🔒 VotesBuffer completo:', papeleta.votesBuffer);
 
       const response = await axios.post(`/api/papeleta/${papeleta.id}/close`, {
         userId,

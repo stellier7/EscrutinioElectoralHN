@@ -43,6 +43,9 @@ export async function POST(
     const finalVotesBuffer = votesBuffer || (papeleta.votesBuffer as any[]);
     
     console.log('🔒 Cerrando papeleta con votos:', finalVotesBuffer.length);
+    console.log('🔒 VotesBuffer del cliente:', votesBuffer);
+    console.log('🔒 VotesBuffer de la DB:', papeleta.votesBuffer);
+    console.log('🔒 Final votesBuffer:', finalVotesBuffer);
 
     // Aplicar votos del buffer a los contadores globales
     await prisma.$transaction(async (tx) => {
