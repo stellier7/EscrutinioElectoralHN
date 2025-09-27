@@ -40,18 +40,15 @@ export async function GET(request: NextRequest) {
 
     const pendingEscrutinios = await prisma.escrutinio.count({
       where: { 
-        status: { 
-          notIn: ['COMPLETED', 'FAILED'] // Excluir completados y cancelados
-        },
+        status: 'PENDING', // Solo escrutinios abiertos (no completados)
         // Todos los usuarios ven estadísticas globales
       },
     });
 
-    // Obtener escrutinios en progreso (no cerrados, ni finalizados, ni cancelados)
+    // Obtener escrutinios en progreso (abiertos, no completados)
     const inProgressEscrutinios = await prisma.escrutinio.findMany({
       where: {
-        status: 'COMPLETED', // En progreso (no cerrado)
-        completedAt: null, // No finalizado
+        status: 'PENDING', // Escrutinios abiertos (en progreso)
         // Excluir escrutinios cancelados (FAILED)
         ...(userRole === 'ADMIN' ? {} : { userId: userId }), // Solo admins ven todos
       },
@@ -115,7 +112,7 @@ export async function GET(request: NextRequest) {
 
         const pending = await prisma.escrutinio.count({
           where: {
-            status: { not: 'COMPLETED' },
+            status: 'PENDING', // Solo escrutinios abiertos
             electionLevel: level as any,
             // Todos los usuarios ven estadísticas globales
           },
