@@ -324,7 +324,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
 
   // Navigation functions
   const handlePreviousParty = useCallback(() => {
-    if (!diputadosData || !expandedParty || !diputadosData.parties || !Array.isArray(diputadosData.parties)) return;
+    if (!diputadosData || !expandedParty || !diputadosData.parties || !Array.isArray(diputadosData.parties) || diputadosData.parties.length === 0) return;
     const currentIndex = diputadosData.parties.findIndex(p => p.id === expandedParty);
     if (currentIndex > 0) {
       setExpandedParty(diputadosData.parties[currentIndex - 1].id);
@@ -332,7 +332,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
   }, [diputadosData, expandedParty]);
 
   const handleNextParty = useCallback(() => {
-    if (!diputadosData || !expandedParty || !diputadosData.parties || !Array.isArray(diputadosData.parties)) return;
+    if (!diputadosData || !expandedParty || !diputadosData.parties || !Array.isArray(diputadosData.parties) || diputadosData.parties.length === 0) return;
     const currentIndex = diputadosData.parties.findIndex(p => p.id === expandedParty);
     if (currentIndex < diputadosData.parties.length - 1) {
       setExpandedParty(diputadosData.parties[currentIndex + 1].id);
