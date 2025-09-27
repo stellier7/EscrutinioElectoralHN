@@ -126,30 +126,30 @@ export function CheckpointTimeline({ checkpoints, escrutinioStartedAt, escrutini
               <p className="text-sm text-gray-600 mb-2">{event.description}</p>
               
               {/* User info for checkpoints */}
-              {event.type === 'checkpoint' && event.user && (
+              {event.type === 'checkpoint' && (event as any).user && (
                 <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
                   <User className="h-3 w-3" />
-                  <span>{event.user.name} ({event.user.email})</span>
+                  <span>{(event as any).user.name} ({(event as any).user.email})</span>
                 </div>
               )}
               
               {/* GPS info for checkpoints */}
-              {event.type === 'checkpoint' && event.gps && event.gps.latitude && event.gps.longitude && (
+              {event.type === 'checkpoint' && (event as any).gps && (event as any).gps.latitude && (event as any).gps.longitude && (
                 <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
                   <MapPin className="h-3 w-3" />
                   <span>
-                    {event.gps.latitude.toFixed(6)}, {event.gps.longitude.toFixed(6)}
-                    {event.gps.accuracy && ` (±${event.gps.accuracy.toFixed(0)}m)`}
+                    {(event as any).gps.latitude.toFixed(6)}, {(event as any).gps.longitude.toFixed(6)}
+                    {(event as any).gps.accuracy && ` (±${(event as any).gps.accuracy.toFixed(0)}m)`}
                   </span>
                 </div>
               )}
               
               {/* Vote breakdown for checkpoints */}
-              {event.type === 'checkpoint' && event.votesSnapshot && (
+              {event.type === 'checkpoint' && (event as any).votesSnapshot && (
                 <div className="bg-gray-50 rounded p-2 text-xs">
                   <div className="font-medium text-gray-700 mb-1">Votos en este momento:</div>
                   <div className="space-y-1">
-                    {Object.entries(event.votesSnapshot).map(([key, count]) => (
+                    {Object.entries((event as any).votesSnapshot).map(([key, count]) => (
                       <div key={key} className="flex justify-between">
                         <span className="text-gray-600">{key}:</span>
                         <span className="font-medium">{count as number}</span>
