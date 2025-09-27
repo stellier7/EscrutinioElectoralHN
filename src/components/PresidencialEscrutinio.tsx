@@ -207,7 +207,7 @@ export default function PresidencialEscrutinio({
     setIsClosing(true);
     try {
       // Enviar checkpoint al servidor
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('auth-token');
       await axios.post(`/api/escrutinio/${escrutinioId}/checkpoint`, {
         action: 'FREEZE',
         votesSnapshot: counts,
@@ -243,7 +243,7 @@ export default function PresidencialEscrutinio({
     setIsReopening(true);
     try {
       // Enviar checkpoint al servidor
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('auth-token');
       await axios.post(`/api/escrutinio/${escrutinioId}/checkpoint`, {
         action: 'UNFREEZE',
         votesSnapshot: counts,

@@ -92,7 +92,7 @@ export default function RevisarEscrutinioPage() {
       
       // Cargar checkpoints de auditoría
       try {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('auth-token');
         const checkpointsResponse = await axios.get(`/api/escrutinio/${escrutinioId}/checkpoint`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });

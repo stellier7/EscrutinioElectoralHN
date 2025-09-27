@@ -147,7 +147,7 @@ export default function ResultadosPage() {
       const resp = await fetch(`/api/mesas/${jrvSearchValue.trim()}/escrutinios`, { 
         cache: 'no-store',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('auth-token')}`
         }
       });
       

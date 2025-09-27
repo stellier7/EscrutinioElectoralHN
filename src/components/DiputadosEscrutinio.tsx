@@ -131,7 +131,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
         setError(null);
 
         // USAR EL ENDPOINT CORRECTO QUE YA EXISTÍA Y FUNCIONABA
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('auth-token');
         const response = await axios.get(`/api/diputados/jrv/${jrvNumber}`, {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -392,7 +392,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
         
         // Guardar la URL en la base de datos
         try {
-          const token = localStorage.getItem('token');
+          const token = localStorage.getItem('auth-token');
           await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/evidence`, 
             { publicUrl }, 
             { headers: { 'Authorization': `Bearer ${token}` } }
@@ -425,7 +425,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
       
       // Guardar la URL en la base de datos
       try {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('auth-token');
         await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/evidence`, 
           { publicUrl: dataUrl }, 
           { headers: { 'Authorization': `Bearer ${token}` } }

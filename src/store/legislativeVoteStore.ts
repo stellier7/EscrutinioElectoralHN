@@ -181,7 +181,7 @@ export const useLegislativeVoteStore = create<State & Actions>()(
 
       loadFromServer: async (escrutinioId: string) => {
         try {
-          const token = localStorage.getItem('token');
+          const token = localStorage.getItem('auth-token');
           const response = await axios.get(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/votes`, {
             headers: { 'Authorization': `Bearer ${token}` }
           });
@@ -265,7 +265,7 @@ async function syncLegislativeVotesForEscrutinio(
   while (retries < MAX_RETRIES) {
     try {
       // Obtener token de autenticación
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('auth-token');
       if (!token) {
         console.error('❌ No hay token de autenticación para sincronizar votos');
         return;
