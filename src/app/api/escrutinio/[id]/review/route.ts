@@ -151,19 +151,20 @@ export async function GET(
           const [partyId, casillaNumber] = key.split('_');
           const candidateId = key;
           const casillaNum = parseInt(casillaNumber);
+          const voteCount = count as number;
           
           // Solo mostrar casillas que tienen votos
-          if (count > 0) {
+          if (voteCount > 0) {
             candidatesMap.set(candidateId, {
               id: candidateId,
               name: `Casilla ${casillaNum}`,
               party: partyId,
               partyColor: '#e5e7eb',
               number: casillaNum,
-              votes: count as number
+              votes: voteCount
             });
             
-            totalVotes += count as number;
+            totalVotes += voteCount;
           }
         });
         
