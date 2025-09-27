@@ -104,9 +104,9 @@ export async function GET(
         console.log('📊 Snapshot encontrado en originalData:', snapshotData);
       }
       
-      // Si no hay snapshot, usar los votos de la base de datos
+      // Si no hay snapshot, usar los votos de la base de datos (fallback)
       if (!snapshotData || !snapshotData.partyCounts) {
-        console.log('📊 No hay snapshot, usando votos de DB...');
+        console.log('📊 No hay snapshot, usando votos de DB como fallback...');
         
         // Crear candidatos basados en los partidos conocidos
         const parties = ['pdc', 'libre', 'pinu-sd', 'liberal', 'nacional'];
@@ -140,23 +140,51 @@ export async function GET(
           }
         });
       } else {
-        // Usar el snapshot del conteo
+        // Usar el snapshot del conteo (PRINCIPAL)
         console.log('📊 Usando snapshot del conteo:', snapshotData.partyCounts);
+        
+        // Obtener información de la mesa para determinar diputados por partido
+        const diputadosPerParty = 8; // Valor por defecto
+        const parties = ['pdc', 'libre', 'pinu-sd', 'liberal', 'nacional'];
         
         Object.entries(snapshotData.partyCounts).forEach(([key, count]) => {
           const [partyId, casillaNumber] = key.split('_');
           const candidateId = key;
+          const casillaNum = parseInt(casillaNumber);
           
-          candidatesMap.set(candidateId, {
-            id: candidateId,
-            name: `Casilla ${casillaNumber}`,
-            party: partyId,
-            partyColor: '#e5e7eb',
-            number: parseInt(casillaNumber),
-            votes: count as number
-          });
-          
-          totalVotes += count as number;
+          // Solo mostrar casillas que tienen votos
+          if (count > 0) {
+            candidatesMap.set(candidateId, {
+              id: candidateId,
+              name: `Casilla ${casillaNum}`,
+              party: partyId,
+              partyColor: '#e5e7eb',
+              number: casillaNum,
+              votes: count as number
+            });
+            
+            totalVotes += count as number;
+          }
+        });
+        
+        // También agregar casillas sin votos para mostrar el rango completo
+        parties.forEach((partyId, partyIndex) => {
+          for (let casilla = 1; casilla <= diputadosPerParty; casilla++) {
+            const casillaNumber = partyIndex * diputadosPerParty + casilla;
+            const candidateId = `${partyId}_${casillaNumber}`;
+            
+            // Si no está en el mapa, agregarlo con 0 votos
+            if (!candidatesMap.has(candidateId)) {
+              candidatesMap.set(candidateId, {
+                id: candidateId,
+                name: `Casilla ${casillaNumber}`,
+                party: partyId,
+                partyColor: '#e5e7eb',
+                number: casillaNumber,
+                votes: 0
+              });
+            }
+          }
         });
       }
       
@@ -197,6 +225,7 @@ export async function GET(
       mesaName: escrutinio.mesa.location,
       department: escrutinio.mesa.department,
       electionLevel: escrutinio.electionLevel,
+      startedAt: escrutinio.startedAt.toISOString(),
       completedAt: escrutinio.completedAt?.toISOString() || escrutinio.updatedAt.toISOString(),
       totalVotes,
       candidates,
