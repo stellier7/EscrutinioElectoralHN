@@ -94,9 +94,12 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     clear: clearVotes
   } = useLegislativeVoteStore();
 
-  // Cargar votos desde servidor al montar el componente (como el presidencial)
+  // Limpiar store y cargar votos desde servidor al montar el componente
   useEffect(() => {
     if (escrutinioId) {
+      console.log('🔄 [LEGISLATIVE] Iniciando nuevo escrutinio, limpiando store local...');
+      clearVotes(); // Limpiar store local primero
+      
       console.log('📊 [LEGISLATIVE] Cargando votos desde servidor para escrutinio:', escrutinioId);
       loadVotesFromServer(escrutinioId).then(() => {
         console.log('✅ [LEGISLATIVE] Votos cargados desde servidor');
@@ -104,7 +107,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
         console.error('❌ [LEGISLATIVE] Error cargando votos desde servidor:', error);
       });
     }
-  }, [escrutinioId, loadVotesFromServer]);
+  }, [escrutinioId, loadVotesFromServer, clearVotes]);
 
   // Inicializar papeleta automáticamente cuando se carga el componente
   useEffect(() => {
@@ -497,17 +500,37 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     setError(null);
     
     try {
+      const action = isEscrutinioClosed ? 'UNFREEZE' : 'FREEZE';
+      const votesSnapshot = counts; // Snapshot actual de votos
+      
+      // Enviar checkpoint al servidor
+      const token = localStorage.getItem('token');
+      await axios.post(`/api/escrutinio/${escrutinioId}/checkpoint`, {
+        action,
+        votesSnapshot,
+        deviceId: navigator.userAgent,
+        gps: {
+          latitude: 0, // TODO: Obtener GPS real
+          longitude: 0,
+          accuracy: 0
+        }
+      }, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
       if (isEscrutinioClosed) {
-        // Descongelar - solo cambiar estado local
+        // Descongelar - cambiar estado local
         console.log('✅ [LEGISLATIVE] Descongelando escrutinio localmente');
         setEscrutinioStatus('OPEN');
         setIsEscrutinioClosed(false);
       } else {
-        // Congelar - solo cambiar estado local
+        // Congelar - cambiar estado local
         console.log('✅ [LEGISLATIVE] Congelando escrutinio localmente');
         setEscrutinioStatus('CLOSED');
         setIsEscrutinioClosed(true);
       }
+      
+      console.log(`✅ [LEGISLATIVE] Checkpoint ${action} guardado exitosamente`);
     } catch (error: any) {
       console.error('❌ [LEGISLATIVE] Error toggle freeze:', error);
       const errorMessage = error?.response?.data?.error || error?.message || 'Error cambiando estado';
@@ -515,7 +538,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     } finally {
       setIsClosing(false);
     }
-  }, [escrutinioId, isEscrutinioClosed]);
+  }, [escrutinioId, isEscrutinioClosed, counts]);
 
   // Render grid for expanded party
   const renderGrid = () => {
@@ -589,7 +612,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
             <button
               onClick={handlePreviousParty}
               disabled={!diputadosData || !diputadosData.parties || diputadosData.parties.findIndex(p => p.id === expandedParty) === 0}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
               aria-label="Partido anterior"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -610,7 +633,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
             <button
               onClick={handleNextParty}
               disabled={!diputadosData || !diputadosData.parties || diputadosData.parties.findIndex(p => p.id === expandedParty) === diputadosData.parties.length - 1}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
               aria-label="Siguiente partido"
             >
               <span className="text-sm font-medium hidden sm:inline">
@@ -716,7 +739,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
             <button
               onClick={handleClosePapeleta}
               disabled={getTotalVotesInPapeleta() === 0}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:text-gray-200 disabled:cursor-not-allowed transition-colors text-sm font-medium"
             >
               <Check className="h-4 w-4" />
               <span className="hidden sm:inline">Cerrar Papeleta</span>
@@ -725,7 +748,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
             <button
               onClick={handleAnularPapeletaFromAlert}
               disabled={getTotalVotesInPapeleta() === 0}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-gray-400 disabled:text-gray-200 disabled:cursor-not-allowed transition-colors text-sm font-medium"
             >
               <X className="h-4 w-4" />
               <span className="hidden sm:inline">Anular Papeleta</span>
@@ -871,7 +894,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
           <button
             onClick={handleToggleFreeze}
             disabled={isClosing}
-            className="w-full px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="w-full px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:bg-gray-400 disabled:text-gray-200 disabled:cursor-not-allowed transition-colors"
           >
             {isClosing ? <Loader2 className="h-4 w-4 animate-spin mx-auto" /> : 
              (isEscrutinioClosed ? 'Editar' : 'Cerrar')}
@@ -894,7 +917,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
             accept="image/*"
             onChange={handleActaUpload}
             disabled={isEscrutinioClosed}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
           />
           {actaImage && (
             <p className="text-xs text-green-600 mt-1">✓ {actaImage.name}</p>
@@ -915,7 +938,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
           <button
             onClick={handleCompleteEscrutinio}
             disabled={isCompleting}
-            className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:text-gray-200 disabled:cursor-not-allowed transition-colors"
           >
             {isCompleting ? <Loader2 className="h-4 w-4 animate-spin mx-auto" /> : 'Enviar Resultados'}
           </button>

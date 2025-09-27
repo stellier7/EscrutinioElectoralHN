@@ -38,10 +38,11 @@ export default function PresidencialEscrutinio({
   deviceId 
 }: PresidencialEscrutinioProps) {
   const router = useRouter();
-  const { counts, increment, decrement } = useVoteStore((s) => ({
+  const { counts, increment, decrement, clear: clearVotes } = useVoteStore((s) => ({
     counts: s.counts,
     increment: s.increment,
     decrement: s.decrement,
+    clear: s.clear,
   }));
 
   // Estados para foto y finalización
@@ -53,6 +54,14 @@ export default function PresidencialEscrutinio({
   const [escrutinioStatus, setEscrutinioStatus] = useState<'COMPLETED' | 'CLOSED'>('COMPLETED');
   const [isClosing, setIsClosing] = useState(false);
   const [isReopening, setIsReopening] = useState(false);
+
+  // Limpiar store al iniciar nuevo escrutinio
+  useEffect(() => {
+    if (escrutinioId) {
+      console.log('🔄 [PRESIDENTIAL] Iniciando nuevo escrutinio, limpiando store local...');
+      clearVotes();
+    }
+  }, [escrutinioId, clearVotes]);
 
   const handleActaUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -193,20 +202,32 @@ export default function PresidencialEscrutinio({
       alert('Error: No se encontró el ID del escrutinio');
       return;
     }
+    
+    console.log('🔄 [PRESIDENTIAL] Congelando escrutinio localmente');
     setIsClosing(true);
     try {
+      // Enviar checkpoint al servidor
       const token = localStorage.getItem('token');
-      await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/close`, {}, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+      await axios.post(`/api/escrutinio/${escrutinioId}/checkpoint`, {
+        action: 'FREEZE',
+        votesSnapshot: counts,
+        deviceId: navigator.userAgent,
+        gps: {
+          latitude: 0, // TODO: Obtener GPS real
+          longitude: 0,
+          accuracy: 0
         }
+      }, {
+        headers: { 'Authorization': `Bearer ${token}` }
       });
+      
+      // Cambiar estado local
       setEscrutinioStatus('CLOSED');
       setIsEscrutinioClosed(true);
+      console.log('✅ [PRESIDENTIAL] Escrutinio congelado localmente y checkpoint guardado');
     } catch (error) {
-      console.error('Error cerrando escrutinio:', error);
-      alert(`Error al cerrar el escrutinio: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+      console.error('Error congelando escrutinio:', error);
+      alert(`Error al congelar el escrutinio: ${error instanceof Error ? error.message : 'Error desconocido'}`);
     } finally {
       setIsClosing(false);
     }
@@ -217,15 +238,32 @@ export default function PresidencialEscrutinio({
       alert('Error: No se encontró el ID del escrutinio');
       return;
     }
+    
+    console.log('🔄 [PRESIDENTIAL] Descongelando escrutinio localmente');
     setIsReopening(true);
     try {
-      // Reabrir localmente (cambiar estado)
-      console.log('🔄 [PRESIDENTIAL] Reabriendo escrutinio localmente');
+      // Enviar checkpoint al servidor
+      const token = localStorage.getItem('token');
+      await axios.post(`/api/escrutinio/${escrutinioId}/checkpoint`, {
+        action: 'UNFREEZE',
+        votesSnapshot: counts,
+        deviceId: navigator.userAgent,
+        gps: {
+          latitude: 0, // TODO: Obtener GPS real
+          longitude: 0,
+          accuracy: 0
+        }
+      }, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      // Cambiar estado local
       setEscrutinioStatus('COMPLETED');
       setIsEscrutinioClosed(false);
+      console.log('✅ [PRESIDENTIAL] Escrutinio descongelado localmente y checkpoint guardado');
     } catch (error) {
-      console.error('Error reabriendo escrutinio:', error);
-      alert(`Error al reabrir el escrutinio: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+      console.error('Error descongelando escrutinio:', error);
+      alert(`Error al descongelar el escrutinio: ${error instanceof Error ? error.message : 'Error desconocido'}`);
     } finally {
       setIsReopening(false);
     }

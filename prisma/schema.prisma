@@ -91,6 +91,7 @@ model User {
   auditLogs       AuditLog[]
   offlineQueue    OfflineQueue[]
   rateLimit       UserRateLimit?
+  checkpoints     EscrutinioCheckpoint[]
   
   // Relaciones auto-referenciales para aprobación
   approvedByUser  User?       @relation("UserApproval", fields: [approvedBy], references: [id])
@@ -218,9 +219,33 @@ model Escrutinio {
   votes           Vote[]
   corrections     Correction[]
   papeletas       Papeleta[]
+  checkpoints     EscrutinioCheckpoint[]
   
   @@unique([userId, electionId, mesaId, electionLevel])
   @@map("escrutinios")
+}
+
+model EscrutinioCheckpoint {
+  id              String    @id @default(cuid())
+  escrutinioId    String
+  userId          String
+  action          String    // 'FREEZE' o 'UNFREEZE'
+  votesSnapshot   Json      // Snapshot de los votos en ese momento
+  timestamp       DateTime  @default(now())
+  
+  // Metadatos adicionales
+  deviceId        String?
+  gpsLatitude     Float?
+  gpsLongitude    Float?
+  gpsAccuracy     Float?
+  
+  createdAt       DateTime  @default(now())
+  
+  // Relaciones
+  escrutinio      Escrutinio @relation(fields: [escrutinioId], references: [id], onDelete: Cascade)
+  user            User       @relation(fields: [userId], references: [id])
+  
+  @@map("escrutinio_checkpoints")
 }
 
 model Vote {

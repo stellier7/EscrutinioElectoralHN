@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import LegislativeReview from '../../../components/LegislativeReview';
+import { CheckpointTimeline } from '../../../components/CheckpointTimeline';
 
 interface EscrutinioData {
   id: string;
@@ -24,6 +25,7 @@ interface EscrutinioData {
   mesaName: string;
   department: string;
   electionLevel: string;
+  startedAt: string;
   completedAt: string;
   totalVotes: number;
   candidates: Array<{
@@ -54,6 +56,7 @@ export default function RevisarEscrutinioPage() {
   const escrutinioId = params.id as string;
   
   const [escrutinioData, setEscrutinioData] = useState<EscrutinioData | null>(null);
+  const [checkpoints, setCheckpoints] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -74,6 +77,7 @@ export default function RevisarEscrutinioPage() {
       setLoading(true);
       setError(null);
       
+      // Cargar datos del escrutinio
       const response = await axios.get(`/api/escrutinio/${escrutinioId}/review`);
       
       if (response.data.success) {
@@ -84,6 +88,22 @@ export default function RevisarEscrutinioPage() {
         setEscrutinioData(response.data.data);
       } else {
         throw new Error(response.data.error || 'Error al cargar el escrutinio');
+      }
+      
+      // Cargar checkpoints de auditoría
+      try {
+        const token = localStorage.getItem('token');
+        const checkpointsResponse = await axios.get(`/api/escrutinio/${escrutinioId}/checkpoint`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (checkpointsResponse.data.success) {
+          console.log('📋 Checkpoints cargados:', checkpointsResponse.data.data.checkpoints);
+          setCheckpoints(checkpointsResponse.data.data.checkpoints);
+        }
+      } catch (checkpointErr) {
+        console.warn('⚠️ No se pudieron cargar los checkpoints:', checkpointErr);
+        // No es crítico, continuar sin checkpoints
       }
     } catch (err) {
       console.error('Error loading escrutinio:', err);
@@ -370,6 +390,13 @@ export default function RevisarEscrutinioPage() {
             </div>
           </div>
         )}
+
+        {/* Timeline de Auditoría */}
+        <CheckpointTimeline 
+          checkpoints={checkpoints}
+          escrutinioStartedAt={escrutinioData.startedAt}
+          escrutinioCompletedAt={escrutinioData.completedAt}
+        />
       </div>
     </div>
   );
