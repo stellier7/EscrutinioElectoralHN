@@ -1,34 +1,15 @@
-import { NextResponse } from 'next/server';
-import { z } from 'zod';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { AuthUtils } from '@/lib/auth';
-import { SimpleRateLimiter } from '@/lib/rate-limiter';
 
-export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
-const VoteDeltaSchema = z.object({
-  candidateId: z.string().min(1),
-  delta: z.number().int().min(-1000).max(1000),
-  timestamp: z.number(),
-  clientBatchId: z.string(),
-});
-
-const BodySchema = z.object({
-  escrutinioId: z.string().min(1),
-  votes: z.array(VoteDeltaSchema).min(1),
-  gps: z
-    .object({
-      latitude: z.number(),
-      longitude: z.number(),
-      accuracy: z.number().optional(),
-    })
-    .optional(),
-  deviceId: z.string().optional(),
-  audit: z.any().array().optional(),
-});
-
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
+    // Check authentication
     const authHeader = request.headers.get('authorization') || undefined;
     const token = AuthUtils.extractTokenFromHeader(authHeader);
     if (!token) {
@@ -41,165 +22,61 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
     const escrutinioId = params.id;
 
-    // Verificar que el escrutinio existe
-    const escrutinio = await prisma.escrutinio.findUnique({ 
+    if (!escrutinioId) {
+      return NextResponse.json(
+        { success: false, error: 'ID de escrutinio es requerido' },
+        { status: 400 }
+      );
+    }
+
+    // Buscar el escrutinio
+    const escrutinio = await prisma.escrutinio.findUnique({
       where: { id: escrutinioId },
       include: {
         votes: {
           include: {
-            candidate: true,
-          },
+            candidate: true
+          }
         },
-      },
-    });
-
-    if (!escrutinio) {
-      return NextResponse.json({ success: false, error: 'Escrutinio no encontrado' }, { status: 404 });
-    }
-
-    // Formatear votos para el cliente
-    const votes = escrutinio.votes.map(vote => ({
-      candidateId: vote.candidateId,
-      count: vote.count,
-      candidate: {
-        id: vote.candidate.id,
-        name: vote.candidate.name,
-        party: vote.candidate.party,
-        number: vote.candidate.number,
-      },
-    }));
-
-    return NextResponse.json({ 
-      success: true, 
-      data: votes,
-      message: 'Votos obtenidos exitosamente'
-    });
-
-  } catch (error: any) {
-    console.error('Error fetching votes:', error);
-    return NextResponse.json({ 
-      success: false, 
-      error: error?.message || 'Error interno del servidor' 
-    }, { status: 500 });
-  }
-}
-
-export async function POST(request: Request, { params }: { params: { id: string } }) {
-  try {
-    const authHeader = request.headers.get('authorization') || undefined;
-    const token = AuthUtils.extractTokenFromHeader(authHeader);
-    if (!token) {
-      return NextResponse.json({ success: false, error: 'No autorizado' }, { status: 401 });
-    }
-    const payload = AuthUtils.verifyToken(token);
-    if (!payload) {
-      return NextResponse.json({ success: false, error: 'Token inválido' }, { status: 401 });
-    }
-
-    // Rate limiting por rol de usuario
-    const rateLimitResult = SimpleRateLimiter.checkLimit(payload.userId, payload.role);
-    if (!rateLimitResult.allowed) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Límite de requests excedido. Intenta de nuevo más tarde.',
-        rateLimitInfo: {
-          remaining: rateLimitResult.remaining,
-          resetTime: rateLimitResult.resetTime
-        }
-      }, { status: 429 });
-    }
-
-    const body = await request.json();
-    console.log('🔍 [VOTES API] Request body recibido:', JSON.stringify(body, null, 2));
-    
-    const parsed = BodySchema.safeParse(body);
-    if (!parsed.success) {
-      console.error('❌ [VOTES API] Error de validación:', JSON.stringify(parsed.error, null, 2));
-      console.error('❌ [VOTES API] Datos que fallaron:', JSON.stringify(body, null, 2));
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Payload inválido',
-        details: parsed.error.errors 
-      }, { status: 400 });
-    }
-
-    const { escrutinioId, votes } = parsed.data;
-    if (params.id !== escrutinioId) {
-      return NextResponse.json({ success: false, error: 'ID inconsistente' }, { status: 400 });
-    }
-
-    // Validate escrutinio exists to avoid FK errors
-    const escrutinio = await prisma.escrutinio.findUnique({ where: { id: escrutinioId } });
-    if (!escrutinio) {
-      return NextResponse.json({ success: false, error: 'Escrutinio no encontrado. Inicie el escrutinio antes de registrar votos.' }, { status: 400 });
-    }
-
-    await prisma.$transaction(async (tx) => {
-      for (const v of votes) {
-        // Resolve candidateId: accept either real candidate ID or candidate number
-        let resolvedCandidateId = v.candidateId;
-
-        // Try direct ID first
-        let candidate = await tx.candidate.findUnique({ where: { id: resolvedCandidateId } });
-        if (!candidate) {
-          // If not found and looks numeric, map by (electionId, number, level)
-          const asNumber = Number(v.candidateId);
-          if (!Number.isNaN(asNumber)) {
-            candidate = await tx.candidate.findUnique({
-              where: {
-                electionId_number_electionLevel: {
-                  electionId: escrutinio.electionId,
-                  number: asNumber,
-                  electionLevel: escrutinio.electionLevel,
-                },
-              },
-            });
-            if (candidate) {
-              resolvedCandidateId = candidate.id;
-            }
-          }
-        }
-
-        if (!candidate) {
-          // Auto-create placeholder candidate when numeric code provided but not present in DB
-          const asNumber = Number(v.candidateId);
-          if (!Number.isNaN(asNumber)) {
-            candidate = await tx.candidate.create({
-              data: {
-                name: `Candidato ${asNumber}`,
-                party: 'N/A',
-                number: asNumber,
-                electionId: escrutinio.electionId,
-                electionLevel: escrutinio.electionLevel,
-                isActive: true,
-              },
-            });
-            resolvedCandidateId = candidate.id;
-          } else {
-            return NextResponse.json({ success: false, error: `Candidato no encontrado para '${v.candidateId}'` }, { status: 400 });
-          }
-        }
-
-        const existing = await tx.vote.findUnique({
-          where: { escrutinioId_candidateId: { escrutinioId, candidateId: resolvedCandidateId } },
-        });
-
-        if (!existing) {
-          await tx.vote.create({
-            data: { escrutinioId, candidateId: resolvedCandidateId, count: Math.max(0, v.delta) },
-          });
-        } else {
-          await tx.vote.update({
-            where: { id: existing.id },
-            data: { count: Math.max(0, existing.count + v.delta) },
-          });
-        }
+        election: true,
+        mesa: true
       }
     });
 
-    return NextResponse.json({ success: true, data: { updated: votes.length } });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error?.message || 'Error interno' }, { status: 500 });
+    if (!escrutinio) {
+      return NextResponse.json(
+        { success: false, error: 'Escrutinio no encontrado' },
+        { status: 404 }
+      );
+    }
+
+    // Verificar que el usuario tenga acceso al escrutinio
+    if (payload.role !== 'ADMIN' && escrutinio.userId !== payload.userId) {
+      return NextResponse.json(
+        { success: false, error: 'No autorizado para acceder a este escrutinio' },
+        { status: 403 }
+      );
+    }
+
+    console.log(`📊 [VOTES API] Obteniendo votos para escrutinio ${escrutinioId}:`, {
+      totalVotes: escrutinio.votes.length,
+      electionLevel: escrutinio.electionLevel
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: escrutinio.votes
+    });
+
+  } catch (error) {
+    console.error('Error fetching votes for escrutinio:', error);
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: 'Error interno del servidor',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: 500 }
+    );
   }
 }
-

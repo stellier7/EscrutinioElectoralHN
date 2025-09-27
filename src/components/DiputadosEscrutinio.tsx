@@ -324,7 +324,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
 
   // Navigation functions
   const handlePreviousParty = useCallback(() => {
-    if (!diputadosData || !expandedParty || !diputadosData.parties) return;
+    if (!diputadosData || !expandedParty || !diputadosData.parties || !Array.isArray(diputadosData.parties)) return;
     const currentIndex = diputadosData.parties.findIndex(p => p.id === expandedParty);
     if (currentIndex > 0) {
       setExpandedParty(diputadosData.parties[currentIndex - 1].id);
@@ -332,7 +332,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
   }, [diputadosData, expandedParty]);
 
   const handleNextParty = useCallback(() => {
-    if (!diputadosData || !expandedParty || !diputadosData.parties) return;
+    if (!diputadosData || !expandedParty || !diputadosData.parties || !Array.isArray(diputadosData.parties)) return;
     const currentIndex = diputadosData.parties.findIndex(p => p.id === expandedParty);
     if (currentIndex < diputadosData.parties.length - 1) {
       setExpandedParty(diputadosData.parties[currentIndex + 1].id);
@@ -549,7 +549,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
 
     const currentIndex = diputadosData.parties.findIndex(p => p.id === expandedParty);
     const prevParty = currentIndex > 0 ? diputadosData.parties[currentIndex - 1] : null;
-    const nextParty = currentIndex < diputadosData.parties.length - 1 ? diputadosData.parties[currentIndex + 1] : null;
+    const nextParty = currentIndex < (diputadosData.parties?.length || 0) - 1 ? diputadosData.parties[currentIndex + 1] : null;
 
     const columns = Math.min(party.slots, 8);
     const rows = Math.ceil(party.slots / columns);
@@ -559,7 +559,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
         {/* Party Navigation Numbers */}
         <div className="flex justify-center mb-4">
           <div className="flex items-center gap-2">
-            {diputadosData?.parties?.map((p, index) => {
+                   {diputadosData?.parties && Array.isArray(diputadosData.parties) ? diputadosData.parties.map((p, index) => {
               const isCurrent = p.id === expandedParty;
               const isPrevious = index === (diputadosData.parties.findIndex(party => party.id === expandedParty) - 1);
               const isNext = index === (diputadosData.parties.findIndex(party => party.id === expandedParty) + 1);
@@ -579,9 +579,9 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
                   {index + 1}
                 </div>
               );
-            })}
-          </div>
-        </div>
+                   }) : null}
+                 </div>
+               </div>
 
         {/* Header con navegación centrada */}
         <div className="flex items-center justify-between gap-4 mb-4">
@@ -622,9 +622,12 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
                   const currentIndex = diputadosData.parties.findIndex(p => p.id === expandedParty);
                   if (currentIndex > 0) {
                     const prevParty = diputadosData.parties[currentIndex - 1];
-                    const firstCasilla = prevParty.casillas[0];
-                    const lastCasilla = prevParty.casillas[prevParty.casillas.length - 1];
-                    return `${prevParty.fullName} (${firstCasilla}-${lastCasilla})`;
+                    if (prevParty.casillas && Array.isArray(prevParty.casillas) && prevParty.casillas.length > 0) {
+                      const firstCasilla = prevParty.casillas[0];
+                      const lastCasilla = prevParty.casillas[prevParty.casillas.length - 1];
+                      return `${prevParty.fullName} (${firstCasilla}-${lastCasilla})`;
+                    }
+                    return prevParty.fullName;
                   }
                   return '';
                 })()}
@@ -632,7 +635,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
             </button>
             <button
               onClick={handleNextParty}
-              disabled={!diputadosData || !diputadosData.parties || diputadosData.parties.findIndex(p => p.id === expandedParty) === diputadosData.parties.length - 1}
+              disabled={!diputadosData || !diputadosData.parties || !Array.isArray(diputadosData.parties) || diputadosData.parties.findIndex(p => p.id === expandedParty) === diputadosData.parties.length - 1}
               className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
               aria-label="Siguiente partido"
             >
@@ -642,9 +645,12 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
                   const currentIndex = diputadosData.parties.findIndex(p => p.id === expandedParty);
                   if (currentIndex < diputadosData.parties.length - 1) {
                     const nextParty = diputadosData.parties[currentIndex + 1];
-                    const firstCasilla = nextParty.casillas[0];
-                    const lastCasilla = nextParty.casillas[nextParty.casillas.length - 1];
-                    return `${nextParty.fullName} (${firstCasilla}-${lastCasilla})`;
+                    if (nextParty.casillas && Array.isArray(nextParty.casillas) && nextParty.casillas.length > 0) {
+                      const firstCasilla = nextParty.casillas[0];
+                      const lastCasilla = nextParty.casillas[nextParty.casillas.length - 1];
+                      return `${nextParty.fullName} (${firstCasilla}-${lastCasilla})`;
+                    }
+                    return nextParty.fullName;
                   }
                   return '';
                 })()}
@@ -811,7 +817,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
           {diputadosData.jrv.nombre} • {diputadosData.jrv.departamento}
         </p>
         <p className="text-sm text-gray-500">
-          {diputadosData.diputados} diputados • {diputadosData.parties.length} partidos
+          {diputadosData.diputados} diputados • {diputadosData.parties?.length || 0} partidos
         </p>
         <div className="mt-2 p-2 bg-blue-50 rounded-lg border border-blue-200">
           <p className="text-sm text-blue-700">
