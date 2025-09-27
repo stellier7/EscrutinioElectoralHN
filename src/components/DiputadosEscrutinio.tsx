@@ -457,7 +457,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
       await uploadEvidenceIfNeeded();
       
       // 2. Guardar snapshot del conteo actual antes de completar
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('auth-token');
       const snapshotData = {
         partyCounts: counts, // El conteo actual del store
         timestamp: Date.now(),
@@ -504,7 +504,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
       const votesSnapshot = counts; // Snapshot actual de votos
       
       // Enviar checkpoint al servidor
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('auth-token');
       await axios.post(`/api/escrutinio/${escrutinioId}/checkpoint`, {
         action,
         votesSnapshot,
