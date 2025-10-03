@@ -80,3 +80,140 @@ export async function GET(
     );
   }
 }
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    // Check authentication
+    const authHeader = request.headers.get('authorization') || undefined;
+    const token = AuthUtils.extractTokenFromHeader(authHeader);
+    if (!token) {
+      return NextResponse.json({ success: false, error: 'No autorizado' }, { status: 401 });
+    }
+    const payload = AuthUtils.verifyToken(token);
+    if (!payload) {
+      return NextResponse.json({ success: false, error: 'Token inválido' }, { status: 401 });
+    }
+
+    const escrutinioId = params.id;
+    const body = await request.json();
+
+    if (!escrutinioId) {
+      return NextResponse.json(
+        { success: false, error: 'ID de escrutinio es requerido' },
+        { status: 400 }
+      );
+    }
+
+    // Verificar que el escrutinio existe y el usuario tiene acceso
+    const escrutinio = await prisma.escrutinio.findUnique({
+      where: { id: escrutinioId },
+      select: { id: true, userId: true, electionLevel: true }
+    });
+
+    if (!escrutinio) {
+      return NextResponse.json(
+        { success: false, error: 'Escrutinio no encontrado' },
+        { status: 404 }
+      );
+    }
+
+    if (payload.role !== 'ADMIN' && escrutinio.userId !== payload.userId) {
+      return NextResponse.json(
+        { success: false, error: 'No autorizado para acceder a este escrutinio' },
+        { status: 403 }
+      );
+    }
+
+    console.log(`📊 [VOTES API] Guardando votos para escrutinio ${escrutinioId}:`, {
+      votes: body.votes,
+      electionLevel: escrutinio.electionLevel
+    });
+
+    // Procesar votos según el nivel de elección
+    if (escrutinio.electionLevel === 'PRESIDENTIAL') {
+      // Para presidencial: body.votes es un array de { candidateId, count }
+      if (Array.isArray(body.votes)) {
+        for (const vote of body.votes) {
+          if (vote.candidateId && vote.count > 0) {
+            // Crear o actualizar voto
+            await prisma.vote.upsert({
+              where: {
+                escrutinioId_candidateId: {
+                  escrutinioId: escrutinioId,
+                  candidateId: vote.candidateId
+                }
+              },
+              update: {
+                count: vote.count
+              },
+              create: {
+                escrutinioId: escrutinioId,
+                candidateId: vote.candidateId,
+                count: vote.count,
+                userId: payload.userId
+              }
+            });
+          }
+        }
+      }
+    } else if (escrutinio.electionLevel === 'LEGISLATIVE') {
+      // Para legislativo: body.votes es un objeto { "party_slot": count }
+      if (typeof body.votes === 'object' && body.votes !== null) {
+        for (const [key, count] of Object.entries(body.votes)) {
+          if (typeof count === 'number' && count > 0) {
+            const [party, slot] = key.split('_');
+            if (party && slot) {
+              // Buscar candidato por partido y número
+              const candidate = await prisma.candidate.findFirst({
+                where: {
+                  party: party,
+                  number: parseInt(slot),
+                  electionLevel: 'LEGISLATIVE'
+                }
+              });
+
+              if (candidate) {
+                await prisma.vote.upsert({
+                  where: {
+                    escrutinioId_candidateId: {
+                      escrutinioId: escrutinioId,
+                      candidateId: candidate.id
+                    }
+                  },
+                  update: {
+                    count: count
+                  },
+                  create: {
+                    escrutinioId: escrutinioId,
+                    candidateId: candidate.id,
+                    count: count,
+                    userId: payload.userId
+                  }
+                });
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Votos guardados exitosamente'
+    });
+
+  } catch (error) {
+    console.error('Error saving votes for escrutinio:', error);
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: 'Error interno del servidor',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: 500 }
+    );
+  }
+}

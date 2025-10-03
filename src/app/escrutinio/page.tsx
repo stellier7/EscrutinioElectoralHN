@@ -220,7 +220,7 @@ function EscrutinioPageContent() {
       if (escrutinioState.selectedMesa && escrutinioState.selectedMesaInfo?.location === 'Cargando...') {
         try {
           const response = await axios.get(`/api/mesas/search?q=${escrutinioState.selectedMesa}`);
-          if (response.data.success && response.data.results.length > 0) {
+          if (response.data?.success && response.data?.results && Array.isArray(response.data.results) && response.data.results.length > 0) {
             const mesaInfo = response.data.results[0];
             saveState({
               selectedMesaInfo: {
