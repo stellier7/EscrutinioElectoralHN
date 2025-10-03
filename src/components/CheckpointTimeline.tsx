@@ -105,6 +105,13 @@ export function CheckpointTimeline({ checkpoints, escrutinioStartedAt, escrutini
     const isFreeze = checkpoint.action === 'FREEZE';
     const totalVotes = Object.values(checkpoint.votesSnapshot).reduce((sum: number, count: any) => sum + count, 0);
     
+    console.log('🔍 [TIMELINE DEBUG] Checkpoint:', {
+      action: checkpoint.action,
+      votesSnapshot: checkpoint.votesSnapshot,
+      totalVotes,
+      votesCount: Object.keys(checkpoint.votesSnapshot).length
+    });
+    
     timeline.push({
       id: checkpoint.id,
       type: 'checkpoint',
