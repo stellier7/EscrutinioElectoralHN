@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AuthUtils } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { getPartyConfig } from '@/lib/party-config';
 
 export async function GET(
   request: NextRequest,
@@ -80,11 +81,12 @@ export async function GET(
       escrutinio.votes.forEach(vote => {
         const candidateId = vote.candidateId;
         if (!candidatesMap.has(candidateId)) {
-          candidatesMap.set(candidateId, {
+          const partyConfig = getPartyConfig(vote.candidate.party);
+        candidatesMap.set(candidateId, {
             id: candidateId,
             name: vote.candidate.name,
             party: vote.candidate.party,
-            partyColor: '#e5e7eb', // Color por defecto
+            partyColor: partyConfig.color,
             number: vote.candidate.number,
             votes: 0
           });

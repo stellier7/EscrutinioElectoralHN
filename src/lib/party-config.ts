@@ -16,8 +16,24 @@ export const PARTY_CONFIGS: Record<string, PartyConfig> = {
     logoUrl: '/logos/pdc-logo.svg',
     description: 'Partido Demócrata Cristiano de Honduras'
   },
+  'PDC': {
+    id: 'PDC',
+    name: 'Partido Demócrata Cristiano',
+    shortName: 'PDC',
+    color: '#16a34a', // Verde
+    logoUrl: '/logos/pdc-logo.svg',
+    description: 'Partido Demócrata Cristiano de Honduras'
+  },
   'libre': {
     id: 'libre',
+    name: 'Partido Libre',
+    shortName: 'LIBRE',
+    color: '#dc2626', // Rojo
+    logoUrl: '/logos/libre-logo.svg',
+    description: 'Partido Libertad y Refundación'
+  },
+  'LIBRE': {
+    id: 'LIBRE',
     name: 'Partido Libre',
     shortName: 'LIBRE',
     color: '#dc2626', // Rojo
@@ -32,6 +48,14 @@ export const PARTY_CONFIGS: Record<string, PartyConfig> = {
     logoUrl: '/logos/pinu-logo.svg',
     description: 'Partido Innovación y Unidad Social Demócrata'
   },
+  'PINU-SD': {
+    id: 'PINU-SD',
+    name: 'PINU',
+    shortName: 'PINU',
+    color: '#7c3aed', // Morado
+    logoUrl: '/logos/pinu-logo.svg',
+    description: 'Partido Innovación y Unidad Social Demócrata'
+  },
   'liberal': {
     id: 'liberal',
     name: 'Partido Liberal',
@@ -40,8 +64,24 @@ export const PARTY_CONFIGS: Record<string, PartyConfig> = {
     logoUrl: '/logos/plh-logo.svg',
     description: 'Partido Liberal de Honduras'
   },
+  'PLH': {
+    id: 'PLH',
+    name: 'Partido Liberal',
+    shortName: 'Liberal',
+    color: '#ef4444', // Rojo claro
+    logoUrl: '/logos/plh-logo.svg',
+    description: 'Partido Liberal de Honduras'
+  },
   'nacional': {
     id: 'nacional',
+    name: 'Partido Nacional',
+    shortName: 'Nacional',
+    color: '#2563eb', // Azul
+    logoUrl: '/logos/pnh-logo.svg',
+    description: 'Partido Nacional de Honduras'
+  },
+  'PNH': {
+    id: 'PNH',
     name: 'Partido Nacional',
     shortName: 'Nacional',
     color: '#2563eb', // Azul
