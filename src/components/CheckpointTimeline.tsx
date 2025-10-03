@@ -109,7 +109,10 @@ export function CheckpointTimeline({ checkpoints, escrutinioStartedAt, escrutini
       action: checkpoint.action,
       votesSnapshot: checkpoint.votesSnapshot,
       totalVotes,
-      votesCount: Object.keys(checkpoint.votesSnapshot).length
+      votesCount: Object.keys(checkpoint.votesSnapshot).length,
+      votesSnapshotType: typeof checkpoint.votesSnapshot,
+      votesSnapshotKeys: Object.keys(checkpoint.votesSnapshot),
+      votesSnapshotValues: Object.values(checkpoint.votesSnapshot)
     });
     
     timeline.push({
