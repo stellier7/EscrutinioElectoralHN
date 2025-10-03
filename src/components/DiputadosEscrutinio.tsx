@@ -262,12 +262,18 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     console.log('✅ Papeleta cerrada exitosamente');
     setShowVoteLimitAlert(false);
     
+    // Regresar al primer partido (Demócrata Cristiano)
+    if (diputadosData?.parties && diputadosData.parties.length > 0) {
+      setExpandedParty(diputadosData.parties[0].id);
+      console.log('🔄 Regresando al primer partido:', diputadosData.parties[0].id);
+    }
+    
     // Crear nueva papeleta automáticamente
     console.log('🔄 Creando nueva papeleta...');
     setCurrentPapeleta(prev => prev + 1);
     setPapeletaVotes({});
     console.log('✅ Nueva papeleta creada');
-  }, []);
+  }, [diputadosData]);
 
   const handleAnularPapeleta = useCallback(async () => {
     console.log('✅ Papeleta anulada exitosamente');
@@ -850,10 +856,35 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
       {!expandedParty ? (
         // Party Selection View
         <div className="space-y-4">
+          {/* Banner de controles de papeleta en vista de partidos */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-lg font-semibold text-blue-800">Controles de Papeleta</h4>
+              <span className="text-sm font-medium text-blue-600">
+                Papeleta {currentPapeleta} • {getTotalVotesInPapeleta()}/{diputadosData.diputados} marcas
+              </span>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={handleClosePapeleta}
+                disabled={isEscrutinioClosed || getTotalVotesInPapeleta() === 0}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg disabled:bg-gray-300 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
+              >
+                Cerrar Papeleta
+              </button>
+              <button
+                onClick={() => setShowAnularConfirmation(true)}
+                disabled={isEscrutinioClosed || getTotalVotesInPapeleta() === 0}
+                className="flex-1 border border-red-500 text-red-600 hover:bg-red-50 px-4 py-2 rounded-lg disabled:bg-gray-300 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
+              >
+                Anular Papeleta
+              </button>
+            </div>
+          </div>
           {diputadosData.parties.map((party) => (
             <div key={party.id}>
               <div
-                className="w-full flex items-center rounded-lg border focus:outline-none focus:ring-2 transition-transform bg-gray-50 opacity-60 cursor-pointer"
+                className="w-full flex items-center rounded-lg border focus:outline-none focus:ring-2 transition-transform bg-white hover:bg-gray-50 cursor-pointer"
                 onClick={() => handlePartyClick(party.id)}
                 style={{ borderLeftWidth: 6, borderLeftColor: party.color }}
               >
@@ -922,7 +953,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
             type="file"
             accept="image/*"
             onChange={handleActaUpload}
-            disabled={isEscrutinioClosed}
+            disabled={false}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
           />
           {actaImage && (
@@ -950,22 +981,6 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
           </button>
         </div>
 
-        {/* Control de Escrutinio */}
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <FileText className="h-5 w-5 text-purple-600" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900">Control</h3>
-              <p className="text-sm text-gray-600">Estado del escrutinio</p>
-            </div>
-          </div>
-          <div className="text-sm">
-            <p className="text-gray-600">Estado: <span className="font-medium">{escrutinioStatus}</span></p>
-            <p className="text-gray-600">Total votos: <span className="font-medium">{Object.values(counts).reduce((sum, count) => sum + count, 0)}</span></p>
-          </div>
-        </div>
       </div>
 
 
