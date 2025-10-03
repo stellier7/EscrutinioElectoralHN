@@ -134,28 +134,74 @@ export async function POST(
 
     // Procesar votos según el nivel de elección
     if (escrutinio.electionLevel === 'PRESIDENTIAL') {
-      // Para presidencial: body.votes es un array de { candidateId, count }
+      // Para presidencial: body.votes puede ser array de deltas o array de counts
       if (Array.isArray(body.votes)) {
         for (const vote of body.votes) {
-          if (vote.candidateId && vote.count > 0) {
-            // Crear o actualizar voto
-            await prisma.vote.upsert({
-              where: {
-                escrutinioId_candidateId: {
-                  escrutinioId: escrutinioId,
-                  candidateId: vote.candidateId
+          if (vote.candidateId) {
+            // Si tiene 'delta', es un delta (incremento/decremento)
+            if (typeof vote.delta === 'number') {
+              // Aplicar delta al conteo actual
+              const currentVote = await prisma.vote.findUnique({
+                where: {
+                  escrutinioId_candidateId: {
+                    escrutinioId: escrutinioId,
+                    candidateId: vote.candidateId
+                  }
                 }
-              },
-              update: {
-                count: vote.count
-              },
-              create: {
-                escrutinioId: escrutinioId,
-                candidateId: vote.candidateId,
-                count: vote.count,
-                userId: payload.userId
+              });
+
+              const currentCount = currentVote?.count || 0;
+              const newCount = Math.max(0, currentCount + vote.delta);
+
+              if (newCount > 0) {
+                await prisma.vote.upsert({
+                  where: {
+                    escrutinioId_candidateId: {
+                      escrutinioId: escrutinioId,
+                      candidateId: vote.candidateId
+                    }
+                  },
+                  update: {
+                    count: newCount
+                  },
+                  create: {
+                    escrutinioId: escrutinioId,
+                    candidateId: vote.candidateId,
+                    count: newCount,
+                    userId: payload.userId
+                  }
+                });
+              } else if (currentVote) {
+                // Si el conteo llega a 0, eliminar el voto
+                await prisma.vote.delete({
+                  where: {
+                    escrutinioId_candidateId: {
+                      escrutinioId: escrutinioId,
+                      candidateId: vote.candidateId
+                    }
+                  }
+                });
               }
-            });
+            } else if (typeof vote.count === 'number' && vote.count > 0) {
+              // Si tiene 'count', es un conteo absoluto
+              await prisma.vote.upsert({
+                where: {
+                  escrutinioId_candidateId: {
+                    escrutinioId: escrutinioId,
+                    candidateId: vote.candidateId
+                  }
+                },
+                update: {
+                  count: vote.count
+                },
+                create: {
+                  escrutinioId: escrutinioId,
+                  candidateId: vote.candidateId,
+                  count: vote.count,
+                  userId: payload.userId
+                }
+              });
+            }
           }
         }
       }
