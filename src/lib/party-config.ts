@@ -10,7 +10,7 @@ export interface PartyConfig {
 export const PARTY_CONFIGS: Record<string, PartyConfig> = {
   'pdc': {
     id: 'pdc',
-    name: 'Demócrata Cristiano',
+    name: 'Partido Demócrata Cristiano',
     shortName: 'PDC',
     color: '#16a34a', // Verde
     logoUrl: '/logos/pdc-logo.svg',
@@ -18,7 +18,7 @@ export const PARTY_CONFIGS: Record<string, PartyConfig> = {
   },
   'libre': {
     id: 'libre',
-    name: 'LIBRE',
+    name: 'Partido Libre',
     shortName: 'LIBRE',
     color: '#dc2626', // Rojo
     logoUrl: '/logos/libre-logo.svg',

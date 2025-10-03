@@ -198,33 +198,21 @@ function EscrutinioPageContent() {
     load();
   }, [escrutinioState.selectedLevel]);
 
-  // Cargar votos existentes SOLO cuando se está continuando un escrutinio existente
-  // NO cargar votos para escrutinios nuevos (que ya se limpian con voteStore.clear())
+  // Cargar votos existentes cuando se establece el escrutinioId
   useEffect(() => {
     const loadExistingVotes = async () => {
       if (!escrutinioState.escrutinioId) return;
       
-      // Solo cargar votos si estamos continuando un escrutinio existente
-      // Los escrutinios nuevos ya se limpian con voteStore.clear() en handleGetLocation
-      const isStoreEmpty = Object.keys(voteStore.counts).length === 0;
-      const isContinuingExisting = escrutinioState.currentStep === 2 && 
-                                   escrutinioState.escrutinioId && 
-                                   !isStoreEmpty;
-      
-      if (!isContinuingExisting) {
-        console.log('🆕 Nuevo escrutinio detectado, no cargando votos existentes');
-        return;
-      }
-      
       try {
-        console.log('🔄 Continuando escrutinio existente, cargando votos...');
+        console.log('🔄 Cargando votos existentes para escrutinio:', escrutinioState.escrutinioId);
         await voteStore.loadFromServer(escrutinioState.escrutinioId);
+        console.log('✅ Votos cargados exitosamente');
       } catch (error) {
         console.warn('No se pudieron cargar votos existentes:', error);
       }
     };
     loadExistingVotes();
-  }, [escrutinioState.escrutinioId, escrutinioState.currentStep]); // Removido voteStore de dependencias
+  }, [escrutinioState.escrutinioId]); // Solo depender del escrutinioId
 
   // Buscar información de la mesa cuando se carga desde URL
   useEffect(() => {
