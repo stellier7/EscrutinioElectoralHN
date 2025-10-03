@@ -167,8 +167,7 @@ export async function POST(
                   create: {
                     escrutinioId: escrutinioId,
                     candidateId: vote.candidateId,
-                    count: newCount,
-                    userId: payload.userId
+                    count: newCount
                   }
                 });
               } else if (currentVote) {
@@ -197,8 +196,7 @@ export async function POST(
                 create: {
                   escrutinioId: escrutinioId,
                   candidateId: vote.candidateId,
-                  count: vote.count,
-                  userId: payload.userId
+                  count: vote.count
                 }
               });
             }
@@ -235,8 +233,7 @@ export async function POST(
                   create: {
                     escrutinioId: escrutinioId,
                     candidateId: candidate.id,
-                    count: count,
-                    userId: payload.userId
+                    count: count
                   }
                 });
               }
