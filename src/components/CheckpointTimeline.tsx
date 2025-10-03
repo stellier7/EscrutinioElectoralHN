@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Clock, Lock, Unlock, User, MapPin } from 'lucide-react';
+import { getPartyConfig } from '@/lib/party-config';
+import axios from 'axios';
 
 interface Checkpoint {
   id: string;
@@ -22,7 +24,66 @@ interface CheckpointTimelineProps {
   escrutinioCompletedAt?: string;
 }
 
+// Función para mapear ID de candidato a información legible
+function getCandidateDisplayInfo(candidateId: string) {
+  // Si es un ID de candidato presidencial, intentar extraer el partido
+  // Los IDs de candidatos presidenciales tienen formato: "cmg0tjf980003c94aiekygx4p"
+  // Para propósitos de display, vamos a usar una lógica simple
+  
+  // Si contiene "pdc" o similar, mapear al partido
+  const lowerId = candidateId.toLowerCase();
+  if (lowerId.includes('pdc') || lowerId.includes('democ')) {
+    return { party: 'PDC', candidate: 'Demócrata Cristiano' };
+  }
+  if (lowerId.includes('libre') || lowerId.includes('lib')) {
+    return { party: 'LIBRE', candidate: 'Partido Libre' };
+  }
+  if (lowerId.includes('pinu') || lowerId.includes('pinu-sd')) {
+    return { party: 'PINU', candidate: 'PINU' };
+  }
+  if (lowerId.includes('liberal') || lowerId.includes('plh')) {
+    return { party: 'PLH', candidate: 'Partido Liberal' };
+  }
+  if (lowerId.includes('nacional') || lowerId.includes('pnh')) {
+    return { party: 'PNH', candidate: 'Partido Nacional' };
+  }
+  
+  // Si no se puede mapear, usar las primeras 8 letras del ID
+  return { party: 'Candidato', candidate: candidateId.substring(0, 8) + '...' };
+}
+
 export function CheckpointTimeline({ checkpoints, escrutinioStartedAt, escrutinioCompletedAt }: CheckpointTimelineProps) {
+  const [candidateInfo, setCandidateInfo] = useState<Record<string, any>>({});
+
+  // Cargar información de candidatos cuando cambien los checkpoints
+  useEffect(() => {
+    const loadCandidateInfo = async () => {
+      // Recopilar todos los IDs de candidatos únicos de todos los checkpoints
+      const allCandidateIds = new Set<string>();
+      checkpoints.forEach(checkpoint => {
+        if (checkpoint.votesSnapshot) {
+          Object.keys(checkpoint.votesSnapshot).forEach(id => allCandidateIds.add(id));
+        }
+      });
+
+      if (allCandidateIds.size > 0) {
+        try {
+          const response = await axios.post('/api/candidates/lookup', {
+            candidateIds: Array.from(allCandidateIds)
+          });
+          
+          if (response.data.success) {
+            setCandidateInfo(response.data.data);
+          }
+        } catch (error) {
+          console.error('Error loading candidate info:', error);
+        }
+      }
+    };
+
+    loadCandidateInfo();
+  }, [checkpoints]);
+
   // Crear timeline con todos los eventos
   const timeline = [];
   
@@ -149,12 +210,27 @@ export function CheckpointTimeline({ checkpoints, escrutinioStartedAt, escrutini
                 <div className="bg-gray-50 rounded p-2 text-xs">
                   <div className="font-medium text-gray-700 mb-1">Votos en este momento:</div>
                   <div className="space-y-1">
-                    {Object.entries((event as any).votesSnapshot).map(([key, count]) => (
-                      <div key={key} className="flex justify-between">
-                        <span className="text-gray-600">{key}:</span>
-                        <span className="font-medium">{count as number}</span>
-                      </div>
-                    ))}
+                    {Object.entries((event as any).votesSnapshot).map(([candidateId, count]) => {
+                      const candidate = candidateInfo[candidateId];
+                      if (candidate) {
+                        const partyConfig = getPartyConfig(candidate.party);
+                        return (
+                          <div key={candidateId} className="flex justify-between">
+                            <span className="text-gray-600">{partyConfig.name} - {candidate.name}:</span>
+                            <span className="font-medium">{count as number}</span>
+                          </div>
+                        );
+                      } else {
+                        // Fallback si no tenemos información del candidato
+                        const displayInfo = getCandidateDisplayInfo(candidateId);
+                        return (
+                          <div key={candidateId} className="flex justify-between">
+                            <span className="text-gray-600">{displayInfo.party} - {displayInfo.candidate}:</span>
+                            <span className="font-medium">{count as number}</span>
+                          </div>
+                        );
+                      }
+                    })}
                   </div>
                 </div>
               )}
