@@ -75,10 +75,11 @@ export function useGeolocation() {
     }
 
     // Configuración optimizada para móviles - más agresiva para mejor confiabilidad
+    // maximumAge: 0 para forzar nueva ubicación y solicitar permisos
     const options = {
       enableHighAccuracy: true,
-      timeout: 20000, // 20 segundos (reducido de 30)
-      maximumAge: 60000 // 1 minuto (reducido de 5 minutos para obtener ubicación más fresca)
+      timeout: 20000, // 20 segundos
+      maximumAge: 0 // 0 para forzar nueva ubicación y solicitar permisos en móvil
     };
 
     return new Promise((resolve) => {
