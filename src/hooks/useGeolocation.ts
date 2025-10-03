@@ -60,7 +60,7 @@ export function useGeolocation() {
     }
   };
 
-  const getCurrentLocation = async (): Promise<Location | null> => {
+  const getCurrentLocation = async (retryCount = 0): Promise<Location | null> => {
     setIsLoading(true);
     setError(null);
 
@@ -74,11 +74,11 @@ export function useGeolocation() {
       return null;
     }
 
-    // Configuración optimizada para móviles
+    // Configuración optimizada para móviles - más agresiva para mejor confiabilidad
     const options = {
       enableHighAccuracy: true,
-      timeout: 30000, // 30 segundos
-      maximumAge: 300000 // 5 minutos
+      timeout: 20000, // 20 segundos (reducido de 30)
+      maximumAge: 60000 // 1 minuto (reducido de 5 minutos para obtener ubicación más fresca)
     };
 
     return new Promise((resolve) => {
@@ -90,11 +90,14 @@ export function useGeolocation() {
             accuracy: position.coords.accuracy
           };
           
+          console.log('📍 [GPS] Ubicación obtenida exitosamente:', newLocation);
           setLocation(newLocation);
           setIsLoading(false);
           resolve(newLocation);
         },
-        (geolocationError) => {
+        async (geolocationError) => {
+          console.error('❌ [GPS] Error obteniendo ubicación:', geolocationError);
+          
           let userFriendlyMessage = '';
           
           switch (geolocationError.code) {
@@ -119,7 +122,19 @@ export function useGeolocation() {
           
           setError(errorObj);
           setIsLoading(false);
-          resolve(null);
+          
+          // Retry automático si es timeout o posición no disponible (máximo 2 intentos)
+          if ((geolocationError.code === geolocationError.TIMEOUT || 
+               geolocationError.code === geolocationError.POSITION_UNAVAILABLE) && 
+              retryCount < 2) {
+            console.log(`🔄 [GPS] Reintentando obtención de ubicación (intento ${retryCount + 1}/2)`);
+            setTimeout(async () => {
+              const retryResult = await getCurrentLocation(retryCount + 1);
+              resolve(retryResult);
+            }, 2000); // Esperar 2 segundos antes del retry
+          } else {
+            resolve(null);
+          }
         },
         options
       );

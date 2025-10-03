@@ -72,6 +72,7 @@ function EscrutinioPageContent() {
   const [showInstructions, setShowInstructions] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [gpsSuccess, setGpsSuccess] = useState(false);
+  const [gpsError, setGpsError] = useState<string | null>(null);
   const [showJRVWarning, setShowJRVWarning] = useState(false);
   const [activeEscrutinio, setActiveEscrutinio] = useState<any>(null);
   
@@ -256,11 +257,28 @@ function EscrutinioPageContent() {
   };
 
   const handleGetLocation = async (electionLevel?: string) => {
-    const result = await getCurrentLocation();
-    if (!result) return;
     try {
       setIsStarting(true);
       setGpsSuccess(false);
+      setGpsError(null);
+      
+      console.log('📍 [ESCRUTINIO] Iniciando obtención de ubicación GPS...');
+      const result = await getCurrentLocation();
+      
+      if (!result) {
+        console.error('❌ [ESCRUTINIO] No se pudo obtener ubicación GPS');
+        
+        // Mostrar instrucciones específicas según el error
+        if (error) {
+          setGpsError(`${error.userFriendlyMessage}\n\n${showLocationInstructions()}`);
+        } else {
+          setGpsError('No se pudo obtener tu ubicación. Por favor, habilita la ubicación en tu dispositivo e intenta nuevamente.');
+        }
+        return;
+      }
+      
+      console.log('✅ [ESCRUTINIO] Ubicación GPS obtenida exitosamente:', result);
+      setGpsError(null); // Limpiar error si se obtuvo exitosamente
       
       // Usar el nivel pasado como parámetro o el del estado
       const level = electionLevel || escrutinioState.selectedLevel;
@@ -276,7 +294,6 @@ function EscrutinioPageContent() {
       };
       
       console.log('🔍 [ESCRUTINIO] Enviando payload a /api/escrutinio/start:', JSON.stringify(payload, null, 2));
-      console.log('🔍 [ESCRUTINIO] GPS result:', result);
       
       const resp = await axios.post('/api/escrutinio/start', payload);
       if (resp.data?.success && resp.data?.data?.escrutinioId) {
@@ -294,17 +311,27 @@ function EscrutinioPageContent() {
           location: result,
           selectedLevel: level, // Asegurar que el nivel se guarde correctamente
         });
+        
+        console.log('🎉 [ESCRUTINIO] Escrutinio iniciado exitosamente con GPS');
       } else {
         console.error('❌ [ESCRUTINIO] Respuesta del servidor no exitosa:', resp.data);
         alert(resp.data?.error || 'No se pudo iniciar el escrutinio');
       }
     } catch (e: any) {
-      console.error('❌ [ESCRUTINIO] Error obteniendo ubicación:', e);
+      console.error('❌ [ESCRUTINIO] Error en handleGetLocation:', e);
       if (e.response) {
         console.error('❌ [ESCRUTINIO] Respuesta del servidor:', e.response.data);
         console.error('❌ [ESCRUTINIO] Status:', e.response.status);
       }
-      alert(e?.response?.data?.error || 'Error al iniciar el escrutinio');
+      
+      // Manejar diferentes tipos de errores
+      if (e?.response?.status === 400) {
+        alert('Error en los datos enviados. Por favor, verifica que la JRV sea válida.');
+      } else if (e?.response?.status === 500) {
+        alert('Error del servidor. Por favor, intenta nuevamente en unos momentos.');
+      } else {
+        alert(e?.response?.data?.error || 'Error inesperado. Por favor, intenta nuevamente.');
+      }
     } finally {
       setIsStarting(false);
     }
@@ -757,6 +784,30 @@ function EscrutinioPageContent() {
                   <span className="text-sm text-green-800">
                     ✅ GPS obtenido correctamente. Ubicación registrada para el escrutinio.
                   </span>
+                </div>
+              </div>
+            )}
+            
+            {/* Mensaje de error del GPS */}
+            {gpsError && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex items-start">
+                  <AlertCircle className="h-5 w-5 text-red-600 mr-2 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-sm text-red-800 mb-3">
+                      ❌ Error al obtener ubicación GPS
+                    </p>
+                    <p className="text-xs text-red-700 mb-3 whitespace-pre-line">
+                      {gpsError}
+                    </p>
+                    <button
+                      onClick={() => handleGetLocation(escrutinioState.selectedLevel)}
+                      disabled={isStarting}
+                      className="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isStarting ? 'Obteniendo GPS...' : 'Intentar Nuevamente'}
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
