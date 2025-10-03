@@ -78,11 +78,22 @@ export async function GET(
     
     if (escrutinio.electionLevel === 'PRESIDENTIAL') {
       // Procesar votos presidenciales (candidates)
+      console.log('🔄 Procesando votos presidenciales...');
+      console.log('📊 Número de votos en DB:', escrutinio.votes.length);
+      console.log('📊 Votos raw:', escrutinio.votes);
+      
       escrutinio.votes.forEach(vote => {
+        console.log('🗳️ Procesando voto:', {
+          candidateId: vote.candidateId,
+          candidateName: vote.candidate?.name,
+          candidateParty: vote.candidate?.party,
+          voteCount: vote.count
+        });
+        
         const candidateId = vote.candidateId;
         if (!candidatesMap.has(candidateId)) {
           const partyConfig = getPartyConfig(vote.candidate.party);
-        candidatesMap.set(candidateId, {
+          candidatesMap.set(candidateId, {
             id: candidateId,
             name: vote.candidate.name,
             party: vote.candidate.party,
@@ -90,10 +101,15 @@ export async function GET(
             number: vote.candidate.number,
             votes: 0
           });
+          console.log('➕ Nuevo candidato agregado:', candidateId);
         }
         candidatesMap.get(candidateId).votes += vote.count;
+        console.log('📈 Votos actualizados para', candidateId, ':', candidatesMap.get(candidateId).votes);
       });
+      
       totalVotes = Array.from(candidatesMap.values()).reduce((sum, candidate) => sum + candidate.votes, 0);
+      console.log('📊 Total de votos presidenciales calculado:', totalVotes);
+      console.log('📊 Candidatos finales:', Array.from(candidatesMap.values()));
     } else if (escrutinio.electionLevel === 'LEGISLATIVE') {
       // Procesar votos legislativos - SNAPSHOT del conteo actual
       console.log('🔄 Procesando votos legislativos (snapshot del conteo)...');
