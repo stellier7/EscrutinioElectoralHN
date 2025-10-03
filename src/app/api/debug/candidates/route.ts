@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
         electionId: election.id,
         electionName: election.name,
         candidatesCount: candidates.length,
-        parties: [...new Set(candidates.map(c => c.party))]
+        parties: Array.from(new Set(candidates.map(c => c.party)))
       }
     });
   } catch (e: any) {
