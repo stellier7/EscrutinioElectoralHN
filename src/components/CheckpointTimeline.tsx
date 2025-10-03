@@ -205,7 +205,7 @@ export function CheckpointTimeline({ checkpoints, escrutinioStartedAt, escrutini
               )}
               
               {/* GPS info for checkpoints */}
-              {event.type === 'checkpoint' && (event as any).gps && (event as any).gps.latitude && (event as any).gps.longitude && (
+              {event.type === 'checkpoint' && (event as any).gps && (event as any).gps.latitude !== null && (event as any).gps.latitude !== undefined && (event as any).gps.longitude !== null && (event as any).gps.longitude !== undefined && (
                 <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
                   <MapPin className="h-3 w-3" />
                   <span>
