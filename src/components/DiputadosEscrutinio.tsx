@@ -6,6 +6,7 @@ import clsx from 'clsx';
 import axios from 'axios';
 import { useLegislativeVoteStore } from '@/store/legislativeVoteStore';
 import { VoteLimitAlert } from './ui/VoteLimitAlert';
+import { getTransparentColor } from '@/lib/party-config';
 
 // Utility function to generate block-based slot ranges for legislative elections
 export function generatePartySlotRanges(seatCount: number, partyCount: number): Array<{ start: number; end: number; range: string; casillas: number[] }> {
@@ -698,8 +699,8 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
                 style={{
                   borderColor: party.color,
                   backgroundColor: isSelected
-                    ? `${party.color}25`
-                    : 'transparent',
+                    ? getTransparentColor(party.color, 0.25)
+                    : getTransparentColor(party.color, 0.1),
                   color: isSelected ? party.color : '#374151',
                   '--tw-ring-color': party.color,
                   borderWidth: isSelected ? '3px' : '2px'
@@ -884,9 +885,14 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
           {diputadosData.parties.map((party) => (
             <div key={party.id}>
               <div
-                className="w-full flex items-center rounded-lg border focus:outline-none focus:ring-2 transition-transform bg-white hover:bg-gray-50 cursor-pointer"
+                className="w-full flex items-center rounded-lg border focus:outline-none focus:ring-2 transition-transform cursor-pointer"
                 onClick={() => handlePartyClick(party.id)}
-                style={{ borderLeftWidth: 6, borderLeftColor: party.color }}
+                style={{ 
+                  borderLeftWidth: 6, 
+                  borderLeftColor: party.color,
+                  backgroundColor: getTransparentColor(party.color, 0.2),
+                  borderColor: getTransparentColor(party.color, 0.3)
+                }}
               >
                 <div className="flex-1 p-3 sm:p-4 text-left">
                   <div className="flex items-center justify-between">
