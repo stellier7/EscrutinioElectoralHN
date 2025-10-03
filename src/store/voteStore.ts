@@ -181,12 +181,19 @@ export const useVoteStore = create<State & Actions>()(
 
       loadFromServer: async (escrutinioId: string) => {
         try {
-          const response = await axios.get(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/votes`);
+          const token = localStorage.getItem('auth-token');
+          const response = await axios.get(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/votes`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
           if (response.data?.success && response.data.data) {
+            console.log('📊 [PRESIDENTIAL STORE] Votos cargados del servidor:', response.data.data);
             const serverCounts = response.data.data.reduce((acc: Record<string, number>, vote: any) => {
               acc[vote.candidateId] = vote.count;
               return acc;
             }, {});
+            console.log('📊 [PRESIDENTIAL STORE] Counts procesados:', serverCounts);
             set({ counts: serverCounts });
           }
         } catch (error) {
