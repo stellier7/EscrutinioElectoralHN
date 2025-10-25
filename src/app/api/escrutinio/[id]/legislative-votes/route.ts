@@ -29,18 +29,33 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
+    console.log('📥 [LEGISLATIVE-VOTES] Request received for escrutinio:', params.id);
+    
     // Verificar autenticación
     const authHeader = request.headers.get('authorization') || undefined;
     const token = AuthUtils.extractTokenFromHeader(authHeader);
-    if (!token) return NextResponse.json({ success: false, error: 'No autorizado' }, { status: 401 });
+    if (!token) {
+      console.error('❌ [LEGISLATIVE-VOTES] No token provided');
+      return NextResponse.json({ success: false, error: 'No autorizado' }, { status: 401 });
+    }
     const payload = AuthUtils.verifyToken(token);
-    if (!payload) return NextResponse.json({ success: false, error: 'Token inválido' }, { status: 401 });
+    if (!payload) {
+      console.error('❌ [LEGISLATIVE-VOTES] Invalid token');
+      return NextResponse.json({ success: false, error: 'Token inválido' }, { status: 401 });
+    }
 
     const escrutinioId = params.id;
     const body = await request.json();
     
+    console.log('📊 [LEGISLATIVE-VOTES] Body received:', { 
+      votesCount: body.votes?.length, 
+      escrutinioId: body.escrutinioId,
+      hasGps: !!body.gps 
+    });
+    
     const parsed = LegislativeVotePayloadSchema.safeParse(body);
     if (!parsed.success) {
+      console.error('❌ [LEGISLATIVE-VOTES] Validation error:', parsed.error.errors);
       return NextResponse.json(
         { success: false, error: 'Payload inválido', details: parsed.error.errors },
         { status: 400 }
@@ -56,6 +71,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     });
 
     if (!escrutinio) {
+      console.error('❌ [LEGISLATIVE-VOTES] Escrutinio not found:', escrutinioId);
       return NextResponse.json(
         { success: false, error: 'Escrutinio no encontrado' },
         { status: 404 }
@@ -63,11 +79,14 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     }
 
     if (escrutinio.electionLevel !== 'LEGISLATIVE') {
+      console.error('❌ [LEGISLATIVE-VOTES] Wrong election level:', escrutinio.electionLevel);
       return NextResponse.json(
         { success: false, error: 'Este endpoint es solo para escrutinios legislativos' },
         { status: 400 }
       );
     }
+
+    console.log('✅ [LEGISLATIVE-VOTES] Escrutinio validated, processing', votes.length, 'votes');
 
     // Procesar cada voto
     await prisma.$transaction(async (tx) => {
@@ -84,6 +103,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
         if (!candidate) {
           // Crear candidato si no existe
+          console.log('➕ [LEGISLATIVE-VOTES] Creating new candidate:', v.partyId, v.casillaNumber);
           candidate = await tx.candidate.create({
             data: {
               name: `Diputado ${v.casillaNumber}`,
@@ -108,22 +128,28 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
         if (!existing) {
           // Crear nuevo voto
+          const newCount = Math.max(0, v.delta);
+          console.log('➕ [LEGISLATIVE-VOTES] Creating new vote:', v.partyId, v.casillaNumber, 'count:', newCount);
           await tx.vote.create({
             data: { 
               escrutinioId, 
               candidateId: candidate.id, 
-              count: Math.max(0, v.delta) 
+              count: newCount
             },
           });
         } else {
           // Actualizar voto existente
+          const newCount = Math.max(0, existing.count + v.delta);
+          console.log('🔄 [LEGISLATIVE-VOTES] Updating vote:', v.partyId, v.casillaNumber, 'from', existing.count, 'to', newCount);
           await tx.vote.update({
             where: { id: existing.id },
-            data: { count: Math.max(0, existing.count + v.delta) },
+            data: { count: newCount },
           });
         }
       }
     });
+
+    console.log('✅ [LEGISLATIVE-VOTES] Successfully processed', votes.length, 'votes');
 
     return NextResponse.json({ 
       success: true, 
@@ -135,7 +161,8 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     });
 
   } catch (error: any) {
-    console.error('Error processing legislative votes:', error);
+    console.error('❌ [LEGISLATIVE-VOTES] Error processing legislative votes:', error);
+    console.error('❌ [LEGISLATIVE-VOTES] Error stack:', error?.stack);
     return NextResponse.json(
       { success: false, error: error?.message || 'Error interno' }, 
       { status: 500 }

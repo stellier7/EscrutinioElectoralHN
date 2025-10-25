@@ -91,6 +91,7 @@ export class DatabaseOptimizer {
     latitude: number;
     longitude: number;
     locationAccuracy?: number;
+    sessionId: string;
   }) {
     // Usar transacción para atomicidad
     return await prisma.$transaction(async (tx) => {
@@ -101,6 +102,7 @@ export class DatabaseOptimizer {
           electionId: data.electionId,
           mesaId: data.mesaId,
           electionLevel: data.electionLevel as any,
+          sessionId: data.sessionId,
         },
       });
 
@@ -123,6 +125,7 @@ export class DatabaseOptimizer {
             status: 'PENDING',
             isCompleted: false,
             priority: 0, // Se asignará basado en rol
+            sessionId: data.sessionId, // Add sessionId
           },
         });
       }

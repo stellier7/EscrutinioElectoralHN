@@ -6,7 +6,8 @@ import { useAuth } from '@/components/AuthProvider';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Calendar, FileSpreadsheet } from 'lucide-react';
+import JRVUploader from '@/components/JRVUploader';
 // import Toast from '@/components/ui/Toast';
 import type { UserListResponse, UserListFilters, UserApprovalRequest, ApiResponse } from '@/types';
 
@@ -75,6 +76,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [showJRVUploader, setShowJRVUploader] = useState(false);
   
   // Filtros
   const [filters, setFilters] = useState<UserListFilters>({
@@ -352,6 +354,61 @@ export default function AdminDashboard() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Gestión de Sesiones y JRVs */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Gestión de Sesiones */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center mb-4">
+              <Calendar className="h-6 w-6 text-blue-600 mr-2" />
+              <h2 className="text-lg font-semibold text-gray-900">Gestión de Sesiones</h2>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">
+              Crea, activa y cierra sesiones de escrutinio. Cada sesión mantiene un historial completo de votos y escrutinios.
+            </p>
+            <Button
+              onClick={() => router.push('/admin/sessions')}
+              className="w-full"
+            >
+              <Calendar className="h-4 w-4 mr-2" />
+              Gestionar Sesiones
+            </Button>
+          </div>
+
+          {/* Actualización de JRVs */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center mb-4">
+              <FileSpreadsheet className="h-6 w-6 text-green-600 mr-2" />
+              <h2 className="text-lg font-semibold text-gray-900">Actualizar JRVs</h2>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">
+              Sube un archivo Excel con las JRVs actualizadas. Las JRVs anteriores se desactivarán pero se mantendrán para el historial.
+            </p>
+            <div className="text-xs text-gray-500 mb-4">
+              <strong>Nota:</strong> Solo se puede actualizar cuando no hay sesión activa.
+            </div>
+            <Button
+              onClick={() => setShowJRVUploader(!showJRVUploader)}
+              variant="secondary"
+              className="w-full"
+            >
+              <FileSpreadsheet className="h-4 w-4 mr-2" />
+              {showJRVUploader ? 'Ocultar' : 'Mostrar'} Actualizador
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Componente de actualización de JRVs */}
+      {showJRVUploader && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-6">
+          <JRVUploader onUpdate={() => {
+            // Recargar datos si es necesario
+            fetchStats();
+          }} />
         </div>
       )}
 

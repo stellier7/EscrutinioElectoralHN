@@ -5,6 +5,7 @@ export type {
   Candidate,
   Mesa,
   Escrutinio,
+  EscrutinioSession,
   Vote,
   Correction,
   AuditLog,
@@ -294,4 +295,69 @@ export interface RateLimitStatus {
   windowStart: string;
   isBlocked: boolean;
   blockedUntil?: string;
+}
+
+// Escrutinio Session types
+export interface EscrutinioSessionRequest {
+  name: string;
+  description?: string;
+  activateImmediately?: boolean;
+}
+
+export interface EscrutinioSessionResponse {
+  id: string;
+  name: string;
+  description?: string;
+  isActive: boolean;
+  isClosed: boolean;
+  startedAt: string;
+  closedAt?: string;
+  closedBy?: string;
+  createdAt: string;
+  updatedAt: string;
+  stats?: SessionStats;
+}
+
+export interface SessionStats {
+  totalEscrutinios: number;
+  completedEscrutinios: number;
+  totalVotes: number;
+  uniqueUsers: number;
+  totalPapeletas?: number;
+  totalCorrections?: number;
+}
+
+export interface SessionDetailsResponse extends EscrutinioSessionResponse {
+  escrutinios: any[]; // Using any for now to avoid import issues
+  results: CandidateResult[];
+}
+
+export interface SessionFilters {
+  isActive?: boolean;
+  isClosed?: boolean;
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface SessionListResponse {
+  sessions: EscrutinioSessionResponse[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+// JRV Update types
+export interface JRVUpdateRequest {
+  file: File;
+}
+
+export interface JRVUpdateResponse {
+  fileName: string;
+  fileSize: number;
+  processedCount: number;
+  insertedCount: number;
+  oldActiveCount: number;
+  newActiveCount: number;
 } 

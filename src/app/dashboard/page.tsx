@@ -147,7 +147,7 @@ export default function DashboardPage() {
     switch (role) {
       case 'OBSERVER': return <User className="h-4 w-4" />;
       case 'VOLUNTEER': return <User className="h-4 w-4" />;
-      case 'ADMIN': return <Crown className="h-4 w-4" />;
+      case 'ADMIN': return <BarChart3 className="h-4 w-4" />;
       default: return <User className="h-4 w-4" />;
     }
   };
@@ -436,7 +436,7 @@ export default function DashboardPage() {
       {user.role === 'ADMIN' && (
         <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
-            <Crown className="h-5 w-5 text-purple-600" />
+            <BarChart3 className="h-5 w-5 text-purple-600" />
             Todos los Escrutinios (Admin)
           </h3>
           <p className="text-sm text-gray-600 mb-4">
@@ -471,7 +471,7 @@ export default function DashboardPage() {
               <h4 className="font-medium text-blue-900">Funcionalidades Disponibles</h4>
             </div>
             <ul className="text-sm text-blue-800 space-y-1">
-              <li>• Búsqueda inteligente de JRVs (18,298 disponibles)</li>
+              <li>• Búsqueda inteligente de JRVs ({statsLoading ? 'Cargando...' : `${stats?.totalMesas?.toLocaleString() || '0'} disponibles`})</li>
               <li>• Escrutinio presidencial y legislativo</li>
               <li>• Vista dinámica de diputados por departamento</li>
               <li>• Animaciones y feedback visual</li>
@@ -632,6 +632,18 @@ export default function DashboardPage() {
             </Button>
           </div>
         )}
+        
+        {/* Ver Historial Completo Button */}
+        <div className="mt-4 text-center">
+          <Button
+            variant="secondary"
+            onClick={() => router.push('/revisar')}
+            className="text-sm"
+          >
+            <Calendar className="h-4 w-4 mr-2" />
+            Ver Historial Completo
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -714,7 +726,7 @@ export default function DashboardPage() {
                   onClick={() => router.push('/admin')}
                   className="hidden sm:flex"
                 >
-                  <Crown className="h-4 w-4 mr-1" />
+                  <BarChart3 className="h-4 w-4 mr-1" />
                   Admin
                 </Button>
               )}
@@ -761,7 +773,7 @@ export default function DashboardPage() {
                   size="sm"
                   onClick={() => router.push('/admin')}
                 >
-                  <Crown className="h-4 w-4 mr-2" />
+                  <BarChart3 className="h-4 w-4 mr-2" />
                   Admin
                 </Button>
               )}
@@ -821,7 +833,7 @@ export default function DashboardPage() {
                     }}
                     className="w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors text-purple-600 hover:text-purple-700 hover:bg-purple-50 touch-target"
                   >
-                    <Crown className="h-5 w-5 mr-3" />
+                    <BarChart3 className="h-5 w-5 mr-3" />
                     Panel de Administración
                   </button>
                 )}
@@ -866,7 +878,7 @@ export default function DashboardPage() {
                   onClick={() => router.push('/admin')}
                   className="w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors text-purple-600 hover:text-purple-700 hover:bg-purple-50 border border-purple-200"
                 >
-                  <Crown className="h-5 w-5 mr-3" />
+                  <BarChart3 className="h-5 w-5 mr-3" />
                   Panel de Administración
                 </button>
               )}

@@ -2,30 +2,30 @@ const XLSX = require('xlsx');
 const fs = require('fs');
 const path = require('path');
 
-// Función para procesar el archivo de JRVs
+// Función para procesar el archivo de JRVs (2025)
 function processJRVsFile() {
   try {
-    const filePath = path.join(__dirname, '..', 'JRVs 2021.xlsx');
+    const filePath = path.join(__dirname, '..', 'JRV y Carga Electoral Generales 2025xlsx.xlsx');
     const workbook = XLSX.readFile(filePath);
     const sheetName = workbook.SheetNames[0]; // Primera hoja
     const worksheet = workbook.Sheets[sheetName];
     const data = XLSX.utils.sheet_to_json(worksheet);
     
-    console.log('Datos de JRVs encontrados:', data.length, 'registros');
+    console.log('Datos de JRVs 2025 encontrados:', data.length, 'registros');
     console.log('Primeras 3 filas:', data.slice(0, 3));
     
-    // Procesar y limpiar datos
+    // Procesar y limpiar datos según el nuevo formato 2025
     const processedJRVs = data.map((row, index) => {
-      // Mapear columnas según la estructura real del Excel
+      // Mapear columnas según la estructura del Excel 2025
       const jrv = {
         id: `jrv-${index + 1}`,
-        number: row[' NÚMERO DE JRV']?.toString().trim() || `JRV-${String(index + 1).padStart(3, '0')}`,
-        location: row['CENTRO_VOTACION']?.toString().trim() || 'Ubicación no especificada',
-        address: row['SECTOR_ELECTORAL']?.toString().trim() || null,
-        department: row['DEPARTAMENTO']?.toString().trim() || 'Departamento no especificado',
-        municipality: row['MUNICIPIO']?.toString().trim() || null,
-        area: row['AREA']?.toString().trim() || null,
-        electoralLoad: row['CARGA \r\nELECTORAL'] || null,
+        number: String(row['JRV'] || (index + 1)).padStart(5, '0'),
+        location: row['CENTRO DE VOTACION']?.toString().trim() || 'Ubicación no especificada',
+        address: `${row['CODIGO SECTOR ELECTORAL'] || ''}-${row['NOMBRE SECTOR ELECTORAL'] || ''}`.trim(),
+        department: `${row['CD'] || ''}-${row['NOMBRE DEPARTAMENTO'] || ''}`.trim(),
+        municipality: `${row['CM'] || ''}-${row['NOMBRE MUNICIPIO'] || ''}`.trim(),
+        area: `${row['CODIGO AREA'] || ''}-${row['DESCRIPCION AREA'] || ''}`.trim(),
+        electoralLoad: row['CARGA ELECTORAL JRV'] || null,
         latitude: null, // No disponible en el Excel
         longitude: null, // No disponible en el Excel
       };
@@ -35,7 +35,7 @@ function processJRVsFile() {
     
     return processedJRVs;
   } catch (error) {
-    console.error('Error procesando archivo JRVs:', error.message);
+    console.error('Error procesando archivo JRVs 2025:', error.message);
     return [];
   }
 }

@@ -31,17 +31,44 @@ export async function GET(request: NextRequest) {
       where: { isActive: true },
     });
 
+    // Get active session first
+    const activeSession = await prisma.escrutinioSession.findFirst({
+      where: { isActive: true }
+    });
+
+    // If no active session, return empty stats
+    if (!activeSession) {
+      console.log('📊 No active session found, returning empty stats');
+      return NextResponse.json({
+        success: true,
+        data: {
+          totalMesas,
+          completedEscrutinios: 0,
+          pendingEscrutinios: 0,
+          inProgressActivity: [],
+          recentActivity: [],
+          statsByLevel: [
+            { level: 'PRESIDENTIAL', completed: 0, pending: 0, total: 0 },
+            { level: 'LEGISLATIVE', completed: 0, pending: 0, total: 0 },
+            { level: 'MUNICIPAL', completed: 0, pending: 0, total: 0 }
+          ]
+        }
+      });
+    }
+
+    console.log('📊 Active session found:', activeSession.name);
+
     const completedEscrutinios = await prisma.escrutinio.count({
       where: { 
         status: 'COMPLETED',
-        // Todos los usuarios ven estadísticas globales
+        sessionId: activeSession.id  // Filter by active session
       },
     });
 
     const pendingEscrutinios = await prisma.escrutinio.count({
       where: { 
         status: 'PENDING', // Solo escrutinios abiertos (no completados)
-        // Todos los usuarios ven estadísticas globales
+        sessionId: activeSession.id  // Filter by active session
       },
     });
 
@@ -49,6 +76,7 @@ export async function GET(request: NextRequest) {
     const inProgressEscrutinios = await prisma.escrutinio.findMany({
       where: {
         status: 'PENDING', // Escrutinios abiertos (en progreso)
+        sessionId: activeSession.id,  // Filter by active session
         // Excluir escrutinios cancelados (FAILED)
         ...(userRole === 'ADMIN' ? {} : { userId: userId }), // Solo admins ven todos
       },
@@ -66,6 +94,7 @@ export async function GET(request: NextRequest) {
     const completedEscrutiniosList = await prisma.escrutinio.findMany({
       where: {
         status: 'COMPLETED',
+        sessionId: activeSession.id,  // Filter by active session
         completedAt: { not: null }, // Solo los que tienen fecha de completado
         ...(userRole === 'ADMIN' ? {} : { userId: userId }), // Solo admins ven todos
       },
@@ -106,7 +135,7 @@ export async function GET(request: NextRequest) {
           where: {
             status: 'COMPLETED',
             electionLevel: level as any,
-            // Todos los usuarios ven estadísticas globales
+            sessionId: activeSession.id,  // Filter by active session
           },
         });
 
@@ -114,7 +143,7 @@ export async function GET(request: NextRequest) {
           where: {
             status: 'PENDING', // Solo escrutinios abiertos
             electionLevel: level as any,
-            // Todos los usuarios ven estadísticas globales
+            sessionId: activeSession.id,  // Filter by active session
           },
         });
 

@@ -219,20 +219,47 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     const x = rect.left + rect.width / 2;
     const y = rect.top + rect.height / 2;
 
-    // Check vote limit
+    // Check if this slot already has a vote in the current papeleta
+    const voteKey = `${partyId}-${slotNumber}`;
+    const currentVoteCount = papeletaVotes[voteKey] || 0;
+
+    // TOGGLE: If already has a vote, remove it (toggle off)
+    if (currentVoteCount > 0) {
+      console.log('➖ [LEGISLATIVE] Quitando voto (toggle off):', partyId, slotNumber);
+      
+      // Remove vote from current papeleta
+      setPapeletaVotes(prev => {
+        const newVotes = { ...prev };
+        delete newVotes[voteKey];
+        return newVotes;
+      });
+
+      // Also remove from main store
+      decrement(partyId, slotNumber, {
+        escrutinioId: escrutinioId!,
+        userId: userId!,
+        mesaId: diputadosData?.jrv.jrv
+      });
+
+      return;
+    }
+
+    // If no vote yet, check vote limit before adding
     const voteLimit = diputadosData?.diputados || 0;
     const currentVotes = Object.values(papeletaVotes).reduce((sum, count) => sum + count, 0);
 
     if (currentVotes >= voteLimit) {
+      console.log('⚠️ [LEGISLATIVE] Límite de votos alcanzado en papeleta');
       setShowVoteLimitAlert(true);
       return;
     }
 
-    // Add vote to current papeleta
-    const voteKey = `${partyId}-${slotNumber}`;
+    // Add vote to current papeleta (toggle on)
+    console.log('➕ [LEGISLATIVE] Agregando voto (toggle on):', partyId, slotNumber);
+    
     setPapeletaVotes(prev => ({
       ...prev,
-      [voteKey]: (prev[voteKey] || 0) + 1
+      [voteKey]: 1
     }));
 
     // Also add to main store for persistence
@@ -241,8 +268,6 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
       userId: userId!,
       mesaId: diputadosData?.jrv.jrv
     });
-
-    console.log('➕ [LEGISLATIVE] Voto agregado:', partyId, slotNumber);
     
     // Show animation
     setAnimation({
@@ -256,7 +281,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     setTimeout(() => {
       setAnimation(prev => ({ ...prev, show: false }));
     }, 200);
-  }, [userId, escrutinioId, papeletaVotes, diputadosData, isEscrutinioClosed, increment]);
+  }, [userId, escrutinioId, papeletaVotes, diputadosData, isEscrutinioClosed, increment, decrement]);
 
   // Funciones para manejo de papeletas simplificado
   const handleClosePapeleta = useCallback(async () => {

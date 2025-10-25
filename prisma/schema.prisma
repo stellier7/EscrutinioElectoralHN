@@ -53,6 +53,10 @@ enum AuditLogAction {
   EDIT_ESCRUTINIO
   REOPEN_ESCRUTINIO
   CANCEL_ESCRUTINIO
+  CREATE_SESSION
+  ACTIVATE_SESSION
+  CLOSE_SESSION
+  UPDATE_JRVS
 }
 
 enum PapeletaStatus {
@@ -98,6 +102,9 @@ model User {
   rejectedByUser  User?       @relation("UserRejection", fields: [rejectedBy], references: [id])
   approvedUsers   User[]      @relation("UserApproval")
   rejectedUsers   User[]      @relation("UserRejection")
+  
+  // Relaciones para sesiones
+  closedSessions  EscrutinioSession[]
   
   @@map("users")
 }
@@ -171,11 +178,33 @@ model Department {
   @@map("departments")
 }
 
+model EscrutinioSession {
+  id              String    @id @default(cuid())
+  name            String    // "Test 01", "Elecciones Presidenciales Nov 2025"
+  description     String?
+  isActive        Boolean   @default(false)  // Solo una puede estar activa
+  isClosed        Boolean   @default(false)
+  
+  startedAt       DateTime  @default(now())
+  closedAt       DateTime?
+  closedBy        String?   // Admin que cerró
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relaciones
+  escrutinios     Escrutinio[]
+  closedByUser    User?     @relation(fields: [closedBy], references: [id])
+  
+  @@map("escrutinio_sessions")
+}
+
 model Escrutinio {
   id              String              @id @default(cuid())
   userId          String
   electionId      String
   mesaId          String
+  sessionId       String
   electionLevel   ElectionLevel
   
   // Geolocalización
@@ -216,12 +245,13 @@ model Escrutinio {
   user            User               @relation(fields: [userId], references: [id])
   election        Election           @relation(fields: [electionId], references: [id])
   mesa            Mesa               @relation(fields: [mesaId], references: [id])
+  session         EscrutinioSession  @relation(fields: [sessionId], references: [id])
   votes           Vote[]
   corrections     Correction[]
   papeletas       Papeleta[]
   checkpoints     EscrutinioCheckpoint[]
   
-  @@unique([userId, electionId, mesaId, electionLevel])
+  @@unique([userId, sessionId, mesaId, electionLevel])
   @@map("escrutinios")
 }
 

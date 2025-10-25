@@ -271,8 +271,14 @@ async function syncLegislativeVotesForEscrutinio(
         return;
       }
 
-      await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/legislative-votes`, payload, {
+      const response = await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/legislative-votes`, payload, {
         headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      console.log('✅ [LEGISLATIVE-SYNC] Votos guardados exitosamente:', {
+        votesCount: votes.length,
+        escrutinioId,
+        response: response.data
       });
       
       // Éxito: remover votos sincronizados del estado
@@ -289,13 +295,24 @@ async function syncLegislativeVotesForEscrutinio(
     } catch (error: any) {
       retries++;
       
+      console.error(`❌ [LEGISLATIVE-SYNC] Error en intento ${retries}/${MAX_RETRIES}:`, {
+        message: error?.message,
+        response: error?.response?.data,
+        status: error?.response?.status,
+        escrutinioId
+      });
+      
       if (retries < MAX_RETRIES) {
         // Esperar antes del siguiente intento
+        console.log(`⏳ [LEGISLATIVE-SYNC] Reintentando en ${RETRY_DELAY_MS * retries}ms...`);
         await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS * retries));
       } else {
         // Fallo final: restaurar eventos de auditoría para reintento posterior
         AuditClient.restore(auditEvents as any);
-        console.error('❌ Error en auto-save legislativo después de reintentos');
+        console.error('❌ [LEGISLATIVE-SYNC] Error en auto-save legislativo después de reintentos', {
+          lastError: error?.response?.data || error?.message,
+          votesCount: votes.length
+        });
       }
     }
   }

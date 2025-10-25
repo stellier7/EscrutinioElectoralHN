@@ -43,7 +43,11 @@ async function seedJRVs() {
       fs.readFileSync(path.join(__dirname, '..', 'data', 'jrvs.json'), 'utf8')
     );
     
-    // Limpiar mesas existentes
+    // Limpiar escrutinios y mesas existentes (en orden correcto para evitar restricciones FK)
+    console.log('🧹 Limpiando escrutinios existentes...');
+    await prisma.escrutinio.deleteMany({});
+    
+    console.log('🧹 Limpiando mesas existentes...');
     await prisma.mesa.deleteMany({});
     
     // Procesar JRVs en lotes para evitar problemas de memoria

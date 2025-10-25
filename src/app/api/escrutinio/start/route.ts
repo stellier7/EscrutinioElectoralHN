@@ -52,6 +52,18 @@ export async function POST(request: Request) {
     }
     const { mesaNumber, electionLevel, gps } = parsed.data;
 
+    // Verificar que existe una sesión activa
+    const activeSession = await prisma.escrutinioSession.findFirst({
+      where: { isActive: true }
+    });
+
+    if (!activeSession) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'No hay una sesión de escrutinio activa. Contacte al administrador para activar una sesión.' 
+      }, { status: 400 });
+    }
+
     // Pick the first active election; adjust as needed
     let election = await prisma.election.findFirst({ where: { isActive: true }, orderBy: { startDate: 'desc' } });
     if (!election) {
@@ -67,23 +79,39 @@ export async function POST(request: Request) {
       });
     }
 
-    // Ensure Mesa exists by number; create placeholder if not exists
-    let mesa = await prisma.mesa.findUnique({ where: { number: mesaNumber } });
+    // Ensure Mesa exists by number and is active; create placeholder if not exists
+    let mesa = await prisma.mesa.findFirst({ 
+      where: { 
+        number: mesaNumber,
+        isActive: true 
+      } 
+    });
     if (!mesa) {
+      // Verificar si existe pero está inactiva
+      const inactiveMesa = await prisma.mesa.findUnique({ where: { number: mesaNumber } });
+      if (inactiveMesa) {
+        return NextResponse.json({ 
+          success: false, 
+          error: `La JRV ${mesaNumber} no está disponible en la sesión actual. Contacte al administrador.` 
+        }, { status: 400 });
+      }
+      
+      // Crear placeholder solo si no existe
       mesa = await prisma.mesa.create({ 
         data: { 
           number: mesaNumber, 
           location: 'Sin definir',
-          department: 'Departamento no especificado'
+          department: 'Departamento no especificado',
+          isActive: true
         } 
       });
     }
 
-    // If already exists for this user/election/mesa/level, reuse it (update location)
+    // If already exists for this user/session/mesa/level, reuse it (update location)
     const existing = await prisma.escrutinio.findFirst({
       where: {
         userId: payload.userId,
-        electionId: election.id,
+        sessionId: activeSession.id,
         mesaId: mesa.id,
         electionLevel: electionLevel as any,
       },
@@ -101,6 +129,7 @@ export async function POST(request: Request) {
         data: {
           userId: payload.userId,
           electionId: election.id,
+          sessionId: activeSession.id,
           mesaId: mesa.id,
           electionLevel: electionLevel as any,
           latitude: gps.latitude,
