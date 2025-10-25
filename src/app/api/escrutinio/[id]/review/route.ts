@@ -231,12 +231,31 @@ export async function GET(
       actaUrl: actaUrl
     });
 
-    // Datos del GPS si están disponibles
-    const gps = escrutinio.latitude && escrutinio.longitude ? {
+    // Datos del GPS inicial si están disponibles
+    const initialGps = escrutinio.latitude && escrutinio.longitude ? {
       latitude: escrutinio.latitude,
       longitude: escrutinio.longitude,
       accuracy: escrutinio.locationAccuracy || 0
     } : null;
+
+    // Datos del GPS final si están disponibles
+    const finalGps = escrutinio.finalLatitude && escrutinio.finalLongitude ? {
+      latitude: escrutinio.finalLatitude,
+      longitude: escrutinio.finalLongitude,
+      accuracy: escrutinio.finalLocationAccuracy || 0
+    } : null;
+
+    console.log('📍 [REVIEW API] GPS data for escrutinio:', {
+      escrutinioId: escrutinio.id,
+      initialLatitude: escrutinio.latitude,
+      initialLongitude: escrutinio.longitude,
+      initialAccuracy: escrutinio.locationAccuracy,
+      finalLatitude: escrutinio.finalLatitude,
+      finalLongitude: escrutinio.finalLongitude,
+      finalAccuracy: escrutinio.finalLocationAccuracy,
+      initialGpsObject: initialGps,
+      finalGpsObject: finalGps
+    });
 
     const escrutinioData = {
       id: escrutinio.id,
@@ -249,7 +268,8 @@ export async function GET(
       totalVotes,
       candidates,
       actaUrl,
-      gps,
+      initialGps,
+      finalGps,
       user: escrutinio.user
     };
 

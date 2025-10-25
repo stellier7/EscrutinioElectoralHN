@@ -50,7 +50,7 @@ enum AuditLogAction {
   USER_REJECTED
   USER_SUSPENDED
   CLOSE_ESCRUTINIO
-  EDIT_ESCRUTINIO
+  EDIT_ESCRUTINIOPerfec
   REOPEN_ESCRUTINIO
   CANCEL_ESCRUTINIO
   CREATE_SESSION
@@ -211,6 +211,11 @@ model Escrutinio {
   latitude        Float
   longitude       Float
   locationAccuracy Float?
+  
+  // GPS final (cuando se congela/cierra)
+  finalLatitude         Float?
+  finalLongitude        Float?
+  finalLocationAccuracy Float?
   
   // Estados
   status          TransmissionStatus  @default(PENDING)

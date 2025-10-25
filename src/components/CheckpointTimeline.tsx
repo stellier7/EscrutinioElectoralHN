@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Lock, Unlock, User, MapPin } from 'lucide-react';
+import { Clock, Lock, Unlock, User, MapPin, ExternalLink } from 'lucide-react';
 import { getPartyConfig } from '@/lib/party-config';
 import axios from 'axios';
+
+// Helper function for Google Maps URL
+const getGoogleMapsUrl = (lat: number, lng: number) => 
+  `https://www.google.com/maps?q=${lat},${lng}`;
 
 interface Checkpoint {
   id: string;
@@ -22,6 +26,16 @@ interface CheckpointTimelineProps {
   checkpoints: Checkpoint[];
   escrutinioStartedAt?: string;
   escrutinioCompletedAt?: string;
+  initialGps?: {
+    latitude: number;
+    longitude: number;
+    accuracy: number;
+  };
+  finalGps?: {
+    latitude: number;
+    longitude: number;
+    accuracy: number;
+  };
 }
 
 // Función para mapear ID de candidato a información legible
@@ -52,7 +66,7 @@ function getCandidateDisplayInfo(candidateId: string) {
   return { party: 'Candidato', candidate: candidateId.substring(0, 8) + '...' };
 }
 
-export function CheckpointTimeline({ checkpoints, escrutinioStartedAt, escrutinioCompletedAt }: CheckpointTimelineProps) {
+export function CheckpointTimeline({ checkpoints, escrutinioStartedAt, escrutinioCompletedAt, initialGps, finalGps }: CheckpointTimelineProps) {
   const [candidateInfo, setCandidateInfo] = useState<Record<string, any>>({});
 
   // Cargar información de candidatos cuando cambien los checkpoints
@@ -96,7 +110,12 @@ export function CheckpointTimeline({ checkpoints, escrutinioStartedAt, escrutini
       title: 'Escrutinio Iniciado',
       description: 'Conteo de votos comenzado',
       icon: <Clock className="h-4 w-4" />,
-      color: 'bg-blue-500'
+      color: 'bg-blue-500',
+      gps: {
+        latitude: initialGps?.latitude,
+        longitude: initialGps?.longitude,
+        accuracy: initialGps?.accuracy
+      }
     });
   }
   
@@ -204,14 +223,23 @@ export function CheckpointTimeline({ checkpoints, escrutinioStartedAt, escrutini
                 </div>
               )}
               
-              {/* GPS info for checkpoints */}
-              {event.type === 'checkpoint' && (event as any).gps && (event as any).gps.latitude !== null && (event as any).gps.latitude !== undefined && (event as any).gps.longitude !== null && (event as any).gps.longitude !== undefined && (
-                <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
-                  <MapPin className="h-3 w-3" />
-                  <span>
-                    {(event as any).gps.latitude.toFixed(6)}, {(event as any).gps.longitude.toFixed(6)}
-                    {(event as any).gps.accuracy && ` (±${(event as any).gps.accuracy.toFixed(0)}m)`}
-                  </span>
+              {/* GPS info for checkpoints and start events */}
+              {((event.type === 'checkpoint') || (event.type === 'start')) && (event as any).gps && (event as any).gps.latitude !== null && (event as any).gps.latitude !== undefined && (event as any).gps.longitude !== null && (event as any).gps.longitude !== undefined && (
+                <div className="mb-2">
+                  <div className="flex items-center gap-2 text-xs text-gray-500 mb-1">
+                    <MapPin className="h-3 w-3" />
+                    <span>
+                      {(event as any).gps.latitude.toFixed(6)}, {(event as any).gps.longitude.toFixed(6)}
+                      {(event as any).gps.accuracy && ` (±${(event as any).gps.accuracy.toFixed(0)}m)`}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => window.open(getGoogleMapsUrl((event as any).gps.latitude, (event as any).gps.longitude), '_blank')}
+                    className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 transition-colors"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                    Ver en Google Maps
+                  </button>
                 </div>
               )}
               

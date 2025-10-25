@@ -16,19 +16,33 @@ export async function POST(request: Request, { params }: { params: { id: string 
     const escrutinioId = params.id;
     
     // Obtener datos del cuerpo de la petición (opcional para escrutinios presidenciales)
-    let partyCounts, appliedVotes;
+    let partyCounts, appliedVotes, finalGps;
     try {
       const body = await request.json();
       partyCounts = body.partyCounts;
       appliedVotes = body.appliedVotes;
+      finalGps = body.finalGps; // GPS final cuando se cierra el escrutinio
     } catch (error) {
       // Si no hay cuerpo JSON (escrutinio presidencial), usar valores por defecto
       console.log('📝 No se recibieron datos del cuerpo - escrutinio presidencial');
       partyCounts = null;
       appliedVotes = null;
+      finalGps = null;
     }
     
-    console.log('🔄 Cerrando escrutinio con datos:', { escrutinioId, partyCounts, appliedVotes });
+    console.log('🔄 Cerrando escrutinio con datos:', { escrutinioId, partyCounts, appliedVotes, finalGps });
+    
+    // Debug GPS final
+    if (finalGps) {
+      console.log('📍 [CLOSE API] GPS final recibido:', {
+        latitude: finalGps.latitude,
+        longitude: finalGps.longitude,
+        accuracy: finalGps.accuracy,
+        isZero: finalGps.latitude === 0 && finalGps.longitude === 0
+      });
+    } else {
+      console.log('📍 [CLOSE API] No se recibió GPS final');
+    }
     const existing = await prisma.escrutinio.findUnique({ 
       where: { id: escrutinioId },
       include: { mesa: true }
@@ -138,13 +152,28 @@ export async function POST(request: Request, { params }: { params: { id: string 
       console.log('💾 Guardando versión original:', originalData);
     }
 
-    // Actualizar status a CLOSED
+    // Actualizar status a CLOSED con GPS final
+    const updateData: any = { 
+      status: 'CLOSED',
+      ...(originalData && { originalData: originalData })
+    };
+    
+    // Agregar GPS final si está disponible
+    if (finalGps && finalGps.latitude && finalGps.longitude) {
+      updateData.finalLatitude = finalGps.latitude;
+      updateData.finalLongitude = finalGps.longitude;
+      updateData.finalLocationAccuracy = finalGps.accuracy || 0;
+      
+      console.log('📍 [CLOSE API] Guardando GPS final:', {
+        finalLatitude: finalGps.latitude,
+        finalLongitude: finalGps.longitude,
+        finalLocationAccuracy: finalGps.accuracy || 0
+      });
+    }
+    
     await prisma.escrutinio.update({
       where: { id: escrutinioId },
-      data: { 
-        status: 'CLOSED',
-        ...(originalData && { originalData: originalData })
-      },
+      data: updateData,
     });
 
     // Crear log de auditoría

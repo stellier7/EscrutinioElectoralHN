@@ -13,7 +13,9 @@ import {
   Eye,
   FileText,
   Camera,
-  BarChart3
+  BarChart3,
+  Navigation,
+  ExternalLink
 } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import LegislativeReview from '../../../components/LegislativeReview';
@@ -37,7 +39,12 @@ interface EscrutinioData {
     votes: number;
   }>;
   actaUrl?: string;
-  gps?: {
+  initialGps?: {
+    latitude: number;
+    longitude: number;
+    accuracy: number;
+  };
+  finalGps?: {
     latitude: number;
     longitude: number;
     accuracy: number;
@@ -48,6 +55,16 @@ interface EscrutinioData {
     email: string;
   };
 }
+
+// Helper functions for map links
+const getGoogleMapsUrl = (lat: number, lng: number) => 
+  `https://www.google.com/maps?q=${lat},${lng}`;
+
+const getWazeUrl = (lat: number, lng: number) => 
+  `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
+
+const getAppleMapsUrl = (lat: number, lng: number) => 
+  `https://maps.apple.com/?q=${lat},${lng}`;
 
 export default function RevisarEscrutinioPage() {
   const { user, isLoading } = useAuth();
@@ -245,6 +262,124 @@ export default function RevisarEscrutinioPage() {
           </div>
         </div>
 
+        {/* Ubicación GPS */}
+        {(escrutinioData.initialGps || escrutinioData.finalGps) ? (
+          <div className="bg-white rounded-lg shadow-sm border mb-6">
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <Navigation className="h-5 w-5 text-green-600" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">Ubicación del Escrutinio</h2>
+                  <p className="text-sm text-gray-600">Coordenadas GPS capturadas durante el escrutinio</p>
+                </div>
+              </div>
+              
+              <div className="space-y-6">
+                {/* GPS Inicial */}
+                {escrutinioData.initialGps && (
+                  <div className="border rounded-lg p-4">
+                    <h3 className="text-md font-semibold text-gray-900 mb-3">📍 Ubicación cuando se inició el escrutinio</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <div className="flex justify-between">
+                          <span className="text-sm text-gray-600">Latitud:</span>
+                          <span className="text-sm font-mono text-gray-900">
+                            {escrutinioData.initialGps.latitude.toFixed(6)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-sm text-gray-600">Longitud:</span>
+                          <span className="text-sm font-mono text-gray-900">
+                            {escrutinioData.initialGps.longitude.toFixed(6)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-sm text-gray-600">Precisión:</span>
+                          <span className="text-sm font-mono text-gray-900">
+                            ±{escrutinioData.initialGps.accuracy.toFixed(0)}m
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => window.open(getGoogleMapsUrl(escrutinioData.initialGps!.latitude, escrutinioData.initialGps!.longitude), '_blank')}
+                          className="flex items-center gap-2"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                          Ver en Google Maps
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* GPS Final */}
+                {escrutinioData.finalGps && (
+                  <div className="border rounded-lg p-4">
+                    <h3 className="text-md font-semibold text-gray-900 mb-3">📍 Ubicación cuando se cerró el escrutinio</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <div className="flex justify-between">
+                          <span className="text-sm text-gray-600">Latitud:</span>
+                          <span className="text-sm font-mono text-gray-900">
+                            {escrutinioData.finalGps.latitude.toFixed(6)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-sm text-gray-600">Longitud:</span>
+                          <span className="text-sm font-mono text-gray-900">
+                            {escrutinioData.finalGps.longitude.toFixed(6)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-sm text-gray-600">Precisión:</span>
+                          <span className="text-sm font-mono text-gray-900">
+                            ±{escrutinioData.finalGps.accuracy.toFixed(0)}m
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => window.open(getGoogleMapsUrl(escrutinioData.finalGps!.latitude, escrutinioData.finalGps!.longitude), '_blank')}
+                          className="flex items-center gap-2"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                          Ver en Google Maps
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-white rounded-lg shadow-sm border mb-6">
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-gray-100 rounded-lg">
+                  <Navigation className="h-5 w-5 text-gray-600" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">Ubicación del Escrutinio</h2>
+                  <p className="text-sm text-gray-600">Ubicación GPS no disponible</p>
+                </div>
+              </div>
+              <div className="text-center py-4">
+                <p className="text-gray-500">No se pudo capturar la ubicación GPS durante este escrutinio.</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Resultados de Votos */}
         <div className="bg-white rounded-lg shadow-sm border mb-6">
           <div className="p-6">
@@ -396,6 +531,8 @@ export default function RevisarEscrutinioPage() {
           checkpoints={checkpoints}
           escrutinioStartedAt={escrutinioData.startedAt}
           escrutinioCompletedAt={escrutinioData.completedAt}
+          initialGps={escrutinioData.initialGps}
+          finalGps={escrutinioData.finalGps}
         />
       </div>
     </div>

@@ -52,6 +52,14 @@ export async function POST(request: Request) {
     }
     const { mesaNumber, electionLevel, gps } = parsed.data;
 
+    // Debug GPS values
+    console.log('📍 [START API] GPS values received:', {
+      latitude: gps.latitude,
+      longitude: gps.longitude,
+      accuracy: gps.accuracy,
+      isZero: gps.latitude === 0 && gps.longitude === 0
+    });
+
     // Verificar que existe una sesión activa
     const activeSession = await prisma.escrutinioSession.findFirst({
       where: { isActive: true }
@@ -119,12 +127,22 @@ export async function POST(request: Request) {
 
     let escrutinioId: string;
     if (existing) {
+      console.log('📍 [START API] Updating existing escrutinio with GPS:', {
+        latitude: gps.latitude,
+        longitude: gps.longitude,
+        accuracy: gps.accuracy
+      });
       const updated = await prisma.escrutinio.update({
         where: { id: existing.id },
         data: { latitude: gps.latitude, longitude: gps.longitude, locationAccuracy: gps.accuracy },
       });
       escrutinioId = updated.id;
     } else {
+      console.log('📍 [START API] Creating new escrutinio with GPS:', {
+        latitude: gps.latitude,
+        longitude: gps.longitude,
+        accuracy: gps.accuracy
+      });
       const created = await prisma.escrutinio.create({
         data: {
           userId: payload.userId,
