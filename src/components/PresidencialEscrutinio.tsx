@@ -206,6 +206,29 @@ export default function PresidencialEscrutinio({
     console.log('🔄 [PRESIDENTIAL] Congelando escrutinio localmente');
     setIsClosing(true);
     try {
+      // Capturar GPS final
+      let finalGps = null;
+      try {
+        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+          });
+        });
+        
+        finalGps = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracy: position.coords.accuracy
+        };
+        
+        console.log('📍 [PRESIDENTIAL] GPS final capturado:', finalGps);
+      } catch (gpsError) {
+        console.warn('⚠️ [PRESIDENTIAL] No se pudo obtener GPS final:', gpsError);
+        // Continuar sin GPS
+      }
+
       // Enviar checkpoint al servidor
       const token = localStorage.getItem('auth-token');
       await axios.post(`/api/escrutinio/${escrutinioId}/checkpoint`, {
@@ -220,6 +243,16 @@ export default function PresidencialEscrutinio({
       }, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
+
+      // Enviar GPS final al endpoint de cierre
+      if (finalGps) {
+        await axios.post(`/api/escrutinio/${escrutinioId}/close`, {
+          finalGps: finalGps
+        }, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        console.log('📍 [PRESIDENTIAL] GPS final enviado al servidor');
+      }
       
       // Cambiar estado local
       setEscrutinioStatus('CLOSED');

@@ -184,6 +184,7 @@ model EscrutinioSession {
   description     String?
   isActive        Boolean   @default(false)  // Solo una puede estar activa
   isClosed        Boolean   @default(false)
+  isTest          Boolean   @default(false)  // Marcar sesión como prueba
   
   startedAt       DateTime  @default(now())
   closedAt       DateTime?
@@ -216,6 +217,12 @@ model Escrutinio {
   finalLatitude         Float?
   finalLongitude        Float?
   finalLocationAccuracy Float?
+  
+  // Privacidad de ubicación
+  gpsHidden          Boolean   @default(false)
+  gpsHiddenReason    String?
+  gpsHiddenBy        String?   // Admin que ocultó
+  gpsHiddenAt        DateTime?
   
   // Estados
   status          TransmissionStatus  @default(PENDING)

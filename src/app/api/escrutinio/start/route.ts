@@ -108,8 +108,8 @@ export async function POST(request: Request) {
       mesa = await prisma.mesa.create({ 
         data: { 
           number: mesaNumber, 
-          location: 'Sin definir',
-          department: 'Departamento no especificado',
+          location: `JRV ${mesaNumber} - Ubicación por definir`,
+          department: 'Departamento por definir',
           isActive: true
         } 
       });

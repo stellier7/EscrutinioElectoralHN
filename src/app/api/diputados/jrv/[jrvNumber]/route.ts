@@ -1,22 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { AuthUtils } from '@/lib/auth';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { jrvNumber: string } }
 ) {
   try {
-    // Check authentication
-    const authHeader = request.headers.get('authorization') || undefined;
-    const token = AuthUtils.extractTokenFromHeader(authHeader);
-    if (!token) {
-      return NextResponse.json({ success: false, error: 'No autorizado' }, { status: 401 });
-    }
-    const payload = AuthUtils.verifyToken(token);
-    if (!payload) {
-      return NextResponse.json({ success: false, error: 'Token inválido' }, { status: 401 });
-    }
+    console.log('🔍 [DIPUTADOS API] Request received for JRV:', params.jrvNumber);
 
     const { jrvNumber } = params;
 
@@ -53,34 +43,12 @@ export async function GET(
     }
 
     // Buscar información del departamento
-    // Extraer solo el nombre del departamento (remover código numérico)
-    const departmentName = mesa.department.replace(/^\d+-/, '').trim();
     console.log('🔍 [DEBUG] Mesa department:', mesa.department);
-    console.log('🔍 [DEBUG] Extracted department name:', departmentName);
     
-    // Buscar departamento - mapeo directo para casos conocidos
-    let department;
-    
-    // Mapeo directo para casos específicos
-    const departmentMap: { [key: string]: string } = {
-      'ATLANTIDA': 'Atlántida',
-      'COLON': 'Colón',
-      'CORTES': 'Cortés',
-      'FRANCISCO MORAZAN': 'Francisco Morazán',
-      'GRACIAS A DIOS': 'Gracias a Dios',
-      'ISLAS DE LA BAHIA': 'Islas de la Bahía',
-      'LA PAZ': 'La Paz',
-      'SANTA BARBARA': 'Santa Bárbara'
-    };
-    
-    const searchName = departmentMap[departmentName.toUpperCase()] || departmentName;
-    
-    department = await prisma.department.findFirst({
+    // Buscar directamente por el nombre completo del departamento
+    const department = await prisma.department.findFirst({
       where: {
-        name: {
-          contains: searchName,
-          mode: 'insensitive'
-        },
+        name: mesa.department, // Buscar exactamente como viene
         isActive: true
       },
       select: {

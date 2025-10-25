@@ -231,19 +231,27 @@ export async function GET(
       actaUrl: actaUrl
     });
 
-    // Datos del GPS inicial si están disponibles
-    const initialGps = escrutinio.latitude && escrutinio.longitude ? {
+    // Datos del GPS inicial si están disponibles (respetar privacidad)
+    const initialGps = escrutinio.gpsHidden ? {
+      latitude: 0,
+      longitude: 0,
+      accuracy: 0
+    } : (escrutinio.latitude && escrutinio.longitude ? {
       latitude: escrutinio.latitude,
       longitude: escrutinio.longitude,
       accuracy: escrutinio.locationAccuracy || 0
-    } : null;
+    } : null);
 
-    // Datos del GPS final si están disponibles
-    const finalGps = escrutinio.finalLatitude && escrutinio.finalLongitude ? {
+    // Datos del GPS final si están disponibles (respetar privacidad)
+    const finalGps = escrutinio.gpsHidden ? {
+      latitude: 0,
+      longitude: 0,
+      accuracy: 0
+    } : (escrutinio.finalLatitude && escrutinio.finalLongitude ? {
       latitude: escrutinio.finalLatitude,
       longitude: escrutinio.finalLongitude,
       accuracy: escrutinio.finalLocationAccuracy || 0
-    } : null;
+    } : null);
 
     console.log('📍 [REVIEW API] GPS data for escrutinio:', {
       escrutinioId: escrutinio.id,
@@ -270,7 +278,12 @@ export async function GET(
       actaUrl,
       initialGps,
       finalGps,
-      user: escrutinio.user
+      user: escrutinio.user,
+      // Campos de privacidad GPS
+      gpsHidden: escrutinio.gpsHidden,
+      gpsHiddenReason: escrutinio.gpsHiddenReason,
+      gpsHiddenBy: escrutinio.gpsHiddenBy,
+      gpsHiddenAt: escrutinio.gpsHiddenAt?.toISOString()
     };
 
     return NextResponse.json({

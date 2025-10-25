@@ -535,6 +535,31 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
       const action = isEscrutinioClosed ? 'UNFREEZE' : 'FREEZE';
       const votesSnapshot = counts; // Snapshot actual de votos
       
+      // Capturar GPS final solo cuando se congela (FREEZE)
+      let finalGps = null;
+      if (action === 'FREEZE') {
+        try {
+          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              enableHighAccuracy: true,
+              timeout: 10000,
+              maximumAge: 0
+            });
+          });
+          
+          finalGps = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            accuracy: position.coords.accuracy
+          };
+          
+          console.log('📍 [LEGISLATIVE] GPS final capturado:', finalGps);
+        } catch (gpsError) {
+          console.warn('⚠️ [LEGISLATIVE] No se pudo obtener GPS final:', gpsError);
+          // Continuar sin GPS
+        }
+      }
+      
       // Enviar checkpoint al servidor
       const token = localStorage.getItem('auth-token');
       await axios.post(`/api/escrutinio/${escrutinioId}/checkpoint`, {
@@ -549,6 +574,16 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
       }, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
+
+      // Enviar GPS final al endpoint de cierre solo cuando se congela
+      if (action === 'FREEZE' && finalGps) {
+        await axios.post(`/api/escrutinio/${escrutinioId}/close`, {
+          finalGps: finalGps
+        }, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        console.log('📍 [LEGISLATIVE] GPS final enviado al servidor');
+      }
       
       if (isEscrutinioClosed) {
         // Descongelar - cambiar estado local

@@ -134,6 +134,17 @@ export function CheckpointTimeline({ checkpoints, escrutinioStartedAt, escrutini
       votesSnapshotValues: Object.values(checkpoint.votesSnapshot)
     });
     
+    // Si es un FREEZE y tenemos finalGps, usar eso en lugar del checkpoint GPS
+    const gpsToUse = isFreeze && finalGps ? {
+      latitude: finalGps.latitude,
+      longitude: finalGps.longitude,
+      accuracy: finalGps.accuracy
+    } : {
+      latitude: checkpoint.gpsLatitude,
+      longitude: checkpoint.gpsLongitude,
+      accuracy: checkpoint.gpsAccuracy
+    };
+    
     timeline.push({
       id: checkpoint.id,
       type: 'checkpoint',
@@ -144,11 +155,7 @@ export function CheckpointTimeline({ checkpoints, escrutinioStartedAt, escrutini
       color: isFreeze ? 'bg-orange-500' : 'bg-green-500',
       user: checkpoint.user,
       votesSnapshot: checkpoint.votesSnapshot,
-      gps: {
-        latitude: checkpoint.gpsLatitude,
-        longitude: checkpoint.gpsLongitude,
-        accuracy: checkpoint.gpsAccuracy
-      }
+      gps: gpsToUse
     });
   });
   
