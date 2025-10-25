@@ -57,6 +57,8 @@ enum AuditLogAction {
   ACTIVATE_SESSION
   CLOSE_SESSION
   UPDATE_JRVS
+  HIDE_GPS
+  SHOW_GPS
 }
 
 enum PapeletaStatus {
