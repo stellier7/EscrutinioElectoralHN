@@ -74,12 +74,10 @@ export async function POST(
         }
 
         // Verificar si ya existe un voto para este candidato en este escrutinio
-        const existingVote = await tx.vote.findUnique({
+        const existingVote = await tx.vote.findFirst({
           where: {
-            escrutinioId_candidateId: {
-              escrutinioId: papeleta.escrutinioId,
-              candidateId: candidate.id
-            }
+            escrutinioId: papeleta.escrutinioId,
+            candidateId: candidate.id
           }
         });
 

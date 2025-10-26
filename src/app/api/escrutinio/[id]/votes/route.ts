@@ -110,7 +110,19 @@ export async function POST(
     // Verificar que el escrutinio existe y el usuario tiene acceso
     const escrutinio = await prisma.escrutinio.findUnique({
       where: { id: escrutinioId },
-      select: { id: true, userId: true, electionLevel: true }
+      include: {
+        mesa: {
+          select: {
+            electoralLoad: true,
+            number: true
+          }
+        },
+        votes: {
+          select: {
+            count: true
+          }
+        }
+      }
     });
 
     if (!escrutinio) {
@@ -132,6 +144,36 @@ export async function POST(
       electionLevel: escrutinio.electionLevel
     });
 
+    // NUEVA: Validar y marcar batches procesados para prevenir duplicados
+    const processedBatches: string[] = [];
+    if (Array.isArray(body.votes)) {
+      for (const vote of body.votes) {
+        if (vote.clientBatchId) {
+          // Verificar si este batch ya fue procesado
+          const existingBatch = await prisma.processedBatch.findUnique({
+            where: { clientBatchId: vote.clientBatchId }
+          });
+          
+          if (existingBatch) {
+            console.warn(`⚠️ [VOTES API] Batch duplicado detectado: ${vote.clientBatchId}`);
+            continue; // Saltar este voto, ya fue procesado
+          }
+          
+          // Marcar batch como procesado ANTES de aplicar votos
+          await prisma.processedBatch.create({
+            data: {
+              clientBatchId: vote.clientBatchId,
+              escrutinioId: escrutinioId,
+              userId: payload.userId,
+              processedVotes: 1
+            }
+          });
+          
+          processedBatches.push(vote.clientBatchId);
+        }
+      }
+    }
+
     // Procesar votos según el nivel de elección
     if (escrutinio.electionLevel === 'PRESIDENTIAL') {
       // Para presidencial: body.votes puede ser array de deltas o array de counts
@@ -141,12 +183,10 @@ export async function POST(
             // Si tiene 'delta', es un delta (incremento/decremento)
             if (typeof vote.delta === 'number') {
               // Aplicar delta al conteo actual
-              const currentVote = await prisma.vote.findUnique({
+              const currentVote = await prisma.vote.findFirst({
                 where: {
-                  escrutinioId_candidateId: {
-                    escrutinioId: escrutinioId,
-                    candidateId: vote.candidateId
-                  }
+                  escrutinioId: escrutinioId,
+                  candidateId: vote.candidateId
                 }
               });
 
@@ -154,51 +194,49 @@ export async function POST(
               const newCount = Math.max(0, currentCount + vote.delta);
 
               if (newCount > 0) {
-                await prisma.vote.upsert({
-                  where: {
-                    escrutinioId_candidateId: {
+                if (currentVote) {
+                  await prisma.vote.update({
+                    where: { id: currentVote.id },
+                    data: { count: newCount }
+                  });
+                } else {
+                  await prisma.vote.create({
+                    data: {
                       escrutinioId: escrutinioId,
-                      candidateId: vote.candidateId
+                      candidateId: vote.candidateId,
+                      count: newCount
                     }
-                  },
-                  update: {
-                    count: newCount
-                  },
-                  create: {
-                    escrutinioId: escrutinioId,
-                    candidateId: vote.candidateId,
-                    count: newCount
-                  }
-                });
+                  });
+                }
               } else if (currentVote) {
                 // Si el conteo llega a 0, eliminar el voto
                 await prisma.vote.delete({
-                  where: {
-                    escrutinioId_candidateId: {
-                      escrutinioId: escrutinioId,
-                      candidateId: vote.candidateId
-                    }
-                  }
+                  where: { id: currentVote.id }
                 });
               }
             } else if (typeof vote.count === 'number' && vote.count > 0) {
               // Si tiene 'count', es un conteo absoluto
-              await prisma.vote.upsert({
+              const existingVote = await prisma.vote.findFirst({
                 where: {
-                  escrutinioId_candidateId: {
-                    escrutinioId: escrutinioId,
-                    candidateId: vote.candidateId
-                  }
-                },
-                update: {
-                  count: vote.count
-                },
-                create: {
                   escrutinioId: escrutinioId,
-                  candidateId: vote.candidateId,
-                  count: vote.count
+                  candidateId: vote.candidateId
                 }
               });
+
+              if (existingVote) {
+                await prisma.vote.update({
+                  where: { id: existingVote.id },
+                  data: { count: vote.count }
+                });
+              } else {
+                await prisma.vote.create({
+                  data: {
+                    escrutinioId: escrutinioId,
+                    candidateId: vote.candidateId,
+                    count: vote.count
+                  }
+                });
+              }
             }
           }
         }
@@ -220,26 +258,74 @@ export async function POST(
               });
 
               if (candidate) {
-                await prisma.vote.upsert({
+                const existingVote = await prisma.vote.findFirst({
                   where: {
-                    escrutinioId_candidateId: {
-                      escrutinioId: escrutinioId,
-                      candidateId: candidate.id
-                    }
-                  },
-                  update: {
-                    count: count
-                  },
-                  create: {
                     escrutinioId: escrutinioId,
-                    candidateId: candidate.id,
-                    count: count
+                    candidateId: candidate.id
                   }
                 });
+
+                if (existingVote) {
+                  await prisma.vote.update({
+                    where: { id: existingVote.id },
+                    data: { count: count }
+                  });
+                } else {
+                  await prisma.vote.create({
+                    data: {
+                      escrutinioId: escrutinioId,
+                      candidateId: candidate.id,
+                      count: count
+                    }
+                  });
+                }
               }
             }
           }
         }
+      }
+    }
+
+    // Validar límites de votos vs carga electoral
+    const updatedEscrutinio = await prisma.escrutinio.findUnique({
+      where: { id: escrutinioId },
+      include: {
+        mesa: {
+          select: { electoralLoad: true, number: true }
+        },
+        votes: {
+          select: { count: true }
+        }
+      }
+    });
+
+    if (updatedEscrutinio?.mesa && updatedEscrutinio.mesa.electoralLoad) {
+      const totalVotes = updatedEscrutinio.votes.reduce((sum, vote) => sum + vote.count, 0);
+      const cargaElectoral = updatedEscrutinio.mesa.electoralLoad;
+      const margin = 1.10; // 10% de margen
+
+      if (totalVotes > cargaElectoral * margin) {
+        // Loguear anomalía
+        try {
+          await prisma.auditLog.create({
+            data: {
+              userId: payload.userId,
+              action: 'CORRECTION',
+              description: `Vote overflow detected: ${totalVotes} > ${cargaElectoral} (JRV ${updatedEscrutinio.mesa.number})`,
+              metadata: JSON.stringify({
+                escrutinioId,
+                totalVotes,
+                cargaElectoral,
+                jrvNumber: updatedEscrutinio.mesa.number,
+                overflow: totalVotes - cargaElectoral
+              })
+            }
+          });
+        } catch (auditError) {
+          console.error('Failed to log vote overflow anomaly:', auditError);
+        }
+
+        console.warn(`⚠️ [VOTES API] Vote overflow detected in JRV ${updatedEscrutinio.mesa.number}: ${totalVotes} > ${cargaElectoral}`);
       }
     }
 

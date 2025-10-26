@@ -55,6 +55,9 @@ type Actions = {
   loadFromServer: (escrutinioId: string) => Promise<void>;
   getPartyCount: (partyId: string) => number;
   getCasillaCount: (partyId: string, casillaNumber: number) => number;
+  pauseSync: () => void;
+  resumeSync: () => void;
+  isSyncPaused: () => boolean;
 };
 
 // Configuración optimizada para sincronización silenciosa (igual que presidencial)
@@ -63,6 +66,9 @@ const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 1000;
 
 let syncTimer: ReturnType<typeof setInterval> | null = null;
+let isSyncPausedFlag = false;
+let isSyncing = false; // Backpressure control
+let debounceSyncTimer: ReturnType<typeof setTimeout> | null = null;
 
 export const useLegislativeVoteStore = create<State & Actions>()(
   persist(
@@ -114,7 +120,10 @@ export const useLegislativeVoteStore = create<State & Actions>()(
         });
 
         // Auto-save cada 3 segundos
-        startSilentSync();
+        if (!isSyncPausedFlag) {
+          startSilentSync();
+          triggerImmediateSync();
+        }
       },
 
       decrement: (partyId, casillaNumber, meta) => {
@@ -157,7 +166,10 @@ export const useLegislativeVoteStore = create<State & Actions>()(
         });
 
         // Auto-save cada 3 segundos
-        startSilentSync();
+        if (!isSyncPausedFlag) {
+          startSilentSync();
+          triggerImmediateSync();
+        }
       },
 
       syncPendingVotes: async () => {
@@ -194,7 +206,21 @@ export const useLegislativeVoteStore = create<State & Actions>()(
               }
               return acc;
             }, {});
-            set({ counts: serverCounts });
+            
+            // Solo actualizar si los counts realmente cambiaron
+            const currentCounts = get().counts;
+            const hasChanges = Object.keys(serverCounts).some(key => 
+              serverCounts[key] !== currentCounts[key]
+            ) || Object.keys(currentCounts).some(key => 
+              !(key in serverCounts)
+            );
+
+            if (hasChanges) {
+              set({ counts: serverCounts, pendingVotes: [] });
+            } else {
+              // Solo limpiar pendingVotes si no hay cambios en counts
+              set({ pendingVotes: [] });
+            }
           }
         } catch (error) {
           console.warn('No se pudieron cargar votos legislativos del servidor:', error);
@@ -213,6 +239,23 @@ export const useLegislativeVoteStore = create<State & Actions>()(
         const key = `${partyId}_${casillaNumber}`;
         return counts[key] || 0;
       },
+
+      pauseSync: () => {
+        isSyncPausedFlag = true;
+        console.log('⏸️ [LEGISLATIVE VOTE STORE] Auto-sync pausado');
+      },
+
+      resumeSync: () => {
+        isSyncPausedFlag = false;
+        console.log('▶️ [LEGISLATIVE VOTE STORE] Auto-sync reanudado');
+        // Reanudar sync si hay votos pendientes
+        const { pendingVotes } = get();
+        if (pendingVotes.length > 0) {
+          startSilentSync();
+        }
+      },
+
+      isSyncPaused: () => isSyncPausedFlag,
 
       clear: () => set({ 
         counts: {}, 
@@ -318,11 +361,61 @@ async function syncLegislativeVotesForEscrutinio(
   }
 }
 
+// Función para sincronizar inmediatamente con debounce
+function triggerImmediateSync() {
+  // Si está pausado, no hacer nada
+  if (isSyncPausedFlag) {
+    console.log('⏸️ [LEGISLATIVE] Sync pausado, no se dispara sync inmediato');
+    return;
+  }
+
+  // Cancelar cualquier sync pendiente
+  if (debounceSyncTimer) {
+    clearTimeout(debounceSyncTimer);
+  }
+
+  // Programar nuevo sync después de 500ms
+  debounceSyncTimer = setTimeout(async () => {
+    const { pendingVotes } = useLegislativeVoteStore.getState();
+    if (pendingVotes.length === 0) return;
+
+    // Verificar backpressure
+    if (isSyncing) {
+      console.log('⏸️ [LEGISLATIVE] Sync anterior en progreso, reintentando en 1s...');
+      setTimeout(triggerImmediateSync, 1000);
+      return;
+    }
+
+    console.log('🚀 [LEGISLATIVE IMMEDIATE SYNC] Sincronizando votos inmediatamente');
+    isSyncing = true;
+    try {
+      await useLegislativeVoteStore.getState().syncPendingVotes();
+    } finally {
+      isSyncing = false;
+    }
+  }, 500);
+}
+
 // Función para iniciar sincronización silenciosa
 function startSilentSync() {
-  if (syncTimer) return; // Ya está activa
+  if (syncTimer || isSyncPausedFlag) return; // Ya está activa o está pausado
   
   syncTimer = setInterval(async () => {
+    // Verificar si está pausado antes de sincronizar
+    if (isSyncPausedFlag) {
+      if (syncTimer) {
+        clearInterval(syncTimer);
+        syncTimer = null;
+      }
+      return;
+    }
+
+    // Backpressure control: no sincronizar si ya hay un sync en progreso
+    if (isSyncing) {
+      console.log('⏸️ [LEGISLATIVE] Sync anterior aún en progreso, saltando este ciclo...');
+      return;
+    }
+
     const { pendingVotes } = useLegislativeVoteStore.getState();
     if (pendingVotes.length === 0) {
       // No hay votos pendientes, detener timer
@@ -333,6 +426,11 @@ function startSilentSync() {
       return;
     }
     
-    await useLegislativeVoteStore.getState().syncPendingVotes();
+    isSyncing = true;
+    try {
+      await useLegislativeVoteStore.getState().syncPendingVotes();
+    } finally {
+      isSyncing = false;
+    }
   }, SYNC_INTERVAL_MS);
 }

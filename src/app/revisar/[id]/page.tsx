@@ -274,10 +274,10 @@ export default function RevisarEscrutinioPage() {
             <p className="text-red-600 mb-4">{error}</p>
             <Button
               variant="primary"
-              onClick={() => router.push('/dashboard')}
+              onClick={() => router.back()}
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Volver al Dashboard
+              Volver
             </Button>
           </div>
         </div>
@@ -305,10 +305,21 @@ export default function RevisarEscrutinioPage() {
               <Button
                 variant="secondary"
                 size="sm"
-                onClick={() => router.push('/dashboard')}
+                onClick={() => {
+                  // Check if this is the user's own escrutinio
+                  const isOwnEscrutinio = escrutinioData?.user?.id === user?.id;
+                  
+                  if (isOwnEscrutinio) {
+                    // If it's their own escrutinio, go to dashboard
+                    router.push('/dashboard');
+                  } else {
+                    // If reviewing from admin/sessions, go back
+                    router.back();
+                  }
+                }}
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Volver
+                {escrutinioData?.user?.id === user?.id ? 'Ir al Dashboard' : 'Volver'}
               </Button>
               <div className="flex items-center gap-2">
                 <Eye className="h-6 w-6 text-primary-600" />
@@ -672,9 +683,13 @@ export default function RevisarEscrutinioPage() {
                     </div>
                   ))
                 ) : (
-                  // Resumen para votos presidenciales
+                  // Resumen para votos presidenciales - MOSTRAR TODOS LOS CANDIDATOS
                   escrutinioData.candidates
-                    .filter(c => c.votes > 0)
+                    .sort((a, b) => {
+                      const aNum = typeof a.number === 'number' ? a.number : 0;
+                      const bNum = typeof b.number === 'number' ? b.number : 0;
+                      return aNum - bNum;
+                    })
                     .map(c => (
                       <div key={c.id} className="flex justify-between items-center text-sm">
                         <span className="text-blue-700">

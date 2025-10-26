@@ -24,6 +24,7 @@ interface PresidencialEscrutinioProps {
   department?: string;
   gps?: { latitude: number; longitude: number; accuracy?: number } | null;
   deviceId?: string;
+  onEscrutinioStatusChange?: (status: 'PENDING' | 'IN_PROGRESS' | 'CLOSED' | 'COMPLETED') => void;
 }
 
 export default function PresidencialEscrutinio({ 
@@ -35,7 +36,8 @@ export default function PresidencialEscrutinio({
   jrvLocation,
   department,
   gps, 
-  deviceId 
+  deviceId,
+  onEscrutinioStatusChange
 }: PresidencialEscrutinioProps) {
   const router = useRouter();
   const { counts, increment, decrement, clear: clearVotes } = useVoteStore((s) => ({
@@ -55,13 +57,52 @@ export default function PresidencialEscrutinio({
   const [isClosing, setIsClosing] = useState(false);
   const [isReopening, setIsReopening] = useState(false);
 
-  // Limpiar store al iniciar nuevo escrutinio
+  // NO limpiar votos automáticamente - los votos se cargan desde el servidor
   useEffect(() => {
     if (escrutinioId) {
-      console.log('🔄 [PRESIDENTIAL] Iniciando nuevo escrutinio, limpiando store local...');
-      clearVotes();
+      console.log('🔄 [PRESIDENTIAL] Escrutinio activo:', escrutinioId);
     }
-  }, [escrutinioId, clearVotes]);
+  }, [escrutinioId]);
+
+  // Verificar estado del escrutinio al cargar
+  useEffect(() => {
+    const checkEscrutinioStatus = async () => {
+      if (!escrutinioId) return;
+      
+      try {
+        const token = localStorage.getItem('auth-token');
+        const response = await axios.get(
+          `/api/escrutinio/${escrutinioId}/status`,
+          { headers: { 'Authorization': `Bearer ${token}` } }
+        );
+        
+        if (response.data?.success) {
+          const status = response.data.data.status;
+          console.log('📊 [PRESIDENTIAL] Status del escrutinio:', status);
+          
+          // Si el escrutinio está CLOSED o COMPLETED, bloquear la interfaz
+          if (status === 'CLOSED') {
+            setIsEscrutinioClosed(true);
+            setEscrutinioStatus('CLOSED');
+            console.log('🔒 [PRESIDENTIAL] Escrutinio cerrado - bloqueando interfaz');
+            onEscrutinioStatusChange?.(status);
+          } else if (status === 'COMPLETED') {
+            setIsEscrutinioClosed(true);
+            setEscrutinioStatus('COMPLETED');
+            console.log('✅ [PRESIDENTIAL] Escrutinio completado - bloqueando interfaz');
+            onEscrutinioStatusChange?.(status);
+          } else {
+            // Notificar status activo también
+            onEscrutinioStatusChange?.(status);
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error verificando status del escrutinio:', error);
+      }
+    };
+    
+    checkEscrutinioStatus();
+  }, [escrutinioId]);
 
   const handleActaUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -205,6 +246,19 @@ export default function PresidencialEscrutinio({
     
     console.log('🔄 [PRESIDENTIAL] Congelando escrutinio localmente');
     setIsClosing(true);
+    
+    // CRÍTICO: Pausar auto-save PRIMERO para evitar race conditions
+    const { pauseSync, resumeSync } = useVoteStore.getState();
+    pauseSync();
+    console.log('⏸️ [PRESIDENTIAL] Auto-sync pausado para evitar race conditions');
+    
+    // CRÍTICO: Esperar un momento para que cualquier operación pendiente se complete
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // CRÍTICO: Capturar snapshot de votos DESPUÉS de pausar y flush
+    const votesSnapshot = { ...counts };
+    console.log('📸 [PRESIDENTIAL] Snapshot de votos capturado:', votesSnapshot);
+    
     try {
       // Capturar GPS final
       let finalGps = null;
@@ -229,20 +283,40 @@ export default function PresidencialEscrutinio({
         // Continuar sin GPS
       }
 
-      // Enviar checkpoint al servidor
+      // Enviar checkpoint al servidor con el snapshot capturado
       const token = localStorage.getItem('auth-token');
       await axios.post(`/api/escrutinio/${escrutinioId}/checkpoint`, {
         action: 'FREEZE',
-        votesSnapshot: counts,
+        votesSnapshot: votesSnapshot, // Usar snapshot capturado, no counts actual
         deviceId: navigator.userAgent,
-        gps: {
-          latitude: 0, // TODO: Obtener GPS real
+        gps: finalGps || {
+          latitude: 0,
           longitude: 0,
           accuracy: 0
         }
       }, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
+
+      // Log de auditoría para congelación
+      try {
+        await axios.post('/api/audit/log', {
+          action: 'CLOSE_ESCRUTINIO',
+          description: `Froze escrutinio ${escrutinioId} with ${Object.values(votesSnapshot).reduce((a, b) => a + b, 0)} total votes`,
+          metadata: {
+            escrutinioId,
+            totalVotes: Object.values(votesSnapshot).reduce((a, b) => a + b, 0),
+            gps: finalGps,
+            timestamp: Date.now()
+          }
+        }, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+      } catch (auditError) {
+        console.warn('Failed to log freeze audit:', auditError);
+      }
+
+      console.log('✅ [PRESIDENTIAL] Checkpoint enviado con snapshot correcto');
 
       // Enviar GPS final al endpoint de cierre
       if (finalGps) {
@@ -262,6 +336,9 @@ export default function PresidencialEscrutinio({
       console.error('Error congelando escrutinio:', error);
       alert(`Error al congelar el escrutinio: ${error instanceof Error ? error.message : 'Error desconocido'}`);
     } finally {
+      // CRÍTICO: Reanudar auto-save después de completar todas las operaciones
+      resumeSync();
+      console.log('▶️ [PRESIDENTIAL] Auto-sync reanudado');
       setIsClosing(false);
     }
   };
@@ -327,20 +404,13 @@ export default function PresidencialEscrutinio({
                 <span className="hidden sm:inline">Escrutinio Presidencial</span>
                 <span className="sm:hidden">Presidencial</span>
               </h1>
-              <div className="flex items-center gap-2 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
-                <FileText className="h-4 w-4" />
-                Votos: {getTotalVotes()}
-              </div>
             </div>
             <div className="text-right">
               <div className="text-sm text-gray-600">
-                {jrvNumber || 'N/A'}
+                JRV {jrvNumber || 'N/A'}
               </div>
               <div className="text-xs text-gray-500">
                 {jrvLocation || 'N/A'}
-              </div>
-              <div className="text-xs text-gray-400">
-                {department || 'N/A'}
               </div>
             </div>
           </div>
@@ -355,7 +425,7 @@ export default function PresidencialEscrutinio({
               Conteo de Votos Presidenciales
             </h2>
             <p className="text-sm text-gray-600">
-              {jrvNumber ? `${jrvNumber} - ${department}` : 'Selecciona candidatos para votar'}
+              {jrvNumber ? `${jrvNumber} - ${jrvLocation || 'N/A'}` : 'Selecciona candidatos para votar'}
             </p>
           </div>
           

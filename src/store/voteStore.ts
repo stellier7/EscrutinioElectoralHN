@@ -59,6 +59,9 @@ type Actions = {
   setCounts: (counts: Record<string, number>) => void;
   clear: () => void;
   loadFromServer: (escrutinioId: string) => Promise<void>;
+  pauseSync: () => void;
+  resumeSync: () => void;
+  isSyncPaused: () => boolean;
 };
 
 // Configuración optimizada para sincronización silenciosa
@@ -67,6 +70,9 @@ const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 1000;
 
 let syncTimer: ReturnType<typeof setInterval> | null = null;
+let isSyncPausedFlag = false;
+let isSyncing = false; // Backpressure control
+let debounceSyncTimer: ReturnType<typeof setTimeout> | null = null;
 
 export const useVoteStore = create<State & Actions>()(
   persist(
@@ -115,8 +121,11 @@ export const useVoteStore = create<State & Actions>()(
           context: { gps: meta.gps, deviceId: meta.deviceId },
         });
 
-        // Auto-save cada 3 segundos
-        startSilentSync();
+        // Auto-save cada 3 segundos (solo si no está pausado)
+        if (!isSyncPausedFlag) {
+          startSilentSync();
+          triggerImmediateSync();
+        }
       },
 
       decrement: (candidateId, meta) => {
@@ -156,8 +165,11 @@ export const useVoteStore = create<State & Actions>()(
           context: { gps: meta.gps, deviceId: meta.deviceId },
         });
 
-        // Auto-save cada 3 segundos
-        startSilentSync();
+        // Auto-save cada 3 segundos (solo si no está pausado)
+        if (!isSyncPausedFlag) {
+          startSilentSync();
+          triggerImmediateSync();
+        }
       },
 
       syncPendingVotes: async () => {
@@ -194,7 +206,21 @@ export const useVoteStore = create<State & Actions>()(
               return acc;
             }, {});
             console.log('📊 [PRESIDENTIAL STORE] Counts procesados:', serverCounts);
-            set({ counts: serverCounts });
+            
+            // Solo actualizar si los counts realmente cambiaron
+            const currentCounts = get().counts;
+            const hasChanges = Object.keys(serverCounts).some(key => 
+              serverCounts[key] !== currentCounts[key]
+            ) || Object.keys(currentCounts).some(key => 
+              !(key in serverCounts)
+            );
+
+            if (hasChanges) {
+              set({ counts: serverCounts, pendingVotes: [] });
+            } else {
+              // Solo limpiar pendingVotes si no hay cambios en counts
+              set({ pendingVotes: [] });
+            }
           }
         } catch (error) {
           console.warn('No se pudieron cargar votos del servidor:', error);
@@ -207,6 +233,23 @@ export const useVoteStore = create<State & Actions>()(
         lastSyncAt: undefined,
         context: undefined 
       }),
+
+      pauseSync: () => {
+        isSyncPausedFlag = true;
+        console.log('⏸️ [VOTE STORE] Auto-sync pausado');
+      },
+
+      resumeSync: () => {
+        isSyncPausedFlag = false;
+        console.log('▶️ [VOTE STORE] Auto-sync reanudado');
+        // Reanudar sync si hay votos pendientes
+        const { pendingVotes } = get();
+        if (pendingVotes.length > 0) {
+          startSilentSync();
+        }
+      },
+
+      isSyncPaused: () => isSyncPausedFlag,
     }),
     {
       name: 'vote-store-v2',
@@ -278,11 +321,61 @@ async function syncVotesForEscrutinio(
   }
 }
 
+// Función para sincronizar inmediatamente con debounce
+function triggerImmediateSync() {
+  // Si está pausado, no hacer nada
+  if (isSyncPausedFlag) {
+    console.log('⏸️ Sync pausado, no se dispara sync inmediato');
+    return;
+  }
+
+  // Cancelar cualquier sync pendiente
+  if (debounceSyncTimer) {
+    clearTimeout(debounceSyncTimer);
+  }
+
+  // Programar nuevo sync después de 500ms
+  debounceSyncTimer = setTimeout(async () => {
+    const { pendingVotes } = useVoteStore.getState();
+    if (pendingVotes.length === 0) return;
+
+    // Verificar backpressure
+    if (isSyncing) {
+      console.log('⏸️ Sync anterior en progreso, reintentando en 1s...');
+      setTimeout(triggerImmediateSync, 1000);
+      return;
+    }
+
+    console.log('🚀 [IMMEDIATE SYNC] Sincronizando votos inmediatamente');
+    isSyncing = true;
+    try {
+      await useVoteStore.getState().syncPendingVotes();
+    } finally {
+      isSyncing = false;
+    }
+  }, 500);
+}
+
 // Función para iniciar sincronización silenciosa
 function startSilentSync() {
-  if (syncTimer) return; // Ya está activa
+  if (syncTimer || isSyncPausedFlag) return; // Ya está activa o está pausado
   
   syncTimer = setInterval(async () => {
+    // Verificar si está pausado antes de sincronizar
+    if (isSyncPausedFlag) {
+      if (syncTimer) {
+        clearInterval(syncTimer);
+        syncTimer = null;
+      }
+      return;
+    }
+
+    // Backpressure control: no sincronizar si ya hay un sync en progreso
+    if (isSyncing) {
+      console.log('⏸️ Sync anterior aún en progreso, saltando este ciclo...');
+      return;
+    }
+
     const { pendingVotes } = useVoteStore.getState();
     if (pendingVotes.length === 0) {
       // No hay votos pendientes, detener timer
@@ -293,7 +386,12 @@ function startSilentSync() {
       return;
     }
     
-    await useVoteStore.getState().syncPendingVotes();
+    isSyncing = true;
+    try {
+      await useVoteStore.getState().syncPendingVotes();
+    } finally {
+      isSyncing = false;
+    }
   }, SYNC_INTERVAL_MS);
 }
 

@@ -7,6 +7,7 @@ import axios from 'axios';
 import { useLegislativeVoteStore } from '@/store/legislativeVoteStore';
 import { VoteLimitAlert } from './ui/VoteLimitAlert';
 import { getTransparentColor } from '@/lib/party-config';
+import { useEscrutinioPersistence } from '@/hooks/useEscrutinioPersistence';
 
 // Utility function to generate block-based slot ranges for legislative elections
 export function generatePartySlotRanges(seatCount: number, partyCount: number): Array<{ start: number; end: number; range: string; casillas: number[] }> {
@@ -61,9 +62,10 @@ interface DiputadosEscrutinioProps {
   jrvNumber?: string;
   escrutinioId?: string;
   userId?: string;
+  onEscrutinioStatusChange?: (status: 'PENDING' | 'IN_PROGRESS' | 'CLOSED' | 'COMPLETED') => void;
 }
 
-export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }: DiputadosEscrutinioProps) {
+export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, onEscrutinioStatusChange }: DiputadosEscrutinioProps) {
   const router = useRouter();
   const [diputadosData, setDiputadosData] = useState<DiputadosData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -77,9 +79,57 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [escrutinioStatus, setEscrutinioStatus] = useState<'OPEN' | 'CLOSED' | 'COMPLETED'>('OPEN');
   const [isEscrutinioClosed, setIsEscrutinioClosed] = useState(false);
+  const [showNoPhotoWarning, setShowNoPhotoWarning] = useState(false);
+
+  // Hook de persistencia del escrutinio
+  const { 
+    escrutinioState, 
+    saveState 
+  } = useEscrutinioPersistence();
+
+  // Verificar estado del escrutinio al cargar
+  useEffect(() => {
+    const checkEscrutinioStatus = async () => {
+      if (!escrutinioId) return;
+      
+      try {
+        const token = localStorage.getItem('auth-token');
+        const response = await axios.get(
+          `/api/escrutinio/${escrutinioId}/status`,
+          { headers: { 'Authorization': `Bearer ${token}` } }
+        );
+        
+        if (response.data?.success) {
+          const status = response.data.data.status;
+          console.log('📊 [LEGISLATIVE] Status del escrutinio:', status);
+          
+          // Si el escrutinio está CLOSED o COMPLETED, bloquear la interfaz
+          if (status === 'CLOSED') {
+            setIsEscrutinioClosed(true);
+            setEscrutinioStatus('CLOSED');
+            console.log('🔒 [LEGISLATIVE] Escrutinio cerrado - bloqueando interfaz');
+            onEscrutinioStatusChange?.(status);
+          } else if (status === 'COMPLETED') {
+            setIsEscrutinioClosed(true);
+            setEscrutinioStatus('COMPLETED');
+            console.log('✅ [LEGISLATIVE] Escrutinio completado - bloqueando interfaz');
+            onEscrutinioStatusChange?.(status);
+          } else {
+            // Notificar status activo también
+            onEscrutinioStatusChange?.(status);
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error verificando status del escrutinio:', error);
+      }
+    };
+    
+    checkEscrutinioStatus();
+  }, [escrutinioId]);
   
   // Estados para sistema de papeletas simplificado
   const [currentPapeleta, setCurrentPapeleta] = useState(1);
+  const [completedPapeletasCount, setCompletedPapeletasCount] = useState(0);
   const [papeletaVotes, setPapeletaVotes] = useState<{[key: string]: number}>({});
   const [showVoteLimitAlert, setShowVoteLimitAlert] = useState(false);
   const [showAnularConfirmation, setShowAnularConfirmation] = useState(false);
@@ -110,14 +160,60 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     }
   }, [escrutinioId, loadVotesFromServer, clearVotes]);
 
-  // Inicializar papeleta automáticamente cuando se carga el componente
+  // Inicializar papeleta desde estado persistido o default (SOLO en mount inicial)
   useEffect(() => {
     if (escrutinioId && userId) {
       console.log('🔄 Inicializando papeleta simplificada...');
-      setCurrentPapeleta(1);
-      setPapeletaVotes({});
+      
+      // Check if there's persisted state from useEscrutinioPersistence
+      const persistedPapeleta = escrutinioState.legislativeCurrentPapeleta;
+      const persistedParty = escrutinioState.legislativeExpandedParty;
+      const persistedVotes = escrutinioState.legislativePapeletaVotes;
+      const persistedCompletedCount = escrutinioState.legislativeCompletedPapeletas;
+      
+      if (persistedPapeleta !== undefined) {
+        console.log('📦 Restaurando papeleta desde estado persistido:', persistedPapeleta);
+        setCurrentPapeleta(persistedPapeleta);
+      } else {
+        setCurrentPapeleta(1);
+      }
+      
+      if (persistedParty !== undefined) {
+        console.log('📦 Restaurando partido expandido:', persistedParty);
+        setExpandedParty(persistedParty);
+      }
+      
+      // CRÍTICO: Restaurar marcas si existen, sino limpiar
+      if (persistedVotes !== undefined) {
+        console.log('📦 Restaurando marcas desde estado persistido:', persistedVotes);
+        setPapeletaVotes(persistedVotes);
+      } else {
+        console.log('📦 No hay marcas persistidas, inicializando vacío');
+        setPapeletaVotes({});
+      }
+      
+      // Restaurar contador de papeletas completadas
+      if (persistedCompletedCount !== undefined) {
+        console.log('📦 Restaurando papeletas completadas:', persistedCompletedCount);
+        setCompletedPapeletasCount(persistedCompletedCount);
+      } else {
+        setCompletedPapeletasCount(0);
+      }
     }
-  }, [escrutinioId, userId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [escrutinioId, userId]); // ✅ Solo depende de escrutinioId y userId, NO de los valores persistidos
+
+  // Persistir estado de papeleta cuando cambia
+  useEffect(() => {
+    if (escrutinioId) {
+      saveState({
+        legislativeCurrentPapeleta: currentPapeleta,
+        legislativeExpandedParty: expandedParty,
+        legislativePapeletaVotes: papeletaVotes,
+        legislativeCompletedPapeletas: completedPapeletasCount
+      });
+    }
+  }, [currentPapeleta, expandedParty, papeletaVotes, completedPapeletasCount, escrutinioId, saveState]);
 
   // Cargar datos de diputados según la JRV
   useEffect(() => {
@@ -283,10 +379,49 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     }, 200);
   }, [userId, escrutinioId, papeletaVotes, diputadosData, isEscrutinioClosed, increment, decrement]);
 
+  // Funciones de utilidad para conteo de votos
+  const getCasillaVoteCount = useCallback((partyId: string, slotNumber: number) => {
+    const voteKey = `${partyId}-${slotNumber}`;
+    return papeletaVotes[voteKey] || 0;
+  }, [papeletaVotes]);
+
+  const getTotalVotesInPapeleta = useCallback(() => {
+    if (!diputadosData) return 0;
+    
+    let total = 0;
+    
+    // ✅ Loop through ALL parties
+    diputadosData.parties.forEach(party => {
+      if (!party.casillas) return;
+      
+      // Count marks for each casilla in this party
+      party.casillas.forEach(casillaNumber => {
+        const voteKey = `${party.id}-${casillaNumber}`;
+        
+        // Count from papeletaVotes (current papeleta, not yet saved)
+        const localVotes = papeletaVotes[voteKey] || 0;
+        
+        total += localVotes;
+      });
+    });
+    
+    return total;
+  }, [diputadosData, papeletaVotes]);
+
   // Funciones para manejo de papeletas simplificado
   const handleClosePapeleta = useCallback(async () => {
     console.log('✅ Papeleta cerrada exitosamente');
     setShowVoteLimitAlert(false);
+    
+    // Increment completed papeletas counter
+    const totalVotes = getTotalVotesInPapeleta();
+    const maxVotes = diputadosData?.diputados || 0;
+    
+    // If papeleta is complete (8/8), increment completed counter
+    if (totalVotes === maxVotes) {
+      setCompletedPapeletasCount(prev => prev + 1);
+      console.log('📊 Papeleta completada, contador incrementado');
+    }
     
     // Regresar al primer partido (Demócrata Cristiano)
     if (diputadosData?.parties && diputadosData.parties.length > 0) {
@@ -299,7 +434,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     setCurrentPapeleta(prev => prev + 1);
     setPapeletaVotes({});
     console.log('✅ Nueva papeleta creada');
-  }, [diputadosData]);
+  }, [diputadosData, getTotalVotesInPapeleta]);
 
   const handleAnularPapeleta = useCallback(async () => {
     console.log('✅ Papeleta anulada exitosamente');
@@ -338,16 +473,6 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
   const handleAnularPapeletaFromAlert = useCallback(() => {
     setShowAnularConfirmation(true);
   }, []);
-
-  // Funciones de utilidad para conteo de votos
-  const getCasillaVoteCount = useCallback((partyId: string, slotNumber: number) => {
-    const voteKey = `${partyId}-${slotNumber}`;
-    return papeletaVotes[voteKey] || 0;
-  }, [papeletaVotes]);
-
-  const getTotalVotesInPapeleta = useCallback(() => {
-    return Object.values(papeletaVotes).reduce((sum, count) => sum + count, 0);
-  }, [papeletaVotes]);
 
   // Handle back button
   const handleBack = useCallback(() => {
@@ -477,13 +602,13 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     return null;
   }, [actaImage, escrutinioId]);
 
-  const handleCompleteEscrutinio = useCallback(async () => {
-    if (!escrutinioId) {
-      setError('No hay escrutinio activo');
-      return;
-    }
-
+  // Función para proceder con la finalización del escrutinio
+  const proceedWithCompletion = useCallback(async () => {
+    if (!escrutinioId) return;
+    
     setIsCompleting(true);
+    setShowNoPhotoWarning(false); // Cerrar warning si está abierto
+    
     try {
       // 1. Subir foto si existe
       await uploadEvidenceIfNeeded();
@@ -491,9 +616,11 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
       // 2. Guardar snapshot del conteo actual antes de completar
       const token = localStorage.getItem('auth-token');
       const snapshotData = {
-        partyCounts: counts, // El conteo actual del store
+        partyCounts: counts,
         timestamp: Date.now(),
-        source: 'legislative_store'
+        source: 'legislative_store',
+        completedPapeletas: completedPapeletasCount,
+        currentPapeleta: currentPapeleta
       };
       
       console.log('📊 [LEGISLATIVE] Guardando snapshot del conteo:', snapshotData);
@@ -514,11 +641,42 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     }
   }, [escrutinioId, uploadEvidenceIfNeeded, counts]);
 
+  const handleCompleteEscrutinio = useCallback(async () => {
+    if (!escrutinioId) {
+      setError('No hay escrutinio activo');
+      return;
+    }
+
+    // Verificar si hay foto del acta
+    if (!actaImage) {
+      console.warn('⚠️ [LEGISLATIVE] Intentando enviar sin foto del acta');
+      setShowNoPhotoWarning(true);
+      return;
+    }
+
+    await proceedWithCompletion();
+  }, [escrutinioId, actaImage, proceedWithCompletion]);
+
   // Función para revisar escrutinio
-  const handleReviewEscrutinio = () => {
+  const handleReviewEscrutinio = useCallback(() => {
+    console.log('📋 [LEGISLATIVE] Navegando a revisar escrutinio:', escrutinioId);
+    
+    // Limpiar estado de papeleta persistido
+    saveState({
+      legislativeCurrentPapeleta: undefined,
+      legislativeExpandedParty: undefined,
+      legislativePapeletaVotes: undefined,
+      legislativeCompletedPapeletas: undefined
+    });
+    
+    // Cerrar modal
     setShowSuccessModal(false);
-    router.push(`/revisar/${escrutinioId}`);
-  };
+    
+    // Navegar después de un pequeño delay para asegurar que el estado se limpie
+    setTimeout(() => {
+      router.push(`/revisar/${escrutinioId}`);
+    }, 100);
+  }, [escrutinioId, router, saveState]);
 
   // Función para congelar/descongelar escrutinio
   const handleToggleFreeze = useCallback(async () => {
@@ -533,7 +691,21 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
     
     try {
       const action = isEscrutinioClosed ? 'UNFREEZE' : 'FREEZE';
-      const votesSnapshot = counts; // Snapshot actual de votos
+      
+      // CRÍTICO: Si estamos congelando (FREEZE), pausar sync antes de capturar snapshot
+      if (action === 'FREEZE') {
+        // Importar dinámicamente el store legislativo
+        const { useLegislativeVoteStore } = await import('@/store/legislativeVoteStore');
+        const { pauseSync, resumeSync } = useLegislativeVoteStore.getState();
+        
+        pauseSync();
+        console.log('⏸️ [LEGISLATIVE] Auto-sync pausado para evitar race conditions');
+        
+        // Esperar un momento para que cualquier operación pendiente se complete
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      
+      const votesSnapshot = counts; // Snapshot actual de votos después de pausar
       
       // Capturar GPS final solo cuando se congela (FREEZE)
       let finalGps = null;
@@ -566,8 +738,8 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
         action,
         votesSnapshot,
         deviceId: navigator.userAgent,
-        gps: {
-          latitude: 0, // TODO: Obtener GPS real
+        gps: finalGps || {
+          latitude: 0,
           longitude: 0,
           accuracy: 0
         }
@@ -583,6 +755,13 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
           headers: { 'Authorization': `Bearer ${token}` }
         });
         console.log('📍 [LEGISLATIVE] GPS final enviado al servidor');
+      }
+      
+      // CRÍTICO: Reanudar auto-sync después de completar operaciones
+      if (action === 'FREEZE') {
+        const { resumeSync } = useLegislativeVoteStore.getState();
+        resumeSync();
+        console.log('▶️ [LEGISLATIVE] Auto-sync reanudado');
       }
       
       if (isEscrutinioClosed) {
@@ -673,13 +852,13 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
           </div>
         </div>
 
-        {/* Navegación entre partidos centrada */}
-        <div className="flex items-center justify-center gap-4 mb-6">
-          <div className="flex items-center gap-2">
+        {/* Party Navigation - Desktop & Mobile */}
+        <div className="flex justify-center items-center mb-6">
+          <div className="flex items-center gap-3">
             <button
               onClick={handlePreviousParty}
               disabled={!diputadosData || !diputadosData.parties || diputadosData.parties.findIndex(p => p.id === expandedParty) === 0}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors shadow-sm"
               aria-label="Partido anterior"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -700,10 +879,11 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
                 })()}
               </span>
             </button>
+            
             <button
               onClick={handleNextParty}
               disabled={!diputadosData || !diputadosData.parties || !Array.isArray(diputadosData.parties) || diputadosData.parties.findIndex(p => p.id === expandedParty) === diputadosData.parties.length - 1}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors shadow-sm"
               aria-label="Siguiente partido"
             >
               <span className="text-sm font-medium hidden sm:inline">
@@ -878,21 +1058,19 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-          Marcas por Diputado - JRV {diputadosData.jrv.jrv}
+          Diputados - JRV {diputadosData.jrv.jrv}
         </h1>
-        <p className="text-gray-600">
-          {diputadosData.jrv.nombre} • {diputadosData.jrv.departamento}
-        </p>
-        <p className="text-sm text-gray-500">
-          {diputadosData.diputados} diputados • {diputadosData.parties?.length || 0} partidos
-        </p>
         <div className="mt-2 p-2 bg-blue-50 rounded-lg border border-blue-200">
           <p className="text-sm text-blue-700">
             <span className="font-medium">Papeleta {currentPapeleta}</span>
             {' • '}
-            <span className="capitalize">abierta</span>
-            {' • '}
             {getTotalVotesInPapeleta()}/{diputadosData.diputados} marcas
+            {completedPapeletasCount > 0 && (
+              <>
+                {' • '}
+                <span className="font-medium">{completedPapeletasCount} papeleta{completedPapeletasCount !== 1 ? 's' : ''} completada{completedPapeletasCount !== 1 ? 's' : ''}</span>
+              </>
+            )}
           </p>
         </div>
       </div>
@@ -1049,6 +1227,41 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId }:
 
       </div>
 
+
+      {/* No Photo Warning Modal */}
+      {showNoPhotoWarning && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-amber-100 rounded-lg">
+                <AlertCircle className="h-6 w-6 text-amber-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">¡Atención!</h3>
+                <p className="text-sm text-gray-600">No has subido la foto del acta</p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-700 mb-4">
+              Es altamente recomendable subir la foto del acta para verificación. 
+              ¿Estás seguro que deseas continuar sin foto?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowNoPhotoWarning(false)}
+                className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={proceedWithCompletion}
+                className="flex-1 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"
+              >
+                Continuar sin foto
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Success Modal */}
       {showSuccessModal && (

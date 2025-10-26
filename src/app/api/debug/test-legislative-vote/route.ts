@@ -47,12 +47,10 @@ export async function POST(request: NextRequest) {
     }
     
     // Crear o actualizar voto
-    const existingVote = await prisma.vote.findUnique({
+    const existingVote = await prisma.vote.findFirst({
       where: {
-        escrutinioId_candidateId: {
-          escrutinioId,
-          candidateId: candidate.id
-        }
+        escrutinioId: escrutinioId,
+        candidateId: candidate.id
       }
     });
     

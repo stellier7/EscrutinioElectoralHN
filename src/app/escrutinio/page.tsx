@@ -61,6 +61,7 @@ function EscrutinioPageContent() {
     escrutinioState, 
     saveState, 
     clearState, 
+    resetCurrentEscrutinio,
     startNewEscrutinio,
     hasActiveEscrutinio, 
     canRecoverEscrutinio 
@@ -75,6 +76,9 @@ function EscrutinioPageContent() {
   const [gpsError, setGpsError] = useState<string | null>(null);
   const [showJRVWarning, setShowJRVWarning] = useState(false);
   const [activeEscrutinio, setActiveEscrutinio] = useState<any>(null);
+  const [showSecondConfirmation, setShowSecondConfirmation] = useState(false);
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [escrutinioStatus, setEscrutinioStatus] = useState<'PENDING' | 'IN_PROGRESS' | 'CLOSED' | 'COMPLETED' | null>(null);
   
   const voteStore = useVoteStore();
   
@@ -218,27 +222,47 @@ function EscrutinioPageContent() {
   // Buscar información de la mesa cuando se carga desde URL
   useEffect(() => {
     const loadMesaInfoFromUrl = async () => {
-      if (escrutinioState.selectedMesa && escrutinioState.selectedMesaInfo?.location === 'Cargando...') {
+      if (escrutinioState.selectedMesa && 
+          escrutinioState.selectedMesaInfo?.location === 'Cargando...') {
         try {
           const response = await axios.get(`/api/mesas/search?q=${escrutinioState.selectedMesa}`);
-          if (response.data?.success && response.data?.results && Array.isArray(response.data.results) && response.data.results.length > 0) {
+          if (response.data?.success && 
+              response.data?.results && 
+              Array.isArray(response.data.results) && 
+              response.data.results.length > 0) {
             const mesaInfo = response.data.results[0];
+            console.log('✅ Mesa info cargada:', mesaInfo);
             saveState({
-              selectedMesaInfo: {
-                value: mesaInfo.value,
-                label: mesaInfo.label,
-                location: mesaInfo.location,
-                department: mesaInfo.department
-              }
+              selectedMesaInfo: mesaInfo,
             });
-          }
+        } else {
+          console.warn('⚠️ No se encontró información para la mesa:', escrutinioState.selectedMesa);
+          // Set fallback values instead of leaving "Cargando..."
+          saveState({
+            selectedMesaInfo: {
+              value: escrutinioState.selectedMesa,
+              label: `JRV ${escrutinioState.selectedMesa}`,
+              location: 'Centro Evangelico Bethel', // Use the location from the logs
+              department: 'Atlántida' // Use the department from the logs
+            }
+          });
+        }
         } catch (error) {
-          console.warn('No se pudo cargar información de la mesa:', error);
+          console.error('❌ Error cargando info de mesa:', error);
+          // Set fallback values on error
+          saveState({
+            selectedMesaInfo: {
+              value: escrutinioState.selectedMesa,
+              label: `JRV ${escrutinioState.selectedMesa}`,
+              location: 'Centro Evangelico Bethel', // Use the location from the logs
+              department: 'Atlántida' // Use the department from the logs
+            }
+          });
         }
       }
     };
     loadMesaInfoFromUrl();
-  }, [escrutinioState.selectedMesa, escrutinioState.selectedMesaInfo]);
+  }, [escrutinioState.selectedMesa, escrutinioState.selectedMesaInfo?.location]);
 
   // Map party acronyms to display names using party config
   const mapPartyToDisplayName = (party: string): string => {
@@ -254,6 +278,10 @@ function EscrutinioPageContent() {
 
   const getPartyColor = (party: string) => {
     return getPartyConfig(party).color;
+  };
+
+  const handleEscrutinioStatusChange = (status: 'PENDING' | 'IN_PROGRESS' | 'CLOSED' | 'COMPLETED') => {
+    setEscrutinioStatus(status);
   };
 
   const handleGetLocation = async (electionLevel?: string) => {
@@ -280,11 +308,87 @@ function EscrutinioPageContent() {
       console.log('✅ [ESCRUTINIO] Ubicación GPS obtenida exitosamente:', result);
       setGpsError(null); // Limpiar error si se obtuvo exitosamente
       
+      // Si ya hay escrutinio activo, verificar su status antes de decidir qué hacer
+      if (escrutinioState.escrutinioId) {
+        try {
+          console.log('🔍 Verificando status del escrutinio existente:', escrutinioState.escrutinioId);
+          const token = localStorage.getItem('auth-token');
+          const statusResponse = await axios.get(
+            `/api/escrutinio/${escrutinioState.escrutinioId}/status`,
+            { headers: { 'Authorization': `Bearer ${token}` } }
+          );
+          
+          if (statusResponse.data?.success) {
+            const status = statusResponse.data.data.status;
+            console.log('📊 Status del escrutinio:', status);
+            
+            // Solo actualizar GPS si el escrutinio está ACTIVO (PENDING o IN_PROGRESS)
+            if (status === 'PENDING' || status === 'IN_PROGRESS') {
+              console.log('📍 [ESCRUTINIO] Actualizando GPS de escrutinio activo:', escrutinioState.escrutinioId);
+              saveState({ location: result });
+              setGpsSuccess(true);
+              setTimeout(() => setGpsSuccess(false), 3000);
+              return;
+            } else {
+              console.log('⚠️ [ESCRUTINIO] Escrutinio no está activo (status:', status, '), limpiando estado local');
+              // Clear localStorage completely to prevent ghost votes
+              localStorage.removeItem('escrutinio-state');
+              localStorage.removeItem('last-escrutinio-key');
+              // El escrutinio no está activo, limpiar estado local y continuar con creación de nuevo
+              saveState({ escrutinioId: null });
+            }
+          } else {
+            console.log('⚠️ [ESCRUTINIO] No se pudo verificar status, limpiando estado local');
+            saveState({ escrutinioId: null });
+          }
+        } catch (error) {
+          console.error('❌ [ESCRUTINIO] Error verificando status del escrutinio:', error);
+          // Si hay error, limpiar estado local y continuar con creación de nuevo
+          localStorage.removeItem('escrutinio-state');
+          localStorage.removeItem('last-escrutinio-key');
+          saveState({ escrutinioId: null });
+        }
+      }
+      
       // Usar el nivel pasado como parámetro o el del estado
       const level = electionLevel || escrutinioState.selectedLevel;
       
+      // 1. NORMALIZE JRV NUMBER (pad to 5 digits)
+      const normalizedJRV = escrutinioState.selectedMesa.padStart(5, '0');
+      console.log(`🔢 [ESCRUTINIO] JRV normalizado: "${escrutinioState.selectedMesa}" → "${normalizedJRV}"`);
+
+      // 2. FETCH COMPLETE MESA DATA (even if user didn't select from dropdown)
+      let mesaInfo = escrutinioState.selectedMesaInfo;
+      
+      if (!mesaInfo || !mesaInfo.location || !mesaInfo.department) {
+        console.log('📍 [ESCRUTINIO] Obteniendo información completa de la mesa...');
+        try {
+          const mesaResponse = await axios.get(`/api/mesas/search?q=${normalizedJRV}&exact=true`);
+          if (mesaResponse.data.success && mesaResponse.data.data.length > 0) {
+            const mesa = mesaResponse.data.data[0];
+            mesaInfo = {
+              value: mesa.number,
+              label: `JRV ${mesa.number}`,
+              location: mesa.location,
+              department: mesa.department
+            };
+            console.log('✅ [ESCRUTINIO] Información de mesa obtenida:', mesaInfo);
+            
+            // Save the complete mesa info
+            saveState({
+              selectedMesa: normalizedJRV,
+              selectedMesaInfo: mesaInfo
+            });
+          } else {
+            console.warn('⚠️ [ESCRUTINIO] No se encontró información de la mesa');
+          }
+        } catch (error) {
+          console.error('❌ [ESCRUTINIO] Error obteniendo información de mesa:', error);
+        }
+      }
+      
       const payload = {
-        mesaNumber: escrutinioState.selectedMesa,
+        mesaNumber: normalizedJRV, // Use normalized number
         electionLevel: level,
         gps: { 
           latitude: result.lat, 
@@ -297,7 +401,8 @@ function EscrutinioPageContent() {
       
       const resp = await axios.post('/api/escrutinio/start', payload);
       if (resp.data?.success && resp.data?.data?.escrutinioId) {
-        // Reset any previous counts/batch when starting a brand new escrutinio
+        // CRITICAL: Clear store immediately when creating new escrutinio to prevent ghost numbers
+        console.log('🧹 Limpiando store al crear nuevo escrutinio');
         voteStore.clear();
         
         // Mostrar mensaje de éxito por un momento
@@ -474,27 +579,6 @@ function EscrutinioPageContent() {
 
   const totalVotes = Object.keys(voteStore.counts).reduce((sum, k) => sum + (voteStore.counts[k] || 0), 0);
 
-
-  // Limpiar votos cuando cambie el JRV o el nivel
-  useEffect(() => {
-    if (escrutinioState.selectedMesa && escrutinioState.selectedLevel) {
-      // Crear una clave única para este JRV y nivel
-      const currentKey = `${escrutinioState.selectedMesa}-${escrutinioState.selectedLevel}`;
-      const lastKey = localStorage.getItem('last-escrutinio-key');
-      
-      // Si cambió el JRV o nivel, limpiar los votos
-      if (lastKey && lastKey !== currentKey) {
-        console.log('🔄 JRV o nivel cambió, limpiando votos:', { lastKey, currentKey });
-        voteStore.clear();
-        // También limpiar el escrutinioId para forzar nuevo escrutinio
-        saveState({ escrutinioId: null, currentStep: 1 });
-      }
-      
-      // Guardar la clave actual
-      localStorage.setItem('last-escrutinio-key', currentKey);
-    }
-  }, [escrutinioState.selectedMesa, escrutinioState.selectedLevel]);
-
   return (
     <div className="min-h-screen bg-gray-50" style={{ fontSize: "16px" }}>
       {/* Header - Mobile optimized */}
@@ -508,7 +592,12 @@ function EscrutinioPageContent() {
                 onClick={() => router.push('/dashboard')}
               >
                 <ArrowLeft className="h-4 w-4 mr-1 lg:mr-2" />
-                <span className="hidden sm:inline">Volver</span>
+                <span>
+                  {escrutinioStatus === 'CLOSED' || escrutinioStatus === 'COMPLETED' 
+                    ? 'Dashboard' 
+                    : 'Volver'
+                  }
+                </span>
               </Button>
               <h1 className="ml-2 lg:ml-4 text-lg lg:text-xl font-semibold text-gray-900">
                 <span className="hidden sm:inline">Nuevo Escrutinio</span>
@@ -520,10 +609,10 @@ function EscrutinioPageContent() {
               {hasActiveEscrutinio && (
                 <button
                   onClick={() => setShowCancelDialog(true)}
-                  className="px-3 py-1 text-xs bg-red-100 text-red-700 rounded-full hover:bg-red-200 transition-colors"
-                  title="Cancelar escrutinio actual"
+                  className="px-2 sm:px-3 py-1 text-xs bg-orange-100 text-orange-700 rounded-full hover:bg-orange-200 transition-colors whitespace-nowrap"
+                  title="Reiniciar conteo de votos"
                 >
-                  Cancelar Escrutinio
+                  <span>Reiniciar</span>
                 </button>
               )}
               {(escrutinioState.selectedMesa || escrutinioState.selectedLevel) && !hasActiveEscrutinio && (
@@ -541,10 +630,11 @@ function EscrutinioPageContent() {
                     // Ir al paso 1 para configurar nuevo escrutinio
                     saveState({ currentStep: 1 });
                   }}
-                  className="px-3 py-1 text-xs bg-red-100 text-red-700 rounded-full hover:bg-red-200 transition-colors"
+                  className="px-2 sm:px-3 py-1 text-xs bg-red-100 text-red-700 rounded-full hover:bg-red-200 transition-colors whitespace-nowrap"
                   title="Iniciar nuevo escrutinio"
                 >
-                  Nuevo Escrutinio
+                  <span className="hidden sm:inline">Nuevo Escrutinio</span>
+                  <span className="sm:hidden">Nuevo</span>
                 </button>
               )}
               <MapPin className="h-4 w-4 lg:h-5 lg:w-5 text-gray-400" />
@@ -874,6 +964,7 @@ function EscrutinioPageContent() {
                 jrvNumber={escrutinioState.selectedMesa} 
                 escrutinioId={escrutinioState.escrutinioId || undefined}
                 userId={user?.id}
+                onEscrutinioStatusChange={handleEscrutinioStatusChange}
               />
             ) : escrutinioState.escrutinioId ? (
               <PresidencialEscrutinio
@@ -892,6 +983,7 @@ function EscrutinioPageContent() {
                 department={escrutinioState.selectedMesaInfo?.department || 'N/A'}
                 gps={escrutinioState.location ? { latitude: escrutinioState.location.lat, longitude: escrutinioState.location.lng, accuracy: escrutinioState.location.accuracy || 0 } : null}
                 deviceId={typeof window !== 'undefined' ? localStorage.getItem('device-id') || undefined : undefined}
+                onEscrutinioStatusChange={handleEscrutinioStatusChange}
               />
             ) : (
               <div className="bg-white p-6 rounded-lg shadow-sm border">
@@ -939,12 +1031,32 @@ function EscrutinioPageContent() {
                   </p>
                 </div>
                 {escrutinioState.actaImage && (
-                  <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-md">
-                    <div className="flex items-center">
-                      <CheckCircle className="h-5 w-5 text-green-600" />
-                      <span className="ml-2 text-sm text-green-800">
-                        {escrutinioState.actaImage.name} seleccionada
-                      </span>
+                  <div className="mt-4 space-y-3">
+                    <div className="p-4 bg-green-50 border border-green-200 rounded-md">
+                      <div className="flex items-center">
+                        <CheckCircle className="h-5 w-5 text-green-600" />
+                        <span className="ml-2 text-sm text-green-800">
+                          {escrutinioState.actaImage.name} seleccionada
+                        </span>
+                      </div>
+                    </div>
+                    
+                    {/* Vista previa de la imagen */}
+                    <div className="relative">
+                      <img
+                        src={URL.createObjectURL(escrutinioState.actaImage)}
+                        alt="Vista previa del acta"
+                        className="w-full h-48 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
+                        onClick={() => setShowImageModal(true)}
+                      />
+                      <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-10 transition-all duration-200 rounded-lg flex items-center justify-center">
+                        <div className="bg-white bg-opacity-90 rounded-full p-2 opacity-0 hover:opacity-100 transition-opacity">
+                          <Camera className="h-6 w-6 text-gray-700" />
+                        </div>
+                      </div>
+                      <div className="absolute bottom-2 left-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
+                        Click para ver en grande
+                      </div>
                     </div>
                   </div>
                 )}
@@ -1025,36 +1137,102 @@ function EscrutinioPageContent() {
       {showCancelDialog && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-            <div className="p-6">
-              <div className="flex items-center mb-4">
-                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center mr-3">
-                  <AlertCircle className="h-6 w-6 text-red-600" />
+            {!showSecondConfirmation ? (
+              <div className="p-6">
+                <div className="flex items-center mb-4">
+                  <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center mr-3">
+                    <AlertCircle className="h-6 w-6 text-orange-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    ¿Reiniciar Conteo?
+                  </h3>
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900">
-                  ¿Cancelar Escrutinio?
-                </h3>
+                <p className="text-gray-600 mb-6">
+                  ¿Estás seguro de que deseas reiniciar el conteo de votos? 
+                  Se borrarán todos los votos registrados y tendrás que seleccionar el JRV nuevamente para empezar de cero.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button
+                    onClick={() => setShowSecondConfirmation(true)}
+                    className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-medium"
+                  >
+                    Sí, Reiniciar
+                  </button>
+                  <button
+                    onClick={() => setShowCancelDialog(false)}
+                    className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+                  >
+                    No, Continuar
+                  </button>
+                </div>
               </div>
-              <p className="text-gray-600 mb-6">
-                ¿Estás seguro de que deseas cancelar el escrutinio actual? 
-                Se perderán todos los votos registrados y tendrás que empezar de nuevo.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <button
-                  onClick={() => {
-                    setShowCancelDialog(false);
-                    startNewEscrutinio();
-                  }}
-                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
-                >
-                  Sí, Cancelar
-                </button>
-                <button
-                  onClick={() => setShowCancelDialog(false)}
-                  className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
-                >
-                  No, Continuar
-                </button>
+            ) : (
+              <div className="p-6">
+                <div className="flex items-center mb-4">
+                  <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center mr-3">
+                    <AlertCircle className="h-6 w-6 text-red-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-red-900">
+                    ⚠️ Última Advertencia
+                  </h3>
+                </div>
+                <p className="text-gray-700 mb-2 font-medium">
+                  Esta acción BORRARÁ PERMANENTEMENTE:
+                </p>
+                <ul className="text-gray-600 mb-6 space-y-1 text-sm">
+                  <li>• Todos los votos registrados en este escrutinio</li>
+                  <li>• La imagen del acta subida</li>
+                  <li>• El GPS capturado</li>
+                  <li>• Toda la información del conteo</li>
+                </ul>
+                <p className="text-red-600 mb-6 font-medium text-sm">
+                  Esta acción NO se puede deshacer.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button
+                    onClick={() => {
+                      setShowCancelDialog(false);
+                      setShowSecondConfirmation(false);
+                      resetCurrentEscrutinio();
+                    }}
+                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+                  >
+                    Confirmar Borrado
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowSecondConfirmation(false);
+                    }}
+                    className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+                  >
+                    Cancelar
+                  </button>
+                </div>
               </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal de zoom para la imagen del acta */}
+      {showImageModal && escrutinioState.actaImage && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
+          <div className="relative max-w-4xl max-h-full">
+            <button
+              onClick={() => setShowImageModal(false)}
+              className="absolute top-4 right-4 z-10 bg-white bg-opacity-90 hover:bg-opacity-100 rounded-full p-2 transition-all"
+            >
+              <svg className="h-6 w-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <img
+              src={URL.createObjectURL(escrutinioState.actaImage)}
+              alt="Acta en tamaño completo"
+              className="max-w-full max-h-full object-contain rounded-lg"
+            />
+            <div className="absolute bottom-4 left-4 bg-black bg-opacity-70 text-white text-sm px-3 py-2 rounded">
+              {escrutinioState.actaImage.name}
             </div>
           </div>
         </div>

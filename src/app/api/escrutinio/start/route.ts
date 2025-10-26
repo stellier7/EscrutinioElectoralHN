@@ -122,6 +122,7 @@ export async function POST(request: Request) {
         sessionId: activeSession.id,
         mesaId: mesa.id,
         electionLevel: electionLevel as any,
+        status: { in: ['PENDING', 'IN_PROGRESS'] }, // ← SOLO activos
       },
     });
 

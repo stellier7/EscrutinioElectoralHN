@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
 
     const pendingEscrutinios = await prisma.escrutinio.count({
       where: { 
-        status: 'PENDING', // Solo escrutinios abiertos (no completados)
+        status: { in: ['PENDING', 'IN_PROGRESS'] }, // Solo escrutinios abiertos (no completados)
         sessionId: activeSession.id  // Filter by active session
       },
     });
@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
     // Obtener escrutinios en progreso (abiertos, no completados)
     const inProgressEscrutinios = await prisma.escrutinio.findMany({
       where: {
-        status: 'PENDING', // Escrutinios abiertos (en progreso)
+        status: { in: ['PENDING', 'IN_PROGRESS'] }, // Escrutinios abiertos (en progreso)
         sessionId: activeSession.id,  // Filter by active session
         // Excluir escrutinios cancelados (FAILED)
         ...(userRole === 'ADMIN' ? {} : { userId: userId }), // Solo admins ven todos
@@ -114,7 +114,7 @@ export async function GET(request: NextRequest) {
       mesaName: escrutinio.mesa.location,
       department: escrutinio.mesa.department,
       electionLevel: escrutinio.electionLevel,
-      status: 'IN_PROGRESS',
+      status: escrutinio.status, // Usar el status real del escrutinio
       createdAt: escrutinio.createdAt,
     }));
 
@@ -141,7 +141,7 @@ export async function GET(request: NextRequest) {
 
         const pending = await prisma.escrutinio.count({
           where: {
-            status: 'PENDING', // Solo escrutinios abiertos
+            status: { in: ['PENDING', 'IN_PROGRESS'] }, // Solo escrutinios abiertos
             electionLevel: level as any,
             sessionId: activeSession.id,  // Filter by active session
           },

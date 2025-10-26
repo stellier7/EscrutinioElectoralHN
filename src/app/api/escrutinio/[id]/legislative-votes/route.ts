@@ -117,12 +117,10 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         }
 
         // Buscar voto existente
-        const existing = await tx.vote.findUnique({
+        const existing = await tx.vote.findFirst({
           where: { 
-            escrutinioId_candidateId: { 
-              escrutinioId, 
-              candidateId: candidate.id 
-            } 
+            escrutinioId: escrutinioId,
+            candidateId: candidate.id
           },
         });
 

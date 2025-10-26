@@ -132,6 +132,26 @@ export default function DashboardPage() {
     }
   };
 
+  // Helper functions for consistent JRV display
+  const formatJRVNumber = (number: string): string => {
+    // Pad with zeros to 5 digits: "3" -> "00003"
+    return number.padStart(5, '0');
+  };
+
+  const formatLocation = (location: string | null | undefined): string => {
+    if (!location || location.trim() === '') {
+      return 'Ubicación pendiente de registro';
+    }
+    return location;
+  };
+
+  const formatDepartment = (department: string | null | undefined): string => {
+    if (!department || department.trim() === '') {
+      return 'Departamento pendiente';
+    }
+    return department;
+  };
+
   // Función para obtener el color del rol
   const getRoleColor = (role: string) => {
     switch (role) {
@@ -281,7 +301,7 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-2">
                   <Clock className="h-3 w-3 text-orange-600" />
                   <div>
-                    <p className="text-xs font-medium text-gray-900">{activity.mesaNumber}</p>
+                    <p className="text-xs font-medium text-gray-900">JRV {formatJRVNumber(activity.mesaNumber)}</p>
                     <p className="text-xs text-gray-500">{activity.electionLevel}</p>
                   </div>
                 </div>
@@ -343,7 +363,7 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-2">
                   <CheckCircle className="h-3 w-3 text-green-600" />
                   <div>
-                    <p className="text-xs font-medium text-gray-900">{activity.mesaNumber}</p>
+                    <p className="text-xs font-medium text-gray-900">JRV {formatJRVNumber(activity.mesaNumber)}</p>
                     <p className="text-xs text-gray-500">{activity.electionLevel}</p>
                   </div>
                 </div>
@@ -379,9 +399,9 @@ export default function DashboardPage() {
                     <CheckCircle className="h-4 w-4 text-green-600" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-900">{activity.mesaNumber}</p>
-                    <p className="text-xs text-gray-600">{activity.mesaName}</p>
-                    <p className="text-xs text-gray-500">{activity.department}</p>
+                    <p className="text-sm font-medium text-gray-900">JRV {formatJRVNumber(activity.mesaNumber)}</p>
+                    <p className="text-xs text-gray-600">{formatLocation(activity.mesaName)}</p>
+                    <p className="text-xs text-gray-500">{formatDepartment(activity.department)}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -509,9 +529,9 @@ export default function DashboardPage() {
                     <Clock className="h-4 w-4 text-orange-600" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-900">{activity.mesaNumber}</p>
-                    <p className="text-xs text-gray-600">{activity.mesaName}</p>
-                    <p className="text-xs text-gray-500">{activity.department}</p>
+                    <p className="text-sm font-medium text-gray-900">JRV {formatJRVNumber(activity.mesaNumber)}</p>
+                    <p className="text-xs text-gray-600">{formatLocation(activity.mesaName)}</p>
+                    <p className="text-xs text-gray-500">{formatDepartment(activity.department)}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -593,9 +613,9 @@ export default function DashboardPage() {
                     <CheckCircle className="h-4 w-4 text-green-600" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-900">{activity.mesaNumber}</p>
-                    <p className="text-xs text-gray-600">{activity.mesaName}</p>
-                    <p className="text-xs text-gray-500">{activity.department}</p>
+                    <p className="text-sm font-medium text-gray-900">JRV {formatJRVNumber(activity.mesaNumber)}</p>
+                    <p className="text-xs text-gray-600">{formatLocation(activity.mesaName)}</p>
+                    <p className="text-xs text-gray-500">{formatDepartment(activity.department)}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">

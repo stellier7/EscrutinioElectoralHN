@@ -8,6 +8,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const query = searchParams.get('q') || '';
     const limit = parseInt(searchParams.get('limit') || '10');
+    const exact = searchParams.get('exact') === 'true'; // New parameter
 
     if (query.length < 1) {
       return NextResponse.json({
@@ -18,7 +19,12 @@ export async function GET(request: NextRequest) {
 
     // Buscar mesas que coincidan con el query
     const mesas = await prisma.mesa.findMany({
-      where: {
+      where: exact ? {
+        // Exact match
+        number: query,
+        isActive: true
+      } : {
+        // Fuzzy match (existing behavior)
         OR: [
           {
             number: {

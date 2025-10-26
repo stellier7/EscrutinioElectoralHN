@@ -56,12 +56,26 @@ export async function POST(request: Request, { params }: { params: { id: string 
       mesaNumber: existing.mesa.number
     });
 
-    // Solo permitir cerrar escrutinios que están COMPLETED o FAILED
-    if (existing.status !== 'COMPLETED' && existing.status !== 'FAILED') {
+    // Permitir cerrar escrutinios que están COMPLETED, FAILED, o PENDING
+    // Para escrutinios PENDING, los marcamos como COMPLETED automáticamente
+    if (existing.status !== 'COMPLETED' && existing.status !== 'FAILED' && existing.status !== 'PENDING') {
       return NextResponse.json({ 
         success: false, 
         error: `No se puede cerrar este escrutinio. Estado actual: ${existing.status}` 
       }, { status: 400 });
+    }
+
+    // Si está PENDING, marcarlo como COMPLETED automáticamente
+    if (existing.status === 'PENDING') {
+      console.log('🔄 [CLOSE API] Marcando escrutinio PENDING como COMPLETED automáticamente');
+      await prisma.escrutinio.update({
+        where: { id: escrutinioId },
+        data: { 
+          status: 'COMPLETED',
+          isCompleted: true,
+          completedAt: new Date()
+        }
+      });
     }
 
     // Cerrar automáticamente cualquier papeleta abierta antes de cerrar el escrutinio

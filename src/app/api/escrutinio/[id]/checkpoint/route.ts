@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { AuthUtils } from '@/lib/auth';
+import crypto from 'crypto';
 
 export const dynamic = 'force-dynamic';
 
@@ -51,6 +52,21 @@ export async function POST(
       return NextResponse.json({ success: false, error: 'Snapshot de votos inválido' }, { status: 400 });
     }
 
+    // Log detallado del snapshot de votos
+    const totalVotes = Object.values(votesSnapshot).reduce((sum: number, count: any) => sum + count, 0);
+    console.log(`📊 [CHECKPOINT] Snapshot de votos recibido:`, {
+      escrutinioId,
+      action,
+      totalVotes,
+      candidatesCount: Object.keys(votesSnapshot).length,
+      votesSnapshot: votesSnapshot
+    });
+
+    // Calcular hash SHA-256 del snapshot para verificación de integridad
+    const snapshotString = JSON.stringify(votesSnapshot);
+    const snapshotHash = crypto.createHash('sha256').update(snapshotString).digest('hex');
+    console.log(`🔐 [CHECKPOINT] Hash calculado: ${snapshotHash.substring(0, 8)}...`);
+
     // Crear checkpoint
     const checkpoint = await prisma.escrutinioCheckpoint.create({
       data: {
@@ -58,6 +74,7 @@ export async function POST(
         userId,
         action,
         votesSnapshot,
+        snapshotHash, // Hash para verificación de integridad
         timestamp: new Date(),
         deviceId,
         gpsLatitude: gps?.latitude,
@@ -75,7 +92,11 @@ export async function POST(
       }
     });
 
-    console.log(`✅ [CHECKPOINT] ${action} guardado para escrutinio ${escrutinioId} por usuario ${userId}`);
+    console.log(`✅ [CHECKPOINT] ${action} guardado para escrutinio ${escrutinioId} por usuario ${userId}`, {
+      checkpointId: checkpoint.id,
+      totalVotes,
+      gps: gps ? `${gps.latitude}, ${gps.longitude}` : 'No GPS'
+    });
 
     return NextResponse.json({
       success: true,

@@ -190,6 +190,112 @@ export class AuditLogger {
     await this.log(action, description, userId, metadata, request);
   }
 
+  static async logFreezeEscrutinio(
+    userId: string,
+    escrutinioId: string,
+    totalVotes: number,
+    gps?: { latitude: number; longitude: number; accuracy?: number },
+    request?: Request
+  ): Promise<void> {
+    const action: AuditLogAction = 'CLOSE_ESCRUTINIO';
+    const description = `Froze escrutinio ${escrutinioId} with ${totalVotes} total votes`;
+    
+    const metadata = {
+      escrutinioId,
+      totalVotes,
+      gps,
+      timestamp: new Date().toISOString(),
+    };
+
+    await this.log(action, description, userId, metadata, request);
+  }
+
+  static async logUnfreezeEscrutinio(
+    userId: string,
+    escrutinioId: string,
+    totalVotes: number,
+    request?: Request
+  ): Promise<void> {
+    const action: AuditLogAction = 'REOPEN_ESCRUTINIO';
+    const description = `Unfroze escrutinio ${escrutinioId} with ${totalVotes} total votes`;
+    
+    const metadata = {
+      escrutinioId,
+      totalVotes,
+      timestamp: new Date().toISOString(),
+    };
+
+    await this.log(action, description, userId, metadata, request);
+  }
+
+  static async logVoteCorrection(
+    userId: string,
+    escrutinioId: string,
+    candidateId: string,
+    oldCount: number,
+    newCount: number,
+    reason?: string,
+    request?: Request
+  ): Promise<void> {
+    const action: AuditLogAction = 'CORRECTION';
+    const description = `Corrected vote for candidate ${candidateId}: ${oldCount} → ${newCount}`;
+    
+    const metadata = {
+      escrutinioId,
+      candidateId,
+      oldCount,
+      newCount,
+      reason,
+      timestamp: new Date().toISOString(),
+    };
+
+    await this.log(action, description, userId, metadata, request);
+  }
+
+  static async logAnomalyDetected(
+    userId: string,
+    escrutinioId: string,
+    anomalyType: string,
+    details: Record<string, any>,
+    request?: Request
+  ): Promise<void> {
+    // Usaremos 'CORRECTION' para anomalías por ahora, podrías agregar un tipo específico después
+    const action: AuditLogAction = 'CORRECTION';
+    const description = `Anomaly detected in escrutinio ${escrutinioId}: ${anomalyType}`;
+    
+    const metadata = {
+      escrutinioId,
+      anomalyType,
+      details,
+      timestamp: new Date().toISOString(),
+    };
+
+    await this.log(action, description, userId, metadata, request);
+  }
+
+  static async logSyncRetry(
+    userId: string,
+    escrutinioId: string,
+    attempt: number,
+    maxRetries: number,
+    error?: string,
+    request?: Request
+  ): Promise<void> {
+    // Log simple, no necesitamos un tipo específico para esto
+    const description = `Sync retry ${attempt}/${maxRetries} for escrutinio ${escrutinioId}`;
+    
+    const metadata = {
+      escrutinioId,
+      attempt,
+      maxRetries,
+      error,
+      timestamp: new Date().toISOString(),
+    };
+
+    // Usaremos action genérico o TRANSMISSION
+    await this.log('TRANSMISSION', description, userId, metadata, request);
+  }
+
   static async getAuditLogs(
     filters?: {
       userId?: string;

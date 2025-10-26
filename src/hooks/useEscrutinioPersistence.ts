@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import axios from 'axios';
 
 interface EscrutinioState {
   currentStep: number;
@@ -21,6 +22,11 @@ interface EscrutinioState {
     lng: number;
     accuracy?: number;
   } | null;
+  // Legislative-specific UI state
+  legislativeCurrentPapeleta?: number;
+  legislativeExpandedParty?: string | null;
+  legislativePapeletaVotes?: {[key: string]: number}; // casillaNumber -> count (for current party)
+  legislativeCompletedPapeletas?: number; // NEW: Track completed papeletas
 }
 
 const STORAGE_KEY = 'escrutinio-state';
@@ -38,40 +44,51 @@ export function useEscrutinioPersistence() {
     isEscrutinioFinished: false,
     actaImage: null,
     location: null,
+    legislativeCurrentPapeleta: undefined,
+    legislativeExpandedParty: undefined,
+    legislativePapeletaVotes: undefined,
+    legislativeCompletedPapeletas: undefined,
   });
 
   // Función para guardar estado en localStorage y URL
   const saveState = useCallback((newState: Partial<EscrutinioState>) => {
-    const updatedState = { ...escrutinioState, ...newState };
-    
-    // Guardar en localStorage solo lo esencial
-    try {
-      const essentialData = {
-        escrutinioId: updatedState.escrutinioId,
-        actaImage: updatedState.actaImage,
-        isEscrutinioFinished: updatedState.isEscrutinioFinished,
-        // No guardar: selectedMesa, selectedLevel, currentStep, location
-      };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(essentialData));
-    } catch (error) {
-      console.warn('Error saving escrutinio state to localStorage:', error);
-    }
-
-    // Actualizar URL si hay JRV y nivel
-    if (updatedState.selectedMesa && updatedState.selectedLevel) {
-      const params = new URLSearchParams();
-      params.set('jrv', updatedState.selectedMesa);
-      params.set('level', updatedState.selectedLevel);
+    // Use functional update to avoid dependency on escrutinioState
+    setEscrutinioState(prevState => {
+      const updatedState = { ...prevState, ...newState };
       
-      if (updatedState.escrutinioId) {
-        params.set('escrutinioId', updatedState.escrutinioId);
+      // Guardar en localStorage solo lo esencial
+      try {
+        const essentialData = {
+          escrutinioId: updatedState.escrutinioId,
+          actaImage: updatedState.actaImage,
+          isEscrutinioFinished: updatedState.isEscrutinioFinished,
+          location: updatedState.location,
+          legislativeCurrentPapeleta: updatedState.legislativeCurrentPapeleta,
+          legislativeExpandedParty: updatedState.legislativeExpandedParty,
+          legislativePapeletaVotes: updatedState.legislativePapeletaVotes,
+          legislativeCompletedPapeletas: updatedState.legislativeCompletedPapeletas,
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(essentialData));
+      } catch (error) {
+        console.warn('Error saving escrutinio state to localStorage:', error);
       }
-      
-      router.replace(`/escrutinio?${params.toString()}`, { scroll: false });
-    }
 
-    setEscrutinioState(updatedState);
-  }, [escrutinioState, router]);
+      // Actualizar URL si hay JRV y nivel
+      if (updatedState.selectedMesa && updatedState.selectedLevel) {
+        const params = new URLSearchParams();
+        params.set('jrv', updatedState.selectedMesa);
+        params.set('level', updatedState.selectedLevel);
+        
+        if (updatedState.escrutinioId) {
+          params.set('escrutinioId', updatedState.escrutinioId);
+        }
+        
+        router.replace(`/escrutinio?${params.toString()}`, { scroll: false });
+      }
+
+      return updatedState;
+    });
+  }, [router]); // ✅ Only depends on router, not escrutinioState
 
   // Función para cargar estado desde localStorage y URL
   const loadState = useCallback((): EscrutinioState => {
@@ -84,6 +101,9 @@ export function useEscrutinioPersistence() {
       isEscrutinioFinished: false,
       actaImage: null,
       location: null,
+      legislativeCurrentPapeleta: undefined,
+      legislativeExpandedParty: undefined,
+      legislativeCompletedPapeletas: undefined,
     };
 
     console.log('🔍 Cargando estado inicial:', state);
@@ -95,7 +115,7 @@ export function useEscrutinioPersistence() {
         const parsed = JSON.parse(savedState);
         console.log('📦 Datos encontrados en localStorage:', JSON.stringify(parsed, null, 2));
         
-        // Solo cargar lo esencial: escrutinioId y actaImage
+        // Solo cargar lo esencial: escrutinioId, actaImage y location
         // No cargar JRV, nivel, paso - estos deben ser temporales
         if (parsed.escrutinioId) {
           state.escrutinioId = parsed.escrutinioId;
@@ -105,6 +125,21 @@ export function useEscrutinioPersistence() {
         }
         if (parsed.isEscrutinioFinished) {
           state.isEscrutinioFinished = parsed.isEscrutinioFinished;
+        }
+        if (parsed.location) {
+          state.location = parsed.location;
+        }
+        if (parsed.legislativeCurrentPapeleta !== undefined) {
+          state.legislativeCurrentPapeleta = parsed.legislativeCurrentPapeleta;
+        }
+        if (parsed.legislativeExpandedParty !== undefined) {
+          state.legislativeExpandedParty = parsed.legislativeExpandedParty;
+        }
+        if (parsed.legislativePapeletaVotes !== undefined) {
+          state.legislativePapeletaVotes = parsed.legislativePapeletaVotes;
+        }
+        if (parsed.legislativeCompletedPapeletas !== undefined) {
+          state.legislativeCompletedPapeletas = parsed.legislativeCompletedPapeletas;
         }
         
         console.log('🔄 Estado después de cargar localStorage:', JSON.stringify(state, null, 2));
@@ -172,21 +207,98 @@ export function useEscrutinioPersistence() {
       isEscrutinioFinished: false,
       actaImage: null,
       location: null,
+      legislativeCurrentPapeleta: undefined,
+      legislativeExpandedParty: undefined,
+      legislativePapeletaVotes: undefined,
+      legislativeCompletedPapeletas: undefined,
     });
 
     // Limpiar URL
     router.replace('/escrutinio', { scroll: false });
   }, [router]);
 
+  // Función para reiniciar solo el escrutinio actual (limpiar TODO y volver al paso 1)
+  const resetCurrentEscrutinio = useCallback(async () => {
+    console.log('🔄 Reiniciando escrutinio actual...');
+    
+    // 1. CANCELAR EN EL SERVIDOR PRIMERO
+    if (escrutinioState.escrutinioId) {
+      try {
+        const token = localStorage.getItem('auth-token');
+        await axios.post(
+          `/api/escrutinio/${escrutinioState.escrutinioId}/cancel`,
+          {},
+          { headers: { 'Authorization': `Bearer ${token}` } }
+        );
+        console.log('✅ Escrutinio cancelado en el servidor');
+      } catch (error) {
+        console.error('❌ Error cancelando escrutinio en servidor:', error);
+        // Continuar con limpieza local aunque falle
+      }
+    }
+    
+    // 2. Limpiar stores locales
+    if (typeof window !== 'undefined') {
+      // Limpiar store presidencial
+      import('@/store/voteStore').then(({ useVoteStore }) => {
+        console.log('🧹 Limpiando voteStore (presidencial)');
+        useVoteStore.getState().clear();
+      });
+      
+      // Limpiar store legislativo
+      import('@/store/legislativeVoteStore').then(({ useLegislativeVoteStore }) => {
+        console.log('🧹 Limpiando legislativeVoteStore');
+        useLegislativeVoteStore.getState().clear();
+      });
+      
+      // Limpiar la clave del último escrutinio
+      localStorage.removeItem('last-escrutinio-key');
+    }
+    
+    // 3. Limpiar estado local
+        const updatedState = {
+          currentStep: 1,
+          selectedMesa: '',
+          selectedMesaInfo: null,
+          selectedLevel: '',
+          escrutinioId: null,
+          isEscrutinioFinished: false,
+          actaImage: null,
+          location: null,
+          legislativeCurrentPapeleta: undefined,
+          legislativeExpandedParty: undefined,
+          legislativePapeletaVotes: undefined,
+          legislativeCompletedPapeletas: undefined,
+        };
+    
+    // Limpiar localStorage completamente
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch (error) {
+      console.warn('Error removing escrutinio state from localStorage:', error);
+    }
+    
+    setEscrutinioState(updatedState);
+    router.replace('/escrutinio', { scroll: false });
+    
+    console.log('✅ Escrutinio reiniciado, volviendo al paso 1');
+  }, [escrutinioState.escrutinioId, router]);
+
   // Función para iniciar nuevo escrutinio (limpiar todo)
   const startNewEscrutinio = useCallback(() => {
     clearState();
-    // También limpiar el store de votos y la clave del último escrutinio
+    // También limpiar ambos stores de votos y la clave del último escrutinio
     if (typeof window !== 'undefined') {
-      // Importar dinámicamente el store para evitar problemas de SSR
+      // Limpiar store presidencial
       import('@/store/voteStore').then(({ useVoteStore }) => {
         useVoteStore.getState().clear();
       });
+      
+      // Limpiar store legislativo
+      import('@/store/legislativeVoteStore').then(({ useLegislativeVoteStore }) => {
+        useLegislativeVoteStore.getState().clear();
+      });
+      
       // Limpiar la clave del último escrutinio
       localStorage.removeItem('last-escrutinio-key');
     }
@@ -212,6 +324,7 @@ export function useEscrutinioPersistence() {
     escrutinioState,
     saveState,
     clearState,
+    resetCurrentEscrutinio,
     startNewEscrutinio,
     hasActiveEscrutinio: hasActiveEscrutinio(),
     canRecoverEscrutinio: canRecoverEscrutinio(),
