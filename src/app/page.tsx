@@ -137,6 +137,19 @@ export default function HomePage() {
           </div>
         </div>
 
+        {/* Voluntarios Button */}
+        <div className="text-center">
+          <Button
+            onClick={() => router.push('/voluntarios')}
+            variant="secondary"
+            size="lg"
+            className="w-full max-w-sm mx-auto"
+          >
+            <Vote className="h-5 w-5 mr-2" />
+            Únete como Voluntario u Observador
+          </Button>
+        </div>
+
         {/* Form - iPhone-sized card */}
         <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 max-w-sm mx-auto">
           <div className="mb-4">

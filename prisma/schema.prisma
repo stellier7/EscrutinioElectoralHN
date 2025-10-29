@@ -428,4 +428,20 @@ model ProcessedBatch {
   @@index([escrutinioId, clientBatchId])
   @@index([processedAt])  // Para limpieza de registros antiguos
   @@map("processed_batches")
+}
+
+// Tabla para solicitudes de voluntarios/observadores
+model VolunteerApplication {
+  id              String    @id @default(cuid())
+  firstName       String
+  lastName        String
+  email           String
+  phone           String
+  role            UserRole  @default(VOLUNTEER) // OBSERVER o VOLUNTEER
+  jrvNumber       String?   // Número de JRV donde quiere votar (opcional)
+  comments        String?   // Comentarios adicionales (opcional)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@map("volunteer_applications")
 } 
