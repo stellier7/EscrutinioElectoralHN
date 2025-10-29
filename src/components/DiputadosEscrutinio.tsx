@@ -894,6 +894,17 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
     
     try {
       const action = isEscrutinioClosed ? 'UNFREEZE' : 'FREEZE';
+      const token = localStorage.getItem('auth-token');
+      
+      // CRÍTICO: Si estamos descongelando (UNFREEZE), llamar al endpoint /reopen primero
+      // para actualizar el estado en la base de datos de CLOSED a COMPLETED
+      if (action === 'UNFREEZE') {
+        console.log('🔄 [LEGISLATIVE] Actualizando estado del escrutinio en servidor...');
+        await axios.post(`/api/escrutinio/${escrutinioId}/reopen`, {}, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        console.log('✅ [LEGISLATIVE] Estado del escrutinio actualizado a COMPLETED en servidor');
+      }
       
       // CRÍTICO: Si estamos congelando (FREEZE), pausar sync antes de capturar snapshot
       if (action === 'FREEZE') {
@@ -936,7 +947,6 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
       }
       
       // Enviar checkpoint al servidor
-      const token = localStorage.getItem('auth-token');
       await axios.post(`/api/escrutinio/${escrutinioId}/checkpoint`, {
         action,
         votesSnapshot,

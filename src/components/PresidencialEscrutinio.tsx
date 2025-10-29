@@ -440,8 +440,17 @@ export default function PresidencialEscrutinio({
     console.log('🔄 [PRESIDENTIAL] Descongelando escrutinio localmente');
     setIsReopening(true);
     try {
-      // Enviar checkpoint al servidor
       const token = localStorage.getItem('auth-token');
+      
+      // CRÍTICO: Llamar al endpoint /reopen para actualizar el estado en la base de datos
+      // Esto cambia el estado de CLOSED a COMPLETED en la base de datos
+      console.log('🔄 [PRESIDENTIAL] Actualizando estado del escrutinio en servidor...');
+      await axios.post(`/api/escrutinio/${escrutinioId}/reopen`, {}, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      console.log('✅ [PRESIDENTIAL] Estado del escrutinio actualizado a COMPLETED en servidor');
+      
+      // Enviar checkpoint al servidor
       await axios.post(`/api/escrutinio/${escrutinioId}/checkpoint`, {
         action: 'UNFREEZE',
         votesSnapshot: counts,
@@ -459,9 +468,10 @@ export default function PresidencialEscrutinio({
       setEscrutinioStatus('COMPLETED');
       setIsEscrutinioClosed(false);
       console.log('✅ [PRESIDENTIAL] Escrutinio descongelado localmente y checkpoint guardado');
-    } catch (error) {
-      console.error('Error descongelando escrutinio:', error);
-      alert(`Error al descongelar el escrutinio: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+    } catch (error: any) {
+      console.error('❌ [PRESIDENTIAL] Error descongelando escrutinio:', error);
+      const errorMessage = error?.response?.data?.error || error?.message || 'Error desconocido';
+      alert(`Error al descongelar el escrutinio: ${errorMessage}`);
     } finally {
       setIsReopening(false);
     }
