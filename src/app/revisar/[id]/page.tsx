@@ -15,7 +15,9 @@ import {
   Camera,
   BarChart3,
   Navigation,
-  ExternalLink
+  ExternalLink,
+  X,
+  Edit
 } from 'lucide-react';
 import Button from '../../../components/ui/Button';
 import LegislativeReview from '../../../components/LegislativeReview';
@@ -59,6 +61,14 @@ interface EscrutinioData {
   gpsHiddenReason?: string;
   gpsHiddenBy?: string;
   gpsHiddenAt?: string;
+  // Estadísticas de papeletas (solo para escrutinios legislativos)
+  papeletasStats?: {
+    totalPapeletas: number;
+    papeletasCerradas: number;
+    papeletasAnuladas: number;
+    escrutinioCorregido: boolean;
+    vecesCorregido: number;
+  };
 }
 
 // Helper functions for map links
@@ -591,6 +601,60 @@ export default function RevisarEscrutinioPage() {
               </div>
               <div className="text-center py-4">
                 <p className="text-gray-500">No se pudo capturar la ubicación GPS durante este escrutinio.</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Estadísticas de Papeletas (solo para escrutinios legislativos) */}
+        {escrutinioData.electionLevel === 'LEGISLATIVE' && escrutinioData.papeletasStats && (
+          <div className="bg-white rounded-lg shadow-sm border mb-6">
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <FileText className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">Estadísticas de Papeletas</h2>
+                  <p className="text-sm text-gray-600">Resumen del proceso de conteo</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="text-center p-4 bg-gray-50 rounded-lg border">
+                  <div className="text-3xl font-bold text-gray-900 mb-1">
+                    {escrutinioData.papeletasStats.totalPapeletas}
+                  </div>
+                  <div className="text-sm text-gray-600">Total Papeletas</div>
+                </div>
+                <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
+                  <div className="text-3xl font-bold text-green-600 mb-1">
+                    {escrutinioData.papeletasStats.papeletasCerradas}
+                  </div>
+                  <div className="text-sm text-gray-600">Completadas</div>
+                </div>
+                <div className="text-center p-4 bg-red-50 rounded-lg border border-red-200">
+                  <div className="text-3xl font-bold text-red-600 mb-1 flex items-center justify-center gap-1">
+                    <X className="h-6 w-6" />
+                    {escrutinioData.papeletasStats.papeletasAnuladas}
+                  </div>
+                  <div className="text-sm text-gray-600">Anuladas</div>
+                </div>
+                {escrutinioData.papeletasStats.escrutinioCorregido && (
+                  <div className="text-center p-4 bg-amber-50 rounded-lg border border-amber-200">
+                    <div className="text-3xl font-bold text-amber-600 mb-1 flex items-center justify-center gap-1">
+                      <Edit className="h-6 w-6" />
+                      {escrutinioData.papeletasStats.vecesCorregido}
+                    </div>
+                    <div className="text-sm text-gray-600">Veces Corregido</div>
+                  </div>
+                )}
+                {!escrutinioData.papeletasStats.escrutinioCorregido && (
+                  <div className="text-center p-4 bg-gray-50 rounded-lg border">
+                    <div className="text-3xl font-bold text-gray-400 mb-1">-</div>
+                    <div className="text-sm text-gray-500">Sin correcciones</div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

@@ -265,7 +265,25 @@ export async function GET(
       finalGpsObject: finalGps
     });
 
-    const escrutinioData = {
+    // Calcular estadísticas de papeletas (solo para escrutinios legislativos)
+    let papeletasStats = null;
+    if (escrutinio.electionLevel === 'LEGISLATIVE' && escrutinio.papeletas) {
+      const totalPapeletas = escrutinio.papeletas.length;
+      const papeletasCerradas = escrutinio.papeletas.filter(p => p.status === 'CLOSED').length;
+      const papeletasAnuladas = escrutinio.papeletas.filter(p => p.status === 'ANULADA').length;
+      
+      papeletasStats = {
+        totalPapeletas,
+        papeletasCerradas,
+        papeletasAnuladas,
+        escrutinioCorregido: escrutinio.hasEdits || false,
+        vecesCorregido: escrutinio.editCount || 0
+      };
+      
+      console.log('📊 Estadísticas de papeletas calculadas:', papeletasStats);
+    }
+
+    const escrutinioData: any = {
       id: escrutinio.id,
       mesaNumber: escrutinio.mesa.number,
       mesaName: escrutinio.mesa.location,
@@ -285,6 +303,11 @@ export async function GET(
       gpsHiddenBy: escrutinio.gpsHiddenBy,
       gpsHiddenAt: escrutinio.gpsHiddenAt?.toISOString()
     };
+
+    // Incluir estadísticas de papeletas solo si es legislativo
+    if (papeletasStats) {
+      escrutinioData.papeletasStats = papeletasStats;
+    }
 
     return NextResponse.json({
       success: true,
