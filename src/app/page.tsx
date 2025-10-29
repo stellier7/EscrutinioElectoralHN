@@ -141,7 +141,7 @@ export default function HomePage() {
         <div className="text-center">
           <Button
             onClick={() => router.push('/voluntarios')}
-            variant="secondary"
+            variant="primary"
             size="lg"
             className="w-full max-w-sm mx-auto"
           >
