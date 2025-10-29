@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, ArrowRight, Loader2, AlertCircle, Check, X, FileText, Camera, Upload, CheckCircle, Edit } from 'lucide-react';
 import clsx from 'clsx';
@@ -88,6 +88,21 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
   } = useEscrutinioPersistence();
 
   const [isCheckingStatus, setIsCheckingStatus] = useState(true);
+  
+  // Ref para trackear el último escrutinioId y solo limpiar si cambia (nuevo escrutinio)
+  // Inicializar desde localStorage de inmediato si está disponible
+  const getInitialLastEscrutinioId = (): string | null => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('last-legislative-escrutinio-id');
+      if (stored) {
+        console.log('📦 Último escrutinio legislativo cargado desde localStorage:', stored);
+        return stored;
+      }
+    }
+    return null;
+  };
+  const lastEscrutinioIdRef = useRef<string | null>(getInitialLastEscrutinioId());
+  const isStateInitializedRef = useRef(false);
 
   // Verificar estado del escrutinio al cargar
   useEffect(() => {
@@ -153,11 +168,24 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
     clear: clearVotes
   } = useLegislativeVoteStore();
 
-  // Limpiar store y cargar votos desde servidor al montar el componente
+  // Cargar votos desde servidor - solo limpiar si es un NUEVO escrutinio
   useEffect(() => {
     if (escrutinioId) {
-      console.log('🔄 [LEGISLATIVE] Iniciando nuevo escrutinio, limpiando store local...');
-      clearVotes(); // Limpiar store local primero
+      // Solo limpiar si es un NUEVO escrutinio (diferente al anterior)
+      if (lastEscrutinioIdRef.current !== escrutinioId) {
+        console.log('🔄 [LEGISLATIVE] Nuevo escrutinio detectado, limpiando store local...');
+        console.log('📊 [LEGISLATIVE] Escrutinio anterior:', lastEscrutinioIdRef.current, '→ Nuevo:', escrutinioId);
+        clearVotes(); // Limpiar solo si es un nuevo escrutinio
+        lastEscrutinioIdRef.current = escrutinioId;
+        // Guardar en localStorage para persistir entre refrescos
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('last-legislative-escrutinio-id', escrutinioId);
+        }
+        // Resetear flag de inicialización para permitir que se restaure el estado
+        isStateInitializedRef.current = false;
+      } else {
+        console.log('🔄 [LEGISLATIVE] Mismo escrutinio, manteniendo votos del store');
+      }
       
       console.log('📊 [LEGISLATIVE] Cargando votos desde servidor para escrutinio:', escrutinioId);
       loadVotesFromServer(escrutinioId).then(() => {
@@ -165,13 +193,29 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
       }).catch((error) => {
         console.error('❌ [LEGISLATIVE] Error cargando votos desde servidor:', error);
       });
+    } else {
+      // Si no hay escrutinioId, resetear el ref
+      lastEscrutinioIdRef.current = null;
+      isStateInitializedRef.current = false;
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('last-legislative-escrutinio-id');
+      }
     }
   }, [escrutinioId, loadVotesFromServer, clearVotes]);
 
-  // Inicializar papeleta desde estado persistido o default (SOLO en mount inicial)
+  // Inicializar papeleta desde estado persistido o default (SOLO cuando el estado está disponible)
   useEffect(() => {
-    if (escrutinioId && userId) {
+    // Solo inicializar si tenemos escrutinioId y userId, y aún no se ha inicializado
+    // Y también verificar que el escrutinioId del estado coincide con el prop
+    // Esto asegura que el estado se haya cargado completamente desde localStorage
+    if (escrutinioId && userId && !isStateInitializedRef.current && escrutinioState.escrutinioId === escrutinioId) {
       console.log('🔄 Inicializando papeleta simplificada...');
+      console.log('📦 Estado completo disponible:', {
+        papeleta: escrutinioState.legislativeCurrentPapeleta,
+        party: escrutinioState.legislativeExpandedParty,
+        votes: escrutinioState.legislativePapeletaVotes,
+        completed: escrutinioState.legislativeCompletedPapeletas
+      });
       
       // Check if there's persisted state from useEscrutinioPersistence
       const persistedPapeleta = escrutinioState.legislativeCurrentPapeleta;
@@ -179,20 +223,23 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
       const persistedVotes = escrutinioState.legislativePapeletaVotes;
       const persistedCompletedCount = escrutinioState.legislativeCompletedPapeletas;
       
-      if (persistedPapeleta !== undefined) {
+      // Restaurar número de papeleta (aceptar cualquier número > 0, incluyendo 1)
+      if (persistedPapeleta !== undefined && persistedPapeleta !== null && persistedPapeleta >= 1) {
         console.log('📦 Restaurando papeleta desde estado persistido:', persistedPapeleta);
         setCurrentPapeleta(persistedPapeleta);
       } else {
+        console.log('📦 No hay papeleta persistida válida, inicializando en 1');
         setCurrentPapeleta(1);
       }
       
-      if (persistedParty !== undefined) {
+      // Restaurar partido expandido
+      if (persistedParty !== undefined && persistedParty !== null) {
         console.log('📦 Restaurando partido expandido:', persistedParty);
         setExpandedParty(persistedParty);
       }
       
-      // CRÍTICO: Restaurar marcas si existen, sino limpiar
-      if (persistedVotes !== undefined) {
+      // CRÍTICO: Restaurar marcas si existen (incluso si está vacío, restaurar el objeto vacío)
+      if (persistedVotes !== undefined && persistedVotes !== null) {
         console.log('📦 Restaurando marcas desde estado persistido:', persistedVotes);
         setPapeletaVotes(persistedVotes);
       } else {
@@ -200,16 +247,23 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
         setPapeletaVotes({});
       }
       
-      // Restaurar contador de papeletas completadas
-      if (persistedCompletedCount !== undefined) {
+      // Restaurar contador de papeletas completadas (aceptar 0 también)
+      if (persistedCompletedCount !== undefined && persistedCompletedCount !== null && persistedCompletedCount >= 0) {
         console.log('📦 Restaurando papeletas completadas:', persistedCompletedCount);
         setCompletedPapeletasCount(persistedCompletedCount);
       } else {
+        console.log('📦 No hay contador persistido válido, inicializando en 0');
         setCompletedPapeletasCount(0);
       }
+      
+      // Marcar como inicializado
+      isStateInitializedRef.current = true;
+    } else if (!escrutinioId) {
+      // Resetear flag si no hay escrutinioId
+      isStateInitializedRef.current = false;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [escrutinioId, userId]); // ✅ Solo depende de escrutinioId y userId, NO de los valores persistidos
+  }, [escrutinioId, userId, escrutinioState.escrutinioId, escrutinioState.legislativeCurrentPapeleta, escrutinioState.legislativePapeletaVotes, escrutinioState.legislativeCompletedPapeletas]);
 
   // Persistir estado de papeleta cuando cambia
   useEffect(() => {
