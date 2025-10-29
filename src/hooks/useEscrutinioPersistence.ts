@@ -172,9 +172,16 @@ export function useEscrutinioPersistence() {
       }
       
       // Solo saltar al paso 2 si también tenemos un escrutinioId (escritinio activo)
+      // PERO NO saltar si la información de la mesa aún está cargando
       if (escrutinioIdFromUrl && state.currentStep === 1) {
-        console.log('⏭️ Saltando al paso 2 porque hay escrutinioId en URL');
-        state.currentStep = 2; // Saltar al paso de conteo
+        // No saltar al paso 2 si la información de la mesa está en "Cargando..."
+        // Esto permite que el efecto en page.tsx cargue la información primero
+        if (state.selectedMesaInfo?.location !== 'Cargando...') {
+          console.log('⏭️ Saltando al paso 2 porque hay escrutinioId en URL');
+          state.currentStep = 2; // Saltar al paso de conteo
+        } else {
+          console.log('⏸️ Esperando información de mesa antes de saltar al paso 2');
+        }
       }
     } else {
       // Si no hay parámetros de URL, siempre empezar en paso 1

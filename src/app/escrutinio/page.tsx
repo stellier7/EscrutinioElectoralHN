@@ -79,6 +79,8 @@ function EscrutinioPageContent() {
   const [showSecondConfirmation, setShowSecondConfirmation] = useState(false);
   const [showImageModal, setShowImageModal] = useState(false);
   const [escrutinioStatus, setEscrutinioStatus] = useState<'PENDING' | 'IN_PROGRESS' | 'CLOSED' | 'COMPLETED' | null>(null);
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [isLoadingMesaInfo, setIsLoadingMesaInfo] = useState(false);
   
   const voteStore = useVoteStore();
   
@@ -203,6 +205,110 @@ function EscrutinioPageContent() {
     load();
   }, [escrutinioState.selectedLevel]);
 
+  // Inicializar estado al cargar el componente
+  useEffect(() => {
+    // Solo marcar como inicializado si no hay información de mesa cargando
+    // Esto permite que el efecto de carga de mesa controle el estado de inicialización
+    if (!escrutinioState.selectedMesa || 
+        escrutinioState.selectedMesaInfo?.location !== 'Cargando...') {
+      setIsInitializing(false);
+    }
+  }, [escrutinioState.selectedMesa, escrutinioState.selectedMesaInfo?.location]);
+
+  // Buscar información de la mesa cuando se carga desde URL
+  useEffect(() => {
+    const loadMesaInfoFromUrl = async () => {
+      // Solo cargar si tenemos mesa seleccionada y la info está en "Cargando..."
+      if (escrutinioState.selectedMesa && 
+          escrutinioState.selectedMesaInfo?.location === 'Cargando...') {
+        
+        // Evitar múltiples cargas simultáneas
+        if (isLoadingMesaInfo) return;
+        
+        setIsLoadingMesaInfo(true);
+        
+        try {
+          const mesaNumber = escrutinioState.selectedMesa;
+          const response = await axios.get(`/api/mesas/search?q=${mesaNumber}`);
+          
+          const escrutinioIdFromUrl = searchParams.get('escrutinioId');
+          
+          if (response.data?.success && 
+              response.data?.results && 
+              Array.isArray(response.data.results) && 
+              response.data.results.length > 0) {
+            const mesaInfo = response.data.results[0];
+            console.log('✅ Mesa info cargada:', mesaInfo);
+            
+            // Actualizar información de mesa y saltar al paso 2 si hay escrutinioId
+            const updates: any = {
+              selectedMesaInfo: mesaInfo,
+            };
+            
+            if (escrutinioIdFromUrl && escrutinioState.currentStep === 1) {
+              console.log('⏭️ Saltando al paso 2 después de cargar información de mesa');
+              updates.currentStep = 2;
+              updates.escrutinioId = escrutinioIdFromUrl;
+            }
+            
+            saveState(updates);
+          } else {
+            // No mostrar warning en consola, solo establecer valores por defecto
+            const fallbackInfo = {
+              value: mesaNumber,
+              label: `${mesaNumber} - ${mesaNumber}`,
+              location: mesaNumber,
+              department: 'N/A'
+            };
+            
+            const updates: any = {
+              selectedMesaInfo: fallbackInfo,
+            };
+            
+            // Si hay escrutinioId en URL, saltar al paso 2 incluso con info fallback
+            if (escrutinioIdFromUrl && escrutinioState.currentStep === 1) {
+              console.log('⏭️ Saltando al paso 2 con información fallback');
+              updates.currentStep = 2;
+              updates.escrutinioId = escrutinioIdFromUrl;
+            }
+            
+            saveState(updates);
+          }
+        } catch (error) {
+          // No mostrar error en consola, solo establecer valores por defecto
+          const fallbackInfo = {
+            value: escrutinioState.selectedMesa,
+            label: `${escrutinioState.selectedMesa} - ${escrutinioState.selectedMesa}`,
+            location: escrutinioState.selectedMesa,
+            department: 'N/A'
+          };
+          
+          const escrutinioIdFromUrl = searchParams.get('escrutinioId');
+          const updates: any = {
+            selectedMesaInfo: fallbackInfo,
+          };
+          
+          // Si hay escrutinioId en URL, saltar al paso 2 incluso con info fallback
+          if (escrutinioIdFromUrl && escrutinioState.currentStep === 1) {
+            console.log('⏭️ Saltando al paso 2 con información fallback después de error');
+            updates.currentStep = 2;
+            updates.escrutinioId = escrutinioIdFromUrl;
+          }
+          
+          saveState(updates);
+        } finally {
+          setIsLoadingMesaInfo(false);
+          setIsInitializing(false);
+        }
+      } else {
+        // Si no hay información cargando, marcar como inicializado
+        setIsInitializing(false);
+      }
+    };
+    loadMesaInfoFromUrl();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [escrutinioState.selectedMesa, escrutinioState.selectedMesaInfo?.location]);
+
   // Cargar votos existentes cuando se establece el escrutinioId
   useEffect(() => {
     const loadExistingVotes = async () => {
@@ -218,51 +324,6 @@ function EscrutinioPageContent() {
     };
     loadExistingVotes();
   }, [escrutinioState.escrutinioId]); // Solo depender del escrutinioId
-
-  // Buscar información de la mesa cuando se carga desde URL
-  useEffect(() => {
-    const loadMesaInfoFromUrl = async () => {
-      if (escrutinioState.selectedMesa && 
-          escrutinioState.selectedMesaInfo?.location === 'Cargando...') {
-        try {
-          const response = await axios.get(`/api/mesas/search?q=${escrutinioState.selectedMesa}`);
-          if (response.data?.success && 
-              response.data?.results && 
-              Array.isArray(response.data.results) && 
-              response.data.results.length > 0) {
-            const mesaInfo = response.data.results[0];
-            console.log('✅ Mesa info cargada:', mesaInfo);
-            saveState({
-              selectedMesaInfo: mesaInfo,
-            });
-        } else {
-          console.warn('⚠️ No se encontró información para la mesa:', escrutinioState.selectedMesa);
-          // Set fallback values instead of leaving "Cargando..."
-          saveState({
-            selectedMesaInfo: {
-              value: escrutinioState.selectedMesa,
-              label: `JRV ${escrutinioState.selectedMesa}`,
-              location: 'Centro Evangelico Bethel', // Use the location from the logs
-              department: 'Atlántida' // Use the department from the logs
-            }
-          });
-        }
-        } catch (error) {
-          console.error('❌ Error cargando info de mesa:', error);
-          // Set fallback values on error
-          saveState({
-            selectedMesaInfo: {
-              value: escrutinioState.selectedMesa,
-              label: `JRV ${escrutinioState.selectedMesa}`,
-              location: 'Centro Evangelico Bethel', // Use the location from the logs
-              department: 'Atlántida' // Use the department from the logs
-            }
-          });
-        }
-      }
-    };
-    loadMesaInfoFromUrl();
-  }, [escrutinioState.selectedMesa, escrutinioState.selectedMesaInfo?.location]);
 
   // Map party acronyms to display names using party config
   const mapPartyToDisplayName = (party: string): string => {
@@ -578,6 +639,18 @@ function EscrutinioPageContent() {
   };
 
   const totalVotes = Object.keys(voteStore.counts).reduce((sum, k) => sum + (voteStore.counts[k] || 0), 0);
+
+  // Mostrar spinner mientras se inicializa
+  if (isInitializing || isLoadingMesaInfo) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto mb-4" />
+          <p className="text-gray-600">Cargando escrutinio...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50" style={{ fontSize: "16px" }}>

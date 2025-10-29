@@ -87,12 +87,18 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
     saveState 
   } = useEscrutinioPersistence();
 
+  const [isCheckingStatus, setIsCheckingStatus] = useState(true);
+
   // Verificar estado del escrutinio al cargar
   useEffect(() => {
     const checkEscrutinioStatus = async () => {
-      if (!escrutinioId) return;
+      if (!escrutinioId) {
+        setIsCheckingStatus(false);
+        return;
+      }
       
       try {
+        setIsCheckingStatus(true);
         const token = localStorage.getItem('auth-token');
         const response = await axios.get(
           `/api/escrutinio/${escrutinioId}/status`,
@@ -121,6 +127,8 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
         }
       } catch (error) {
         console.error('❌ Error verificando status del escrutinio:', error);
+      } finally {
+        setIsCheckingStatus(false);
       }
     };
     
@@ -526,6 +534,13 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
       return null;
     }
 
+    // Validar token antes de proceder
+    const token = localStorage.getItem('auth-token');
+    if (!token) {
+      console.error('📸 [LEGISLATIVE] No hay token de autenticación');
+      throw new Error('No hay token de autenticación. Por favor inicia sesión nuevamente.');
+    }
+
     try {
       setIsUploading(true);
       console.log('📸 [LEGISLATIVE] Subiendo acta...');
@@ -534,40 +549,68 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
       const presignResponse = await axios.post('/api/upload/presign', {
         escrutinioId,
         fileName: actaImage.name,
-        contentType: actaImage.type
+        contentType: actaImage.type || 'image/jpeg'
+      }, {
+        headers: { 'Authorization': `Bearer ${token}` }
       });
 
-      if (presignResponse.data?.success && presignResponse.data.presignedUrl) {
-        const { presignedUrl, publicUrl } = presignResponse.data;
+      console.log('📸 [LEGISLATIVE] Presign response:', presignResponse.data);
+
+      if (presignResponse.data?.success && presignResponse.data.data) {
+        const { uploadUrl, publicUrl } = presignResponse.data.data as { uploadUrl: string; publicUrl: string };
+        
+        if (!uploadUrl || !publicUrl) {
+          throw new Error('URLs de presign inválidas');
+        }
+        
+        console.log('📸 [LEGISLATIVE] Uploading to:', uploadUrl.substring(0, 50) + '...');
         
         // Subir archivo a S3
-        await axios.put(presignedUrl, actaImage, {
-          headers: { 'Content-Type': actaImage.type }
+        const uploadResponse = await fetch(uploadUrl, {
+          method: 'PUT',
+          headers: { 'Content-Type': actaImage.type || 'image/jpeg' },
+          body: actaImage
         });
+
+        if (!uploadResponse.ok) {
+          throw new Error(`Error subiendo archivo a S3: ${uploadResponse.status} ${uploadResponse.statusText}`);
+        }
 
         console.log('📸 [LEGISLATIVE] Acta subida a S3:', publicUrl);
         
         // Guardar la URL en la base de datos
         try {
-          const token = localStorage.getItem('auth-token');
-          await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/evidence`, 
+          const evidenceResponse = await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/evidence`, 
             { publicUrl }, 
             { headers: { 'Authorization': `Bearer ${token}` } }
           );
-          console.log('📸 [LEGISLATIVE] URL guardada en base de datos');
-        } catch (error) {
+          
+          if (evidenceResponse.data?.success) {
+            console.log('📸 [LEGISLATIVE] URL guardada exitosamente en base de datos');
+          } else {
+            console.warn('📸 [LEGISLATIVE] URL guardada pero respuesta no exitosa:', evidenceResponse.data);
+          }
+        } catch (error: any) {
           console.error('📸 [LEGISLATIVE] Error guardando URL en DB:', error);
+          // Continuar aunque falle el guardado de evidence, ya tenemos la URL
         }
         
+        setIsUploading(false);
         return publicUrl;
+      } else {
+        throw new Error('Respuesta de presign inválida o sin éxito');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('📸 [LEGISLATIVE] Error subiendo a S3:', error);
+      setIsUploading(false);
+      // Continuar con fallback
     }
 
     // Fallback: convertir a dataUrl
     try {
       console.log('📸 [LEGISLATIVE] Usando fallback: convirtiendo a dataUrl');
+      setIsUploading(true);
+      
       const toDataUrl = (file: File): Promise<string> => {
         return new Promise((resolve, reject) => {
           const reader = new FileReader();
@@ -583,38 +626,85 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
       // Guardar la URL en la base de datos
       try {
         const token = localStorage.getItem('auth-token');
-        await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/evidence`, 
-          { publicUrl: dataUrl }, 
-          { headers: { 'Authorization': `Bearer ${token}` } }
-        );
-        console.log('📸 [LEGISLATIVE] DataURL guardada en base de datos');
-      } catch (error) {
+        if (token) {
+          const evidenceResponse = await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/evidence`, 
+            { publicUrl: dataUrl }, 
+            { headers: { 'Authorization': `Bearer ${token}` } }
+          );
+          
+          if (evidenceResponse.data?.success) {
+            console.log('📸 [LEGISLATIVE] DataURL guardada exitosamente en base de datos');
+          } else {
+            console.warn('📸 [LEGISLATIVE] DataURL guardada pero respuesta no exitosa:', evidenceResponse.data);
+          }
+        }
+      } catch (error: any) {
         console.error('📸 [LEGISLATIVE] Error guardando DataURL en DB:', error);
+        // Continuar aunque falle el guardado
       }
       
-      return dataUrl;
-    } catch (error) {
-      console.error('📸 [LEGISLATIVE] Fallback también falló:', error);
-    } finally {
       setIsUploading(false);
+      return dataUrl;
+    } catch (error: any) {
+      console.error('📸 [LEGISLATIVE] Fallback también falló:', error);
+      setIsUploading(false);
+      throw new Error('Error subiendo foto del acta. Por favor intenta nuevamente.');
     }
-
-    return null;
   }, [actaImage, escrutinioId]);
 
   // Función para proceder con la finalización del escrutinio
   const proceedWithCompletion = useCallback(async () => {
-    if (!escrutinioId) return;
+    if (!escrutinioId) {
+      setError('No hay escrutinio activo');
+      return;
+    }
+    
+    // Validar token antes de proceder
+    const token = localStorage.getItem('auth-token');
+    if (!token) {
+      setError('Sesión expirada. Por favor inicia sesión nuevamente.');
+      setTimeout(() => window.location.href = '/', 2000);
+      return;
+    }
     
     setIsCompleting(true);
     setShowNoPhotoWarning(false); // Cerrar warning si está abierto
+    setError(null); // Limpiar errores previos
     
     try {
       // 1. Subir foto si existe
-      await uploadEvidenceIfNeeded();
+      if (actaImage) {
+        try {
+          console.log('📸 [LEGISLATIVE] Subiendo foto antes de completar...');
+          const evidenceUrl = await uploadEvidenceIfNeeded();
+          
+          if (!evidenceUrl) {
+            console.warn('📸 [LEGISLATIVE] No se pudo obtener URL de evidence');
+            const shouldContinue = confirm(
+              'No se pudo subir la foto del acta. ¿Deseas continuar sin foto?'
+            );
+            if (!shouldContinue) {
+              setIsCompleting(false);
+              return;
+            }
+          } else {
+            console.log('✅ [LEGISLATIVE] Foto subida exitosamente');
+          }
+        } catch (uploadError: any) {
+          console.error('📸 [LEGISLATIVE] Error subiendo foto:', uploadError);
+          const shouldContinue = confirm(
+            `Hubo un error al subir la foto del acta: ${uploadError.message || 'Error desconocido'}. ¿Deseas continuar sin foto?`
+          );
+          if (!shouldContinue) {
+            setIsCompleting(false);
+            return;
+          }
+        }
+      } else {
+        console.log('📸 [LEGISLATIVE] No hay foto para subir');
+      }
       
       // 2. Guardar snapshot del conteo actual antes de completar
-      const token = localStorage.getItem('auth-token');
       const snapshotData = {
         partyCounts: counts,
         timestamp: Date.now(),
@@ -625,21 +715,31 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
       
       console.log('📊 [LEGISLATIVE] Guardando snapshot del conteo:', snapshotData);
       
-      await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/complete`, {
+      const completeResponse = await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/complete`, {
         originalData: snapshotData
       }, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
+      if (!completeResponse.data?.success) {
+        throw new Error(completeResponse.data?.error || 'Error completando escrutinio');
+      }
+      
+      console.log('✅ [LEGISLATIVE] Escrutinio completado exitosamente');
+      
       // 3. Mostrar modal de éxito
       setShowSuccessModal(true);
     } catch (error: any) {
-      console.error('Error completando escrutinio:', error);
-      setError(error?.response?.data?.error || 'Error completando escrutinio');
+      console.error('❌ [LEGISLATIVE] Error completando escrutinio:', error);
+      const errorMessage = error?.response?.data?.error || error?.message || 'Error completando escrutinio';
+      setError(errorMessage);
+      
+      // Mostrar alerta al usuario
+      alert(`Error completando escrutinio: ${errorMessage}`);
     } finally {
       setIsCompleting(false);
     }
-  }, [escrutinioId, uploadEvidenceIfNeeded, counts]);
+  }, [escrutinioId, uploadEvidenceIfNeeded, counts, actaImage, completedPapeletasCount, currentPapeleta]);
 
   const handleCompleteEscrutinio = useCallback(async () => {
     if (!escrutinioId) {
@@ -1014,12 +1114,15 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
     );
   };
 
-  if (loading) {
+  // Mostrar loading mientras se verifica el status o se cargan datos
+  if (isCheckingStatus || loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-          <p className="text-gray-600">Cargando datos de diputados...</p>
+          <p className="text-gray-600">
+            {isCheckingStatus ? 'Cargando escrutinio...' : 'Cargando datos de diputados...'}
+          </p>
         </div>
       </div>
     );

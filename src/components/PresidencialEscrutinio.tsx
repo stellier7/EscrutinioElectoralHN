@@ -64,12 +64,18 @@ export default function PresidencialEscrutinio({
     }
   }, [escrutinioId]);
 
+  const [isCheckingStatus, setIsCheckingStatus] = useState(true);
+
   // Verificar estado del escrutinio al cargar
   useEffect(() => {
     const checkEscrutinioStatus = async () => {
-      if (!escrutinioId) return;
+      if (!escrutinioId) {
+        setIsCheckingStatus(false);
+        return;
+      }
       
       try {
+        setIsCheckingStatus(true);
         const token = localStorage.getItem('auth-token');
         const response = await axios.get(
           `/api/escrutinio/${escrutinioId}/status`,
@@ -98,6 +104,8 @@ export default function PresidencialEscrutinio({
         }
       } catch (error) {
         console.error('❌ Error verificando status del escrutinio:', error);
+      } finally {
+        setIsCheckingStatus(false);
       }
     };
     
@@ -113,7 +121,7 @@ export default function PresidencialEscrutinio({
 
   // Función para subir acta si existe
   const uploadEvidenceIfNeeded = async (): Promise<string | null> => {
-    console.log('📸 uploadEvidenceIfNeeded called:', { 
+    console.log('📸 [PRESIDENTIAL] uploadEvidenceIfNeeded called:', { 
       actaImage: !!actaImage, 
       escrutinioId,
       actaImageDetails: actaImage ? {
@@ -124,7 +132,7 @@ export default function PresidencialEscrutinio({
       } : null
     });
     if (!actaImage || !escrutinioId) {
-      console.log('📸 No actaImage or escrutinioId, returning null', { 
+      console.log('📸 [PRESIDENTIAL] No actaImage or escrutinioId, returning null', { 
         hasActaImage: !!actaImage, 
         hasEscrutinioId: !!escrutinioId,
         actaImage,
@@ -132,36 +140,77 @@ export default function PresidencialEscrutinio({
       });
       return null;
     }
+
+    // Validar token antes de proceder
+    const token = localStorage.getItem('auth-token');
+    if (!token) {
+      console.error('📸 [PRESIDENTIAL] No hay token de autenticación');
+      throw new Error('No hay token de autenticación. Por favor inicia sesión nuevamente.');
+    }
     
     try {
-      console.log('📸 Uploading evidence:', { fileName: actaImage.name, contentType: actaImage.type });
+      console.log('📸 [PRESIDENTIAL] Uploading evidence:', { fileName: actaImage.name, contentType: actaImage.type });
       // Obtener URL de presign para subir la foto
       const presign = await axios.post('/api/upload/presign', {
         escrutinioId,
         fileName: actaImage.name,
         contentType: actaImage.type || 'image/jpeg',
+      }, {
+        headers: { 'Authorization': `Bearer ${token}` }
       });
       
-      console.log('📸 Presign response:', presign.data);
+      console.log('📸 [PRESIDENTIAL] Presign response:', presign.data);
       
-      if (presign.data?.success) {
+      if (presign.data?.success && presign.data.data) {
         const { uploadUrl, publicUrl } = presign.data.data as { uploadUrl: string; publicUrl: string };
-        console.log('📸 Uploading to:', uploadUrl);
-        await fetch(uploadUrl, {
+        
+        if (!uploadUrl || !publicUrl) {
+          throw new Error('URLs de presign inválidas');
+        }
+        
+        console.log('📸 [PRESIDENTIAL] Uploading to:', uploadUrl.substring(0, 50) + '...');
+        const uploadResponse = await fetch(uploadUrl, {
           method: 'PUT',
           headers: { 'Content-Type': actaImage.type || 'image/jpeg' },
           body: actaImage,
         });
-        console.log('📸 Upload successful, publicUrl:', publicUrl);
+        
+        if (!uploadResponse.ok) {
+          throw new Error(`Error subiendo archivo a S3: ${uploadResponse.status} ${uploadResponse.statusText}`);
+        }
+        
+        console.log('📸 [PRESIDENTIAL] Upload successful, publicUrl:', publicUrl);
+        
+        // Guardar la URL en la base de datos
+        try {
+          const evidenceResponse = await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/evidence`, {
+            publicUrl: publicUrl,
+            hash: null
+          }, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          
+          if (evidenceResponse.data?.success) {
+            console.log('📸 [PRESIDENTIAL] Evidence URL guardada exitosamente en BD');
+          } else {
+            console.warn('📸 [PRESIDENTIAL] Evidence guardado pero respuesta no exitosa:', evidenceResponse.data);
+          }
+        } catch (evidenceError: any) {
+          console.error('📸 [PRESIDENTIAL] Error guardando evidence URL en BD:', evidenceError);
+          // Continuar aunque falle el guardado de evidence, ya tenemos la URL
+        }
+        
         return publicUrl;
+      } else {
+        throw new Error('Respuesta de presign inválida o sin éxito');
       }
-    } catch (error) {
-      console.error('📸 S3 upload failed, trying fallback:', error);
+    } catch (error: any) {
+      console.error('📸 [PRESIDENTIAL] S3 upload failed, trying fallback:', error);
       // Fallback: convertir a dataUrl como en legislativo
     }
     
     try {
-      console.log('📸 Using fallback: converting to dataUrl');
+      console.log('📸 [PRESIDENTIAL] Using fallback: converting to dataUrl');
       const toDataUrl = (file: File): Promise<string> => {
         return new Promise((resolve, reject) => {
           const reader = new FileReader();
@@ -172,11 +221,34 @@ export default function PresidencialEscrutinio({
       };
       
       const dataUrl = await toDataUrl(actaImage);
-      console.log('📸 Fallback successful, dataUrl length:', dataUrl.length);
+      console.log('📸 [PRESIDENTIAL] Fallback successful, dataUrl length:', dataUrl.length);
+      
+      // Guardar la URL en la base de datos también en fallback
+      try {
+        const token = localStorage.getItem('auth-token');
+        if (token) {
+          const evidenceResponse = await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/evidence`, {
+            publicUrl: dataUrl,
+            hash: null
+          }, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          
+          if (evidenceResponse.data?.success) {
+            console.log('📸 [PRESIDENTIAL] DataURL guardada exitosamente en BD');
+          } else {
+            console.warn('📸 [PRESIDENTIAL] DataURL guardado pero respuesta no exitosa:', evidenceResponse.data);
+          }
+        }
+      } catch (evidenceError: any) {
+        console.error('📸 [PRESIDENTIAL] Error guardando DataURL en DB:', evidenceError);
+        // Continuar aunque falle el guardado
+      }
+      
       return dataUrl;
     } catch (error) {
-      console.error('📸 Fallback also failed:', error);
-      return null;
+      console.error('📸 [PRESIDENTIAL] Fallback also failed:', error);
+      throw new Error('Error subiendo foto del acta. Por favor intenta nuevamente.');
     }
   };
 
@@ -187,47 +259,63 @@ export default function PresidencialEscrutinio({
       return;
     }
 
+    // Validar token antes de proceder
+    const token = localStorage.getItem('auth-token');
+    if (!token) {
+      alert('Sesión expirada. Por favor inicia sesión nuevamente.');
+      window.location.href = '/';
+      return;
+    }
+
     setIsCompleting(true);
     
     try {
-      console.log('📸 handleSendResults - Iniciando proceso:', { 
+      console.log('📸 [PRESIDENTIAL] handleSendResults - Iniciando proceso:', { 
         escrutinioId, 
         actaImage: actaImage ? { name: actaImage.name, size: actaImage.size, type: actaImage.type } : null,
-        hasActaImage: !!actaImage,
-        actaImageFile: actaImage
+        hasActaImage: !!actaImage
       });
       
-      // Subir acta si existe (opcional)
-      const evidenceUrl = await uploadEvidenceIfNeeded();
-      console.log('📸 handleSendResults - evidenceUrl result:', evidenceUrl);
-      
-        // Si se subió acta, guardar la URL en la base de datos
-        if (evidenceUrl) {
-          console.log('📸 Guardando URL de acta:', evidenceUrl);
-          try {
-            const evidenceResponse = await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/evidence`, {
-              publicUrl: evidenceUrl,
-              hash: null // Podríamos calcular el hash si es necesario
-            });
-            console.log('📸 Evidence saved response:', evidenceResponse.data);
-          } catch (evidenceError) {
-            console.error('📸 Error saving evidence:', evidenceError);
-            // Continuar aunque falle el guardado de evidence
+      // Subir acta si existe (uploadEvidenceIfNeeded ya guarda la URL en BD)
+      if (actaImage) {
+        try {
+          const evidenceUrl = await uploadEvidenceIfNeeded();
+          console.log('📸 [PRESIDENTIAL] handleSendResults - evidenceUrl result:', evidenceUrl ? 'URL obtenida' : 'null');
+          
+          if (!evidenceUrl) {
+            console.warn('📸 [PRESIDENTIAL] No se pudo obtener URL de evidence, pero continuando...');
           }
-        } else {
-          console.log('📸 No evidence URL to save - actaImage was null or upload failed');
+        } catch (uploadError: any) {
+          console.error('📸 [PRESIDENTIAL] Error subiendo acta:', uploadError);
+          // No bloquear el proceso si falla el upload de foto, pero mostrar warning
+          const shouldContinue = confirm(
+            'Hubo un error al subir la foto del acta. ¿Deseas continuar sin foto?'
+          );
+          if (!shouldContinue) {
+            setIsCompleting(false);
+            return;
+          }
         }
+      } else {
+        console.log('📸 [PRESIDENTIAL] No hay acta para subir');
+      }
       
       // Marcar el escrutinio como completado definitivamente
-      await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/complete`);
+      await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/complete`, {}, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      console.log('✅ [PRESIDENTIAL] Escrutinio completado exitosamente');
       
       // El escrutinio ya está finalizado definitivamente, no cambiar estado local
       setIsCompleting(false);
       setShowSuccessModal(true);
-    } catch (error) {
-      console.error('Error enviando resultados:', error);
+    } catch (error: any) {
+      console.error('❌ [PRESIDENTIAL] Error enviando resultados:', error);
       setIsCompleting(false);
-      alert(`Error al enviar los resultados: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+      
+      const errorMessage = error?.response?.data?.error || error?.message || 'Error desconocido';
+      alert(`Error al enviar los resultados: ${errorMessage}`);
     }
   };
 
@@ -392,6 +480,18 @@ export default function PresidencialEscrutinio({
 
   // Verificar si hay al menos un voto
   const hasVotes = getTotalVotes() > 0;
+
+  // Mostrar loading mientras se verifica el status del escrutinio
+  if (isCheckingStatus) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+          <p className="text-gray-600">Cargando escrutinio...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
