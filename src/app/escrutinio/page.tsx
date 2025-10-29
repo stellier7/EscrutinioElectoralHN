@@ -363,6 +363,7 @@ function EscrutinioPageContent() {
         } else {
           setGpsError('No se pudo obtener tu ubicación. Por favor, habilita la ubicación en tu dispositivo e intenta nuevamente.');
         }
+        setIsStarting(false);
         return;
       }
       
@@ -389,6 +390,7 @@ function EscrutinioPageContent() {
               saveState({ location: result });
               setGpsSuccess(true);
               setTimeout(() => setGpsSuccess(false), 3000);
+              setIsStarting(false);
               return;
             } else {
               console.log('⚠️ [ESCRUTINIO] Escrutinio no está activo (status:', status, '), limpiando estado local');
@@ -479,9 +481,15 @@ function EscrutinioPageContent() {
         });
         
         console.log('🎉 [ESCRUTINIO] Escrutinio iniciado exitosamente con GPS');
+        
+        // Establecer isStarting en false DESPUÉS de guardar el estado
+        // Esto previene el glimpse al asegurar que el estado esté completamente guardado
+        // antes de renderizar los componentes de escrutinio
+        setIsStarting(false);
       } else {
         console.error('❌ [ESCRUTINIO] Respuesta del servidor no exitosa:', resp.data);
         alert(resp.data?.error || 'No se pudo iniciar el escrutinio');
+        setIsStarting(false);
       }
     } catch (e: any) {
       console.error('❌ [ESCRUTINIO] Error en handleGetLocation:', e);
@@ -498,7 +506,7 @@ function EscrutinioPageContent() {
       } else {
         alert(e?.response?.data?.error || 'Error inesperado. Por favor, intenta nuevamente.');
       }
-    } finally {
+      
       setIsStarting(false);
     }
   };
@@ -1031,8 +1039,18 @@ function EscrutinioPageContent() {
                 </div>
               );
             })()}
-            {/* Show different UI based on election level */}
-            {escrutinioState.selectedLevel === 'LEGISLATIVE' ? (
+            {/* Show loading spinner mientras se está creando el escrutinio */}
+            {isStarting ? (
+              <div className="bg-white p-6 rounded-lg shadow-sm border">
+                <div className="text-center py-8">
+                  <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Iniciando Escrutinio</h3>
+                  <p className="text-gray-600">
+                    Obteniendo ubicación GPS y creando escrutinio...
+                  </p>
+                </div>
+              </div>
+            ) : escrutinioState.selectedLevel === 'LEGISLATIVE' ? (
               <DiputadosEscrutinio 
                 jrvNumber={escrutinioState.selectedMesa} 
                 escrutinioId={escrutinioState.escrutinioId || undefined}
