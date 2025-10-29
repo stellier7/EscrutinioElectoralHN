@@ -207,23 +207,38 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
   useEffect(() => {
     // Solo inicializar si tenemos escrutinioId y userId, y aún no se ha inicializado
     // Y también verificar que el escrutinioId del estado coincide con el prop
-    // Esto asegura que el estado se haya cargado completamente desde localStorage
-    if (escrutinioId && userId && !isStateInitializedRef.current && escrutinioState.escrutinioId === escrutinioId) {
+    // IMPORTANTE: Verificar que el estado NO sea undefined/null para asegurar que se cargó desde localStorage
+    const hasLoadedState = escrutinioState.escrutinioId !== null && escrutinioState.escrutinioId !== undefined;
+    const isStateReady = escrutinioId && userId && !isStateInitializedRef.current && escrutinioState.escrutinioId === escrutinioId && hasLoadedState;
+    
+    if (isStateReady) {
+      // Leer directamente desde localStorage como respaldo para asegurar que tenemos los valores correctos
+      let localStorageState: any = null;
+      try {
+        const stored = localStorage.getItem('escrutinio-state');
+        if (stored) {
+          localStorageState = JSON.parse(stored);
+        }
+      } catch (error) {
+        console.warn('Error leyendo localStorage:', error);
+      }
+      
       console.log('🔄 Inicializando papeleta simplificada...');
-      console.log('📦 Estado completo disponible:', {
+      console.log('📦 Estado desde hook:', {
         papeleta: escrutinioState.legislativeCurrentPapeleta,
         party: escrutinioState.legislativeExpandedParty,
         votes: escrutinioState.legislativePapeletaVotes,
         completed: escrutinioState.legislativeCompletedPapeletas
       });
+      console.log('📦 Estado desde localStorage:', localStorageState);
       
-      // Check if there's persisted state from useEscrutinioPersistence
-      const persistedPapeleta = escrutinioState.legislativeCurrentPapeleta;
-      const persistedParty = escrutinioState.legislativeExpandedParty;
-      const persistedVotes = escrutinioState.legislativePapeletaVotes;
-      const persistedCompletedCount = escrutinioState.legislativeCompletedPapeletas;
+      // Usar valores del hook primero, pero si están undefined/null, intentar desde localStorage directamente
+      const persistedPapeleta = escrutinioState.legislativeCurrentPapeleta ?? localStorageState?.legislativeCurrentPapeleta;
+      const persistedParty = escrutinioState.legislativeExpandedParty ?? localStorageState?.legislativeExpandedParty;
+      const persistedVotes = escrutinioState.legislativePapeletaVotes ?? localStorageState?.legislativePapeletaVotes;
+      const persistedCompletedCount = escrutinioState.legislativeCompletedPapeletas ?? localStorageState?.legislativeCompletedPapeletas;
       
-      // Restaurar número de papeleta (aceptar cualquier número > 0, incluyendo 1)
+      // Restaurar número de papeleta (aceptar cualquier número >= 1)
       if (persistedPapeleta !== undefined && persistedPapeleta !== null && persistedPapeleta >= 1) {
         console.log('📦 Restaurando papeleta desde estado persistido:', persistedPapeleta);
         setCurrentPapeleta(persistedPapeleta);
@@ -238,13 +253,20 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
         setExpandedParty(persistedParty);
       }
       
-      // CRÍTICO: Restaurar marcas si existen (incluso si está vacío, restaurar el objeto vacío)
+      // CRÍTICO: Restaurar marcas si existen
+      // Usar valores del hook primero, pero si están undefined/null, intentar desde localStorage directamente
       if (persistedVotes !== undefined && persistedVotes !== null) {
-        console.log('📦 Restaurando marcas desde estado persistido:', persistedVotes);
-        setPapeletaVotes(persistedVotes);
+        if (Object.keys(persistedVotes).length > 0) {
+          console.log('📦 Restaurando marcas desde estado persistido:', persistedVotes);
+          setPapeletaVotes(persistedVotes);
+        } else {
+          console.log('📦 Estado persistido indica marcas vacías, inicializando vacío');
+          setPapeletaVotes({});
+        }
       } else {
-        console.log('📦 No hay marcas persistidas, inicializando vacío');
-        setPapeletaVotes({});
+        console.log('⏸️ Esperando que el estado se cargue completamente...');
+        // No hacer nada aún, el estado aún no está completamente cargado
+        return;
       }
       
       // Restaurar contador de papeletas completadas (aceptar 0 también)
@@ -256,7 +278,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
         setCompletedPapeletasCount(0);
       }
       
-      // Marcar como inicializado
+      // Marcar como inicializado SOLO si logramos restaurar todo
       isStateInitializedRef.current = true;
     } else if (!escrutinioId) {
       // Resetear flag si no hay escrutinioId
