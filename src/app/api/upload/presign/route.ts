@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
 
     const key = `escrutinios/${encodeURIComponent(escrutinioId)}/${Date.now()}-${fileName.replace(/\s+/g, '_')}`;
 
-    console.log('📸 Generating S3 presigned URL:', { key, contentType });
+    console.log('📸 [PRESIGN API] Generating S3 presigned URL:', { key, contentType });
     
     const s3 = new S3Client({ region: env.AWS_REGION });
     const command = new PutObjectCommand({ Bucket: env.AWS_S3_BUCKET, Key: key, ContentType: contentType });
@@ -55,9 +55,22 @@ export async function POST(request: NextRequest) {
 
     const publicUrl = `https://${env.AWS_S3_BUCKET}.s3.${env.AWS_REGION}.amazonaws.com/${key}`;
 
-    console.log('📸 Presigned URL generated successfully:', { uploadUrl: uploadUrl.substring(0, 50) + '...', publicUrl, key });
+    console.log('📸 [PRESIGN API] Presigned URL generated successfully:', { 
+      uploadUrl: uploadUrl.substring(0, 50) + '...', 
+      publicUrl,
+      key,
+      escrutinioId 
+    });
 
-    return NextResponse.json({ success: true, data: { uploadUrl, publicUrl, key } });
+    // Asegurar formato consistente: siempre retornar data: { uploadUrl, publicUrl }
+    return NextResponse.json({ 
+      success: true, 
+      data: { 
+        uploadUrl, 
+        publicUrl, 
+        key 
+      } 
+    });
   } catch (e: any) {
     return NextResponse.json({ success: false, error: e?.message || 'Error generando URL de subida' }, { status: 500 });
   }
