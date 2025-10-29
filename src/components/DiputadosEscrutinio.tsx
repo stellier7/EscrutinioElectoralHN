@@ -103,6 +103,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
   };
   const lastEscrutinioIdRef = useRef<string | null>(getInitialLastEscrutinioId());
   const isStateInitializedRef = useRef(false);
+  const isInitializingRef = useRef(true); // Prevenir guardado durante inicialización
 
   // Verificar estado del escrutinio al cargar
   useEffect(() => {
@@ -181,8 +182,9 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
         if (typeof window !== 'undefined') {
           localStorage.setItem('last-legislative-escrutinio-id', escrutinioId);
         }
-        // Resetear flag de inicialización para permitir que se restaure el estado
+        // Resetear flags de inicialización para permitir que se restaure el estado
         isStateInitializedRef.current = false;
+        isInitializingRef.current = true; // Permitir inicialización del nuevo escrutinio
       } else {
         console.log('🔄 [LEGISLATIVE] Mismo escrutinio, manteniendo votos del store');
       }
@@ -194,9 +196,10 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
         console.error('❌ [LEGISLATIVE] Error cargando votos desde servidor:', error);
       });
     } else {
-      // Si no hay escrutinioId, resetear el ref
+      // Si no hay escrutinioId, resetear los refs
       lastEscrutinioIdRef.current = null;
       isStateInitializedRef.current = false;
+      isInitializingRef.current = false;
       if (typeof window !== 'undefined') {
         localStorage.removeItem('last-legislative-escrutinio-id');
       }
@@ -212,7 +215,10 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
     const isStateReady = escrutinioId && userId && !isStateInitializedRef.current && escrutinioState.escrutinioId === escrutinioId && hasLoadedState;
     
     if (isStateReady) {
-      // Leer directamente desde localStorage como respaldo para asegurar que tenemos los valores correctos
+      // CRÍTICO: Establecer flag de inicialización ANTES de restaurar para prevenir guardado prematuro
+      isInitializingRef.current = true;
+      
+      // Leer directamente desde localStorage como fuente principal (el hook puede no haber cargado aún)
       let localStorageState: any = null;
       try {
         const stored = localStorage.getItem('escrutinio-state');
@@ -232,11 +238,11 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
       });
       console.log('📦 Estado desde localStorage:', localStorageState);
       
-      // Usar valores del hook primero, pero si están undefined/null, intentar desde localStorage directamente
-      const persistedPapeleta = escrutinioState.legislativeCurrentPapeleta ?? localStorageState?.legislativeCurrentPapeleta;
-      const persistedParty = escrutinioState.legislativeExpandedParty ?? localStorageState?.legislativeExpandedParty;
-      const persistedVotes = escrutinioState.legislativePapeletaVotes ?? localStorageState?.legislativePapeletaVotes;
-      const persistedCompletedCount = escrutinioState.legislativeCompletedPapeletas ?? localStorageState?.legislativeCompletedPapeletas;
+      // Usar localStorage como fuente principal, fallback al hook si localStorage no tiene los valores
+      const persistedPapeleta = localStorageState?.legislativeCurrentPapeleta ?? escrutinioState.legislativeCurrentPapeleta;
+      const persistedParty = localStorageState?.legislativeExpandedParty ?? escrutinioState.legislativeExpandedParty;
+      const persistedVotes = localStorageState?.legislativePapeletaVotes ?? escrutinioState.legislativePapeletaVotes;
+      const persistedCompletedCount = localStorageState?.legislativeCompletedPapeletas ?? escrutinioState.legislativeCompletedPapeletas;
       
       // Restaurar número de papeleta (aceptar cualquier número >= 1)
       if (persistedPapeleta !== undefined && persistedPapeleta !== null && persistedPapeleta >= 1) {
@@ -254,7 +260,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
       }
       
       // CRÍTICO: Restaurar marcas si existen
-      // Usar valores del hook primero, pero si están undefined/null, intentar desde localStorage directamente
+      // Usar localStorage como fuente principal
       if (persistedVotes !== undefined && persistedVotes !== null) {
         if (Object.keys(persistedVotes).length > 0) {
           console.log('📦 Restaurando marcas desde estado persistido:', persistedVotes);
@@ -266,6 +272,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
       } else {
         console.log('⏸️ Esperando que el estado se cargue completamente...');
         // No hacer nada aún, el estado aún no está completamente cargado
+        isInitializingRef.current = false; // Resetear flag si no podemos restaurar
         return;
       }
       
@@ -278,18 +285,38 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
         setCompletedPapeletasCount(0);
       }
       
-      // Marcar como inicializado SOLO si logramos restaurar todo
+      // Marcar como inicializado SOLO después de restaurar todos los valores
       isStateInitializedRef.current = true;
+      
+      // CRÍTICO: Establecer flag de inicialización en false DESPUÉS de restaurar todo
+      // Usar setTimeout para asegurar que todos los setState se hayan procesado
+      setTimeout(() => {
+        isInitializingRef.current = false;
+        console.log('✅ Inicialización completada, persistencia habilitada');
+      }, 100);
     } else if (!escrutinioId) {
-      // Resetear flag si no hay escrutinioId
+      // Resetear flags si no hay escrutinioId
       isStateInitializedRef.current = false;
+      isInitializingRef.current = false;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [escrutinioId, userId, escrutinioState.escrutinioId, escrutinioState.legislativeCurrentPapeleta, escrutinioState.legislativePapeletaVotes, escrutinioState.legislativeCompletedPapeletas]);
 
   // Persistir estado de papeleta cuando cambia
   useEffect(() => {
+    // CRÍTICO: NO guardar durante la inicialización para evitar sobrescribir valores correctos
+    if (isInitializingRef.current) {
+      console.log('⏸️ Persistencia pausada durante inicialización');
+      return;
+    }
+    
     if (escrutinioId) {
+      console.log('💾 Guardando estado de papeleta:', {
+        papeleta: currentPapeleta,
+        party: expandedParty,
+        votes: papeletaVotes,
+        completed: completedPapeletasCount
+      });
       saveState({
         legislativeCurrentPapeleta: currentPapeleta,
         legislativeExpandedParty: expandedParty,
