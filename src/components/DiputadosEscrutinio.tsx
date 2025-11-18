@@ -178,11 +178,16 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
         localStorage.getItem('is-new-escrutinio') === 'true' &&
         localStorage.getItem('new-escrutinio-id') === escrutinioId;
       
-      // Solo limpiar si es un NUEVO escrutinio (diferente al anterior)
-      if (lastEscrutinioIdRef.current !== escrutinioId) {
+      // CRITICAL: Limpiar si es un NUEVO escrutinio (diferente al anterior) o si lastEscrutinioIdRef es null
+      // Esto asegura que siempre empezamos limpio cuando hay un nuevo escrutinio
+      const isDifferentEscrutinio = lastEscrutinioIdRef.current !== escrutinioId;
+      const isFirstEscrutinio = lastEscrutinioIdRef.current === null;
+      
+      if (isDifferentEscrutinio || isFirstEscrutinio) {
         console.log('🔄 [LEGISLATIVE] Nuevo escrutinio detectado, limpiando store local...');
         console.log('📊 [LEGISLATIVE] Escrutinio anterior:', lastEscrutinioIdRef.current, '→ Nuevo:', escrutinioId);
-        clearVotes(); // Limpiar solo si es un nuevo escrutinio
+        // CRITICAL: Limpiar el store ANTES de cualquier otra operación
+        clearVotes();
         lastEscrutinioIdRef.current = escrutinioId;
         // Guardar en localStorage para persistir entre refrescos
         if (typeof window !== 'undefined') {
@@ -197,7 +202,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
       
       // Solo cargar votos del servidor si NO es un escrutinio nuevo
       // Los escrutinios nuevos deben empezar de 0
-      if (!isNewEscrutinio) {
+      if (!isNewEscrutinio && !isFirstEscrutinio && !isDifferentEscrutinio) {
         console.log('📊 [LEGISLATIVE] Cargando votos desde servidor para escrutinio:', escrutinioId);
         loadVotesFromServer(escrutinioId).then(() => {
           console.log('✅ [LEGISLATIVE] Votos cargados desde servidor');

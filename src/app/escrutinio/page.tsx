@@ -509,11 +509,11 @@ function EscrutinioPageContent() {
       if (resp.data?.success && resp.data?.data?.escrutinioId) {
         const newEscrutinioId = resp.data.data.escrutinioId;
         
-        // CRITICAL: Clear store immediately when creating new escrutinio to prevent ghost numbers
-        console.log('🧹 Limpiando store al crear nuevo escrutinio');
-        voteStore.clear();
+        // NO limpiar los stores aquí - los componentes detectarán que es un nuevo escrutinio
+        // y limpiarán el store cuando se monten con el nuevo escrutinioId
+        // Esto permite tener múltiples escrutinios abiertos sin interferir entre sí
         
-        // Limpiar localStorage del escrutinioId viejo para presidencial y legislativo
+        // Limpiar localStorage del escrutinioId viejo para que el nuevo se detecte correctamente
         if (typeof window !== 'undefined') {
           localStorage.removeItem('last-presidential-escrutinio-id');
           localStorage.removeItem('last-legislative-escrutinio-id');
@@ -765,14 +765,14 @@ function EscrutinioPageContent() {
                   onClick={() => {
                     // Limpiar estado y ir al paso 1 (configuración)
                     clearState();
-                    // Limpiar también el store de votos y las claves del último escrutinio
+                    // Limpiar solo las claves de tracking para permitir que el nuevo escrutinio se detecte como nuevo
+                    // NO borramos los stores persistidos porque pueden haber otros escrutinios abiertos
                     if (typeof window !== 'undefined') {
-                      import('@/store/voteStore').then(({ useVoteStore }) => {
-                        useVoteStore.getState().clear();
-                      });
-                      localStorage.removeItem('last-escrutinio-key');
+                      // Limpiar claves de tracking para que el nuevo escrutinio se detecte como nuevo
                       localStorage.removeItem('last-presidential-escrutinio-id');
                       localStorage.removeItem('last-legislative-escrutinio-id');
+                      localStorage.removeItem('is-new-escrutinio');
+                      localStorage.removeItem('new-escrutinio-id');
                     }
                     // Ir al paso 1 para configurar nuevo escrutinio
                     saveState({ currentStep: 1 });

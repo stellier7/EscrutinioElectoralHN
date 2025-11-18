@@ -85,11 +85,16 @@ export default function PresidencialEscrutinio({
         localStorage.getItem('is-new-escrutinio') === 'true' &&
         localStorage.getItem('new-escrutinio-id') === escrutinioId;
       
-      // Solo limpiar si es un NUEVO escrutinio (diferente al anterior)
-      if (lastEscrutinioIdRef.current !== escrutinioId) {
+      // CRITICAL: Limpiar si es un NUEVO escrutinio (diferente al anterior) o si lastEscrutinioIdRef es null
+      // Esto asegura que siempre empezamos limpio cuando hay un nuevo escrutinio
+      const isDifferentEscrutinio = lastEscrutinioIdRef.current !== escrutinioId;
+      const isFirstEscrutinio = lastEscrutinioIdRef.current === null;
+      
+      if (isDifferentEscrutinio || isFirstEscrutinio) {
         console.log('🔄 [PRESIDENTIAL] Nuevo escrutinio detectado, limpiando store local...');
         console.log('📊 [PRESIDENTIAL] Escrutinio anterior:', lastEscrutinioIdRef.current, '→ Nuevo:', escrutinioId);
-        clearVotes(); // Limpiar solo si es un nuevo escrutinio
+        // CRITICAL: Limpiar el store ANTES de cualquier otra operación
+        clearVotes();
         lastEscrutinioIdRef.current = escrutinioId;
         // Guardar en localStorage para persistir entre refrescos
         if (typeof window !== 'undefined') {
@@ -101,7 +106,7 @@ export default function PresidencialEscrutinio({
       
       // Solo cargar votos del servidor si NO es un escrutinio nuevo
       // Los escrutinios nuevos deben empezar de 0
-      if (!isNewEscrutinio) {
+      if (!isNewEscrutinio && !isFirstEscrutinio && !isDifferentEscrutinio) {
         console.log('📊 [PRESIDENTIAL] Cargando votos desde servidor para escrutinio:', escrutinioId);
         const { loadFromServer } = useVoteStore.getState();
         loadFromServer(escrutinioId).then(() => {
@@ -686,7 +691,13 @@ export default function PresidencialEscrutinio({
 
           {/* Lista de Candidatos */}
           <div className="space-y-3 mb-8">
-            {candidates.map((c) => (
+            {candidates
+              .filter((c) => {
+                // Excluir candidatos especiales (998 y 999) que se manejan con botones separados
+                const candidateNumber = typeof c.number === 'number' ? c.number : parseInt(String(c.number || '0'));
+                return candidateNumber !== 998 && candidateNumber !== 999;
+              })
+              .map((c) => (
               <VoteCard
                 key={c.id}
                 id={c.id}
