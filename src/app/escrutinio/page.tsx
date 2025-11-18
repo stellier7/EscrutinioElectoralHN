@@ -1114,24 +1114,36 @@ function EscrutinioPageContent() {
                 onEscrutinioStatusChange={handleEscrutinioStatusChange}
               />
             ) : escrutinioState.escrutinioId ? (
-              <PresidencialEscrutinio
-                candidates={filteredCandidates.map((c) => ({
-                  id: c.id,
-                  name: c.name,
-                  party: mapPartyToDisplayName(c.party),
-                  number: c.number,
-                  partyColor: getPartyColor(c.party),
-                }))}
-                escrutinioId={escrutinioState.escrutinioId}
-                userId={user?.id}
-                mesaId={escrutinioState.selectedMesa}
-                jrvNumber={escrutinioState.selectedMesa}
-                jrvLocation={escrutinioState.selectedMesaInfo?.location || 'N/A'}
-                department={escrutinioState.selectedMesaInfo?.department || 'N/A'}
-                gps={escrutinioState.location ? { latitude: escrutinioState.location.lat, longitude: escrutinioState.location.lng, accuracy: escrutinioState.location.accuracy || 0 } : null}
-                deviceId={typeof window !== 'undefined' ? localStorage.getItem('device-id') || undefined : undefined}
-                onEscrutinioStatusChange={handleEscrutinioStatusChange}
-              />
+              (() => {
+                const jrvLocationProp = escrutinioState.selectedMesaInfo?.location || 'N/A';
+                const departmentProp = escrutinioState.selectedMesaInfo?.department || 'N/A';
+                console.log('📍 [DEBUG] Props passed to PresidencialEscrutinio:', {
+                  jrvNumber: escrutinioState.selectedMesa,
+                  jrvLocation: jrvLocationProp,
+                  department: departmentProp,
+                  selectedMesaInfo: escrutinioState.selectedMesaInfo
+                });
+                return (
+                  <PresidencialEscrutinio
+                    candidates={filteredCandidates.map((c) => ({
+                      id: c.id,
+                      name: c.name,
+                      party: mapPartyToDisplayName(c.party),
+                      number: c.number,
+                      partyColor: getPartyColor(c.party),
+                    }))}
+                    escrutinioId={escrutinioState.escrutinioId}
+                    userId={user?.id}
+                    mesaId={escrutinioState.selectedMesa}
+                    jrvNumber={escrutinioState.selectedMesa}
+                    jrvLocation={jrvLocationProp}
+                    department={departmentProp}
+                    gps={escrutinioState.location ? { latitude: escrutinioState.location.lat, longitude: escrutinioState.location.lng, accuracy: escrutinioState.location.accuracy || 0 } : null}
+                    deviceId={typeof window !== 'undefined' ? localStorage.getItem('device-id') || undefined : undefined}
+                    onEscrutinioStatusChange={handleEscrutinioStatusChange}
+                  />
+                );
+              })()
             ) : (
               <div className="bg-white p-6 rounded-lg shadow-sm border">
                 <div className="text-center py-8">

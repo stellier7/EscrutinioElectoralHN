@@ -29,6 +29,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
           select: {
             id: true,
             number: true,
+            location: true,
+            department: true,
             // cargaElectoral se obtendrá después si existe
           }
         }
@@ -68,6 +70,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         id: escrutinio.id,
         status: escrutinio.status,
         mesaNumber: escrutinio.mesa.number,
+        mesaLocation: escrutinio.mesa.location,
+        mesaDepartment: escrutinio.mesa.department,
         cargaElectoral: cargaElectoral
       }
     });

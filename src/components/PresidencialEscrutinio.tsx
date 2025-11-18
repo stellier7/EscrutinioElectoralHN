@@ -58,6 +58,14 @@ export default function PresidencialEscrutinio({
   const [isClosing, setIsClosing] = useState(false);
   const [isReopening, setIsReopening] = useState(false);
   const [cargaElectoral, setCargaElectoral] = useState<number | null>(null);
+  const [mesaLocationFromServer, setMesaLocationFromServer] = useState<string | null>(null);
+  const [mesaDepartmentFromServer, setMesaDepartmentFromServer] = useState<string | null>(null);
+
+  // Debug: Log state changes
+  useEffect(() => {
+    console.log('📍 [DEBUG] mesaLocationFromServer state:', mesaLocationFromServer);
+    console.log('📍 [DEBUG] mesaDepartmentFromServer state:', mesaDepartmentFromServer);
+  }, [mesaLocationFromServer, mesaDepartmentFromServer]);
 
   // Ref para trackear el último escrutinioId y limpiar store cuando cambia
   const getInitialLastEscrutinioId = (): string | null => {
@@ -138,11 +146,34 @@ export default function PresidencialEscrutinio({
         if (response.data?.success) {
           const status = response.data.data.status;
           const cargaElectoralData = response.data.data.cargaElectoral;
+          const mesaLocation = response.data.data.mesaLocation;
+          const mesaDepartment = response.data.data.mesaDepartment;
+          
+          // Debug logging
+          console.log('📍 [DEBUG] Response from status API:', response.data.data);
+          console.log('📍 [DEBUG] mesaLocation:', mesaLocation);
+          console.log('📍 [DEBUG] mesaDepartment:', mesaDepartment);
+          console.log('📍 [DEBUG] cargaElectoral:', cargaElectoralData);
+          console.log('📍 [DEBUG] jrvLocation prop:', jrvLocation);
+          console.log('📍 [DEBUG] department prop:', department);
           console.log('📊 [PRESIDENTIAL] Status del escrutinio:', status);
           
           // Guardar carga electoral
           if (cargaElectoralData !== null && cargaElectoralData !== undefined) {
             setCargaElectoral(cargaElectoralData);
+            console.log('📍 [DEBUG] cargaElectoral state set to:', cargaElectoralData);
+          } else {
+            console.log('📍 [DEBUG] cargaElectoral is null/undefined, not setting state');
+          }
+          
+          // Guardar información de la mesa desde el servidor para usar si los props no tienen la info correcta
+          if (mesaLocation) {
+            setMesaLocationFromServer(mesaLocation);
+            console.log('📍 [DEBUG] mesaLocationFromServer state set to:', mesaLocation);
+          }
+          if (mesaDepartment) {
+            setMesaDepartmentFromServer(mesaDepartment);
+            console.log('📍 [DEBUG] mesaDepartmentFromServer state set to:', mesaDepartment);
           }
           
           // Si el escrutinio está CLOSED o COMPLETED, bloquear la interfaz
@@ -563,9 +594,39 @@ export default function PresidencialEscrutinio({
                 JRV {jrvNumber || 'N/A'}
               </div>
               <div className="text-xs text-gray-500">
-                {jrvLocation && department && jrvLocation !== 'N/A' && department !== 'N/A' 
-                  ? `${jrvLocation} - ${department}`
-                  : jrvLocation || department || 'N/A'}
+                {(() => {
+                  // Usar información del servidor si los props no tienen la info correcta
+                  // Check if jrvLocation is invalid (equals number, 'N/A', or is empty)
+                  const isJrvLocationInvalid = !jrvLocation || 
+                    jrvLocation === 'N/A' || 
+                    jrvLocation === jrvNumber || 
+                    jrvLocation === `JRV ${jrvNumber}` ||
+                    (typeof jrvLocation === 'string' && jrvLocation.trim() === '');
+                  
+                  // Check if department is invalid
+                  const isDepartmentInvalid = !department || 
+                    department === 'N/A' || 
+                    (typeof department === 'string' && department.trim() === '');
+                  
+                  // Prioritize server data if props are invalid, otherwise use props
+                  const location = isJrvLocationInvalid 
+                    ? (mesaLocationFromServer || jrvLocation || 'N/A')
+                    : jrvLocation;
+                  const dept = isDepartmentInvalid 
+                    ? (mesaDepartmentFromServer || department || 'N/A')
+                    : department;
+                  
+                  // Format the display string
+                  if (location && location !== 'N/A' && dept && dept !== 'N/A') {
+                    return `${location} - ${dept}`;
+                  } else if (location && location !== 'N/A') {
+                    return location;
+                  } else if (dept && dept !== 'N/A') {
+                    return dept;
+                  } else {
+                    return 'N/A';
+                  }
+                })()}
               </div>
             </div>
           </div>
@@ -580,12 +641,10 @@ export default function PresidencialEscrutinio({
               Conteo de Votos Presidenciales
             </h2>
             <div className="text-sm text-gray-600">
-              {cargaElectoral !== null ? (
+              {cargaElectoral !== null && cargaElectoral !== undefined ? (
                 <div>Carga Electoral: {cargaElectoral.toLocaleString()}</div>
-              ) : jrvNumber ? (
-                <div>JRV {jrvNumber}</div>
               ) : (
-                'Selecciona candidatos para votar'
+                <div>Carga Electoral: Cargando...</div>
               )}
             </div>
           </div>
