@@ -80,11 +80,13 @@ export function VoteCard({ id, name, party, partyColor = '#e5e7eb', number, coun
       onMouseUp={cancelLongPress}
       disabled={disabled}
       className={clsx(
-        'w-full flex items-center rounded-lg border shadow-sm focus:outline-none focus:ring-2 transition-transform',
+        'w-full flex items-center rounded-lg border shadow-sm focus:outline-none focus:ring-2 transition-all duration-200',
         'active:scale-[0.98] touch-manipulation select-none',
+        'hover:shadow-md hover:border-gray-400',
         animate && 'scale-[1.02]',
         'min-h-[90px] sm:min-h-[70px]', // Altura mínima para mejor toque
-        disabled && 'opacity-50 cursor-not-allowed'
+        disabled && 'opacity-50 cursor-not-allowed',
+        !disabled && 'cursor-pointer'
       )}
       style={{ 
         backgroundColor: getTransparentColor(effectivePartyColor, 0.2),
@@ -94,6 +96,16 @@ export function VoteCard({ id, name, party, partyColor = '#e5e7eb', number, coun
       }}
       data-testid={`vote-card-${id}`}
     >
+      {/* Símbolo + grande a la izquierda */}
+      <div className="flex items-center justify-center px-3 sm:px-4 py-2 sm:py-4">
+        <div className={clsx(
+          'text-4xl sm:text-5xl font-light select-none',
+          disabled ? 'text-gray-300' : 'text-gray-500'
+        )}>
+          +
+        </div>
+      </div>
+      
       <div className="flex-1 p-1 sm:p-4 text-left">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">

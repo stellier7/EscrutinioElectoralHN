@@ -3,6 +3,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, AlertCircle, CheckCircle, FileText, Camera, Upload, Vote } from 'lucide-react';
 import VoteCard from '@/components/VoteCard';
+import VoteHelpTooltip from '@/components/VoteHelpTooltip';
 import { useVoteStore } from '@/store/voteStore';
 import axios from 'axios';
 
@@ -596,6 +597,9 @@ export default function PresidencialEscrutinio({
               </div>
             </div>
           )}
+
+          {/* Tooltip de ayuda para primera vez */}
+          <VoteHelpTooltip />
 
           {/* Lista de Candidatos */}
           <div className="space-y-3 mb-8">
