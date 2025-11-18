@@ -241,8 +241,12 @@ function EscrutinioPageContent() {
       // cuando se cree el nuevo
     }
 
-    // Guardar el nivel seleccionado
-    saveState({ selectedLevel: level });
+    // Guardar el nivel seleccionado y avanzar al paso 2
+    // Esto permite mostrar la pantalla de "GPS Requerido" mientras se obtiene GPS
+    saveState({ 
+      selectedLevel: level,
+      currentStep: 2 // Avanzar al paso 2 para obtener GPS
+    });
 
     // Automáticamente obtener GPS y continuar con el nivel correcto
     await handleGetLocation(level);
@@ -413,47 +417,9 @@ function EscrutinioPageContent() {
       console.log('✅ [ESCRUTINIO] Ubicación GPS obtenida exitosamente:', result);
       setGpsError(null); // Limpiar error si se obtuvo exitosamente
       
-      // Si ya hay escrutinio activo, limpiar estado local para permitir crear uno nuevo
-      // El GPS solo se obtiene al iniciar un nuevo escrutinio, no se actualiza
-      if (escrutinioState.escrutinioId) {
-        try {
-          console.log('🔍 Verificando status del escrutinio existente:', escrutinioState.escrutinioId);
-          const token = localStorage.getItem('auth-token');
-          const statusResponse = await axios.get(
-            `/api/escrutinio/${escrutinioState.escrutinioId}/status`,
-            { headers: { 'Authorization': `Bearer ${token}` } }
-          );
-          
-          if (statusResponse.data?.success) {
-            const status = statusResponse.data.data.status;
-            console.log('📊 Status del escrutinio:', status);
-            
-            // Si el escrutinio está activo, no permitir crear uno nuevo sin cerrar primero
-            if (status === 'PENDING' || status === 'IN_PROGRESS') {
-              console.log('⚠️ [ESCRUTINIO] Ya hay un escrutinio activo, no se puede obtener GPS nuevamente');
-              alert('Ya hay un escrutinio activo. El GPS solo se obtiene al iniciar un nuevo escrutinio.');
-              setIsStarting(false);
-              return;
-            } else {
-              console.log('⚠️ [ESCRUTINIO] Escrutinio no está activo (status:', status, '), limpiando estado local');
-              // Clear localStorage completely to prevent ghost votes
-              localStorage.removeItem('escrutinio-state');
-              localStorage.removeItem('last-escrutinio-key');
-              // El escrutinio no está activo, limpiar estado local y continuar con creación de nuevo
-              saveState({ escrutinioId: null });
-            }
-          } else {
-            console.log('⚠️ [ESCRUTINIO] No se pudo verificar status, limpiando estado local');
-            saveState({ escrutinioId: null });
-          }
-        } catch (error) {
-          console.error('❌ [ESCRUTINIO] Error verificando status del escrutinio:', error);
-          // Si hay error, limpiar estado local y continuar con creación de nuevo
-          localStorage.removeItem('escrutinio-state');
-          localStorage.removeItem('last-escrutinio-key');
-          saveState({ escrutinioId: null });
-        }
-      }
+      // El API maneja la detección de escrutinios duplicados correctamente
+      // No necesitamos verificar aquí - el GPS se captura una vez por escrutinio
+      // y múltiples escrutinios pueden funcionar independientemente
       
       // Usar el nivel pasado como parámetro o el del estado
       const level = electionLevel || escrutinioState.selectedLevel;

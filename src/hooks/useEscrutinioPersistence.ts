@@ -204,17 +204,23 @@ export function useEscrutinioPersistence() {
         };
       }
       
-      // Solo saltar al paso 2 si también tenemos un escrutinioId (escritinio activo)
-      // PERO NO saltar si la información de la mesa aún está cargando
-      if (escrutinioIdFromUrl && state.currentStep === 1) {
-        // No saltar al paso 2 si la información de la mesa está en "Cargando..."
-        // Esto permite que el efecto en page.tsx cargue la información primero
-        if (state.selectedMesaInfo?.location !== 'Cargando...') {
-          console.log('⏭️ Saltando al paso 2 porque hay escrutinioId en URL');
-          state.currentStep = 2; // Saltar al paso de conteo
-        } else {
-          console.log('⏸️ Esperando información de mesa antes de saltar al paso 2');
+      // Saltar al paso 2 si:
+      // 1. Tenemos un escrutinioId válido (de URL o localStorage) - escrutinio ya iniciado
+      // 2. O tenemos nivel y JRV seleccionados - usuario seleccionó nivel, debe ir al paso 2 para obtener GPS
+      // Esto permite mostrar la pantalla de "GPS Requerido" en el paso 2 mientras se obtiene GPS
+      const escrutinioId = escrutinioIdFromUrl || state.escrutinioId;
+      if (escrutinioId) {
+        console.log('⏭️ Saltando al paso 2 porque hay escrutinioId:', escrutinioId);
+        state.currentStep = 2; // Saltar al paso de conteo
+        // Asegurar que el escrutinioId esté en el estado
+        if (!state.escrutinioId) {
+          state.escrutinioId = escrutinioId;
         }
+      } else if (levelFromUrl && jrvFromUrl) {
+        // Si hay nivel y JRV en URL pero no escrutinioId, significa que el usuario
+        // seleccionó el nivel y debe ir al paso 2 para obtener GPS
+        console.log('⏭️ Saltando al paso 2 porque hay nivel y JRV seleccionados (esperando GPS)');
+        state.currentStep = 2;
       }
     } else {
       // Si no hay parámetros de URL, siempre empezar en paso 1
