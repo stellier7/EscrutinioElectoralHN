@@ -1556,10 +1556,10 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
                 Revisar Resultados
               </button>
               <button
-                onClick={() => setShowSuccessModal(false)}
+                onClick={() => router.push('/dashboard')}
                 className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
               >
-                Cerrar
+                Volver
               </button>
             </div>
           </div>

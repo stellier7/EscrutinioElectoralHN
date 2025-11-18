@@ -568,8 +568,7 @@ export default function PresidencialEscrutinio({
 
   // Función para volver a la pantalla principal
   const handleGoBack = () => {
-    // Aquí se implementaría la navegación de vuelta
-    window.location.href = '/';
+    router.push('/dashboard');
   };
 
   const getTotalVotes = () => {
@@ -878,11 +877,6 @@ export default function PresidencialEscrutinio({
                     <div className="flex items-center gap-2 text-sm text-green-800">
                       <CheckCircle className="h-4 w-4" />
                       <span>Foto seleccionada: {actaImage.name}</span>
-                      {actaImageSource && (
-                        <span className="ml-2 text-green-600">
-                          ({actaImageSource === 'CAMERA' ? 'Tomada con cámara' : 'Subida desde galería'})
-                        </span>
-                      )}
                     </div>
                   </div>
                 )}
