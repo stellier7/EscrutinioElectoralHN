@@ -577,9 +577,20 @@ export default function PresidencialEscrutinio({
             <h2 className="text-lg font-semibold text-gray-900">
               Conteo de Votos Presidenciales
             </h2>
-            <p className="text-sm text-gray-600">
-              {jrvNumber ? `${jrvNumber} - ${jrvLocation || 'N/A'}` : 'Selecciona candidatos para votar'}
-            </p>
+            <div className="text-sm text-gray-600">
+              {jrvNumber ? (
+                <>
+                  <div>JRV {jrvNumber}</div>
+                  {cargaElectoral !== null && (
+                    <div className="text-xs text-gray-500 mt-1">
+                      Carga Electoral: {cargaElectoral.toLocaleString()}
+                    </div>
+                  )}
+                </>
+              ) : (
+                'Selecciona candidatos para votar'
+              )}
+            </div>
           </div>
 
           {/* Carga Electoral - Simple */}

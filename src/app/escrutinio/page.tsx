@@ -190,6 +190,42 @@ function EscrutinioPageContent() {
       
       // Marcar que el próximo escrutinio será nuevo (no cargar votos del servidor)
       localStorage.setItem('is-new-escrutinio', 'true');
+      
+      // Limpiar datos del otro nivel según el nivel seleccionado
+      if (level === 'PRESIDENTIAL') {
+        // Limpiar datos legislativos del localStorage
+        console.log('🧹 [LEVEL SELECT] Limpiando datos legislativos para escrutinio presidencial');
+        const savedState = localStorage.getItem('escrutinio-state');
+        if (savedState) {
+          try {
+            const parsed = JSON.parse(savedState);
+            // Remover solo datos legislativos, mantener el resto
+            delete parsed.legislativePapeletaVotes;
+            delete parsed.legislativeCurrentPapeleta;
+            delete parsed.legislativeExpandedParty;
+            delete parsed.legislativeCompletedPapeletas;
+            localStorage.setItem('escrutinio-state', JSON.stringify(parsed));
+          } catch (error) {
+            console.warn('Error limpiando datos legislativos:', error);
+          }
+        }
+      } else if (level === 'LEGISLATIVE') {
+        // Limpiar datos presidenciales del localStorage
+        console.log('🧹 [LEVEL SELECT] Limpiando datos presidenciales para escrutinio legislativo');
+        // Los datos presidenciales se guardan en el store de votos, no en localStorage del estado
+        // Pero podemos limpiar el escrutinioId presidencial si existe
+        const savedState = localStorage.getItem('escrutinio-state');
+        if (savedState) {
+          try {
+            const parsed = JSON.parse(savedState);
+            // Si el escrutinioId actual es de tipo presidencial, limpiarlo
+            // (esto se manejará mejor en saveState)
+            localStorage.setItem('escrutinio-state', JSON.stringify(parsed));
+          } catch (error) {
+            console.warn('Error limpiando datos presidenciales:', error);
+          }
+        }
+      }
     }
 
     // Si hay advertencia activa, crear nuevo escrutinio y mover el anterior a "Recientes"

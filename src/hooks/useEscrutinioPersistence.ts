@@ -57,17 +57,27 @@ export function useEscrutinioPersistence() {
       const updatedState = { ...prevState, ...newState };
       
       // Guardar en localStorage solo lo esencial
+      // Solo guardar datos legislativos si el nivel actual es LEGISLATIVE
+      // Solo guardar datos presidenciales si el nivel actual es PRESIDENTIAL
       try {
-        const essentialData = {
+        const essentialData: any = {
           escrutinioId: updatedState.escrutinioId,
           actaImage: updatedState.actaImage,
           isEscrutinioFinished: updatedState.isEscrutinioFinished,
           location: updatedState.location,
-          legislativeCurrentPapeleta: updatedState.legislativeCurrentPapeleta,
-          legislativeExpandedParty: updatedState.legislativeExpandedParty,
-          legislativePapeletaVotes: updatedState.legislativePapeletaVotes,
-          legislativeCompletedPapeletas: updatedState.legislativeCompletedPapeletas,
         };
+        
+        // Solo incluir datos legislativos si el nivel es LEGISLATIVE
+        if (updatedState.selectedLevel === 'LEGISLATIVE') {
+          essentialData.legislativeCurrentPapeleta = updatedState.legislativeCurrentPapeleta;
+          essentialData.legislativeExpandedParty = updatedState.legislativeExpandedParty;
+          essentialData.legislativePapeletaVotes = updatedState.legislativePapeletaVotes;
+          essentialData.legislativeCompletedPapeletas = updatedState.legislativeCompletedPapeletas;
+        } else if (updatedState.selectedLevel === 'PRESIDENTIAL') {
+          // Si es PRESIDENTIAL, asegurar que los datos legislativos no se guarden
+          // (ya están undefined, pero por seguridad los excluimos explícitamente)
+        }
+        
         localStorage.setItem(STORAGE_KEY, JSON.stringify(essentialData));
       } catch (error) {
         console.warn('Error saving escrutinio state to localStorage:', error);
@@ -129,17 +139,33 @@ export function useEscrutinioPersistence() {
         if (parsed.location) {
           state.location = parsed.location;
         }
-        if (parsed.legislativeCurrentPapeleta !== undefined) {
-          state.legislativeCurrentPapeleta = parsed.legislativeCurrentPapeleta;
-        }
-        if (parsed.legislativeExpandedParty !== undefined) {
-          state.legislativeExpandedParty = parsed.legislativeExpandedParty;
-        }
-        if (parsed.legislativePapeletaVotes !== undefined) {
-          state.legislativePapeletaVotes = parsed.legislativePapeletaVotes;
-        }
-        if (parsed.legislativeCompletedPapeletas !== undefined) {
-          state.legislativeCompletedPapeletas = parsed.legislativeCompletedPapeletas;
+        
+        // Solo cargar datos legislativos si el nivel es LEGISLATIVE
+        // Esto previene que datos legislativos se carguen cuando se está en un escrutinio presidencial
+        // Primero verificar la URL, luego el parsed state
+        const levelFromUrl = searchParams.get('level');
+        const currentLevel = levelFromUrl || parsed.selectedLevel;
+        const shouldLoadLegislative = currentLevel === 'LEGISLATIVE';
+        
+        if (shouldLoadLegislative) {
+          if (parsed.legislativeCurrentPapeleta !== undefined) {
+            state.legislativeCurrentPapeleta = parsed.legislativeCurrentPapeleta;
+          }
+          if (parsed.legislativeExpandedParty !== undefined) {
+            state.legislativeExpandedParty = parsed.legislativeExpandedParty;
+          }
+          if (parsed.legislativePapeletaVotes !== undefined) {
+            state.legislativePapeletaVotes = parsed.legislativePapeletaVotes;
+          }
+          if (parsed.legislativeCompletedPapeletas !== undefined) {
+            state.legislativeCompletedPapeletas = parsed.legislativeCompletedPapeletas;
+          }
+        } else {
+          // Si no es LEGISLATIVE, asegurar que los datos legislativos estén undefined
+          state.legislativeCurrentPapeleta = undefined;
+          state.legislativeExpandedParty = undefined;
+          state.legislativePapeletaVotes = undefined;
+          state.legislativeCompletedPapeletas = undefined;
         }
         
         console.log('🔄 Estado después de cargar localStorage:', JSON.stringify(state, null, 2));
