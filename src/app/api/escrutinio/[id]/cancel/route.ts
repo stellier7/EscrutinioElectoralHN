@@ -28,7 +28,21 @@ export async function POST(request: Request, { params }: { params: { id: string 
     console.log('🔍 Looking for escrutinio:', escrutinioId);
     const existing = await prisma.escrutinio.findUnique({ 
       where: { id: escrutinioId },
-      include: { mesa: true }
+      include: { 
+        mesa: {
+          select: {
+            id: true,
+            number: true,
+            location: true,
+            department: true,
+            municipality: true,
+            area: true,
+            address: true,
+            isActive: true,
+            // cargaElectoral no se necesita para cancel, evitar errores si la migración no se ha ejecutado
+          }
+        }
+      }
     });
     
     if (!existing) {

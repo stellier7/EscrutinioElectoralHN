@@ -336,6 +336,9 @@ export default function DashboardPage() {
                                 localStorage.removeItem(`party-counts-${jrvNumber}-LEGISLATIVE`);
                                 localStorage.removeItem(`applied-votes-${jrvNumber}-LEGISLATIVE`);
                                 localStorage.removeItem(`papeleta-number-${jrvNumber}-LEGISLATIVE`);
+                                // Limpiar keys de escrutinioId
+                                localStorage.removeItem('last-presidential-escrutinio-id');
+                                localStorage.removeItem('last-legislative-escrutinio-id');
                                 console.log('🧹 LocalStorage limpiado para JRV:', jrvNumber);
                               }
                             }
@@ -567,6 +570,9 @@ export default function DashboardPage() {
                                   localStorage.removeItem(`party-counts-${jrvNumber}-LEGISLATIVE`);
                                   localStorage.removeItem(`applied-votes-${jrvNumber}-LEGISLATIVE`);
                                   localStorage.removeItem(`papeleta-number-${jrvNumber}-LEGISLATIVE`);
+                                  // Limpiar keys de escrutinioId
+                                  localStorage.removeItem('last-presidential-escrutinio-id');
+                                  localStorage.removeItem('last-legislative-escrutinio-id');
                                   console.log('🧹 LocalStorage limpiado para JRV:', jrvNumber);
                                 }
                               }

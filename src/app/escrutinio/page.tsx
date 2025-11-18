@@ -309,21 +309,9 @@ function EscrutinioPageContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [escrutinioState.selectedMesa, escrutinioState.selectedMesaInfo?.location]);
 
-  // Cargar votos existentes cuando se establece el escrutinioId
-  useEffect(() => {
-    const loadExistingVotes = async () => {
-      if (!escrutinioState.escrutinioId) return;
-      
-      try {
-        console.log('🔄 Cargando votos existentes para escrutinio:', escrutinioState.escrutinioId);
-        await voteStore.loadFromServer(escrutinioState.escrutinioId);
-        console.log('✅ Votos cargados exitosamente');
-      } catch (error) {
-        console.warn('No se pudieron cargar votos existentes:', error);
-      }
-    };
-    loadExistingVotes();
-  }, [escrutinioState.escrutinioId]); // Solo depender del escrutinioId
+  // Los votos se cargan automáticamente en PresidencialEscrutinio y DiputadosEscrutinio
+  // cuando se montan con el escrutinioId correcto. No necesitamos cargar aquí para evitar
+  // conflictos con la lógica de limpieza de store en esos componentes.
 
   // Map party acronyms to display names using party config
   const mapPartyToDisplayName = (party: string): string => {
@@ -464,9 +452,17 @@ function EscrutinioPageContent() {
       
       const resp = await axios.post('/api/escrutinio/start', payload);
       if (resp.data?.success && resp.data?.data?.escrutinioId) {
+        const newEscrutinioId = resp.data.data.escrutinioId;
+        
         // CRITICAL: Clear store immediately when creating new escrutinio to prevent ghost numbers
         console.log('🧹 Limpiando store al crear nuevo escrutinio');
         voteStore.clear();
+        
+        // Limpiar localStorage del escrutinioId viejo para presidencial y legislativo
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('last-presidential-escrutinio-id');
+          localStorage.removeItem('last-legislative-escrutinio-id');
+        }
         
         // Mostrar mensaje de éxito por un momento
         setGpsSuccess(true);
@@ -474,7 +470,7 @@ function EscrutinioPageContent() {
         
         // Guardar el estado del escrutinio iniciado
         saveState({
-          escrutinioId: resp.data.data.escrutinioId,
+          escrutinioId: newEscrutinioId,
           currentStep: 2, // Ir al paso de conteo después de obtener GPS
           location: result,
           selectedLevel: level, // Asegurar que el nivel se guarde correctamente
@@ -701,12 +697,14 @@ function EscrutinioPageContent() {
                   onClick={() => {
                     // Limpiar estado y ir al paso 1 (configuración)
                     clearState();
-                    // Limpiar también el store de votos y la clave del último escrutinio
+                    // Limpiar también el store de votos y las claves del último escrutinio
                     if (typeof window !== 'undefined') {
                       import('@/store/voteStore').then(({ useVoteStore }) => {
                         useVoteStore.getState().clear();
                       });
                       localStorage.removeItem('last-escrutinio-key');
+                      localStorage.removeItem('last-presidential-escrutinio-id');
+                      localStorage.removeItem('last-legislative-escrutinio-id');
                     }
                     // Ir al paso 1 para configurar nuevo escrutinio
                     saveState({ currentStep: 1 });

@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, AlertCircle, CheckCircle, FileText, Camera, Upload, Vote } from 'lucide-react';
 import VoteCard from '@/components/VoteCard';
@@ -59,12 +59,48 @@ export default function PresidencialEscrutinio({
   const [isReopening, setIsReopening] = useState(false);
   const [cargaElectoral, setCargaElectoral] = useState<number | null>(null);
 
-  // NO limpiar votos automáticamente - los votos se cargan desde el servidor
+  // Ref para trackear el último escrutinioId y limpiar store cuando cambia
+  const getInitialLastEscrutinioId = (): string | null => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('last-presidential-escrutinio-id');
+    }
+    return null;
+  };
+  const lastEscrutinioIdRef = useRef<string | null>(getInitialLastEscrutinioId());
+
+  // Cargar votos desde servidor - solo limpiar si es un NUEVO escrutinio
   useEffect(() => {
     if (escrutinioId) {
-      console.log('🔄 [PRESIDENTIAL] Escrutinio activo:', escrutinioId);
+      // Solo limpiar si es un NUEVO escrutinio (diferente al anterior)
+      if (lastEscrutinioIdRef.current !== escrutinioId) {
+        console.log('🔄 [PRESIDENTIAL] Nuevo escrutinio detectado, limpiando store local...');
+        console.log('📊 [PRESIDENTIAL] Escrutinio anterior:', lastEscrutinioIdRef.current, '→ Nuevo:', escrutinioId);
+        clearVotes(); // Limpiar solo si es un nuevo escrutinio
+        lastEscrutinioIdRef.current = escrutinioId;
+        // Guardar en localStorage para persistir entre refrescos
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('last-presidential-escrutinio-id', escrutinioId);
+        }
+      } else {
+        console.log('🔄 [PRESIDENTIAL] Mismo escrutinio, manteniendo votos del store');
+      }
+      
+      // Cargar votos desde el servidor para el escrutinioId correcto
+      console.log('📊 [PRESIDENTIAL] Cargando votos desde servidor para escrutinio:', escrutinioId);
+      const { loadFromServer } = useVoteStore.getState();
+      loadFromServer(escrutinioId).then(() => {
+        console.log('✅ [PRESIDENTIAL] Votos cargados desde servidor');
+      }).catch((error) => {
+        console.error('❌ [PRESIDENTIAL] Error cargando votos desde servidor:', error);
+      });
+    } else {
+      // Si no hay escrutinioId, resetear el ref
+      lastEscrutinioIdRef.current = null;
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('last-presidential-escrutinio-id');
+      }
     }
-  }, [escrutinioId]);
+  }, [escrutinioId, clearVotes]);
 
   const [isCheckingStatus, setIsCheckingStatus] = useState(true);
 
@@ -394,23 +430,7 @@ export default function PresidencialEscrutinio({
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
-      // Log de auditoría para congelación
-      try {
-        await axios.post('/api/audit/log', {
-          action: 'CLOSE_ESCRUTINIO',
-          description: `Froze escrutinio ${escrutinioId} with ${Object.values(votesSnapshot).reduce((a, b) => a + b, 0)} total votes`,
-          metadata: {
-            escrutinioId,
-            totalVotes: Object.values(votesSnapshot).reduce((a, b) => a + b, 0),
-            gps: finalGps,
-            timestamp: Date.now()
-          }
-        }, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-      } catch (auditError) {
-        console.warn('Failed to log freeze audit:', auditError);
-      }
+      // Log de auditoría se crea automáticamente en el endpoint /api/escrutinio/[id]/close
 
       console.log('✅ [PRESIDENTIAL] Checkpoint enviado con snapshot correcto');
 
@@ -547,54 +567,20 @@ export default function PresidencialEscrutinio({
             </p>
           </div>
 
-          {/* Carga Electoral */}
+          {/* Carga Electoral - Simple */}
           {cargaElectoral !== null && (
-            <div className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                  <Vote className="h-4 w-4 text-blue-600" />
-                  Carga Electoral
-                </h3>
-                <span className={`text-sm font-bold ${
-                  getTotalVotes() > cargaElectoral ? 'text-red-600' :
-                  getTotalVotes() > cargaElectoral * 0.9 ? 'text-orange-600' :
-                  'text-blue-600'
-                }`}>
-                  {getTotalVotes().toLocaleString()} / {cargaElectoral.toLocaleString()}
+            <div className="mb-4">
+              <div className="text-sm text-gray-600">
+                <span className={getTotalVotes() >= cargaElectoral ? 'text-red-600 font-semibold' : ''}>
+                  Votos: {getTotalVotes().toLocaleString()} / {cargaElectoral.toLocaleString()}
                 </span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-3 mb-2">
-                <div
-                  className={`h-3 rounded-full transition-all duration-300 ${
-                    getTotalVotes() > cargaElectoral ? 'bg-red-500' :
-                    getTotalVotes() > cargaElectoral * 0.9 ? 'bg-orange-500' :
-                    'bg-blue-500'
-                  }`}
-                  style={{
-                    width: `${Math.min((getTotalVotes() / cargaElectoral) * 100, 100)}%`
-                  }}
-                />
-              </div>
-              <div className="flex items-center justify-between text-xs text-gray-600">
-                <span>
-                  {cargaElectoral > 0 
-                    ? `${((getTotalVotes() / cargaElectoral) * 100).toFixed(1)}% utilizado`
-                    : '0% utilizado'
-                  }
-                </span>
-                {getTotalVotes() > cargaElectoral && (
-                  <span className="text-red-600 font-semibold flex items-center gap-1">
-                    <AlertCircle className="h-3 w-3" />
-                    Excede el máximo
-                  </span>
-                )}
-                {getTotalVotes() <= cargaElectoral && getTotalVotes() > cargaElectoral * 0.9 && (
-                  <span className="text-orange-600 font-semibold flex items-center gap-1">
-                    <AlertCircle className="h-3 w-3" />
-                    Cerca del límite
-                  </span>
-                )}
-              </div>
+              {getTotalVotes() >= cargaElectoral && (
+                <div className="mt-2 text-sm text-red-600 font-semibold flex items-center gap-1">
+                  <AlertCircle className="h-4 w-4" />
+                  Se ha alcanzado el máximo de votos permitidos
+                </div>
+              )}
             </div>
           )}
 

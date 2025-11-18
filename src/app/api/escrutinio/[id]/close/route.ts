@@ -45,7 +45,21 @@ export async function POST(request: Request, { params }: { params: { id: string 
     }
     const existing = await prisma.escrutinio.findUnique({ 
       where: { id: escrutinioId },
-      include: { mesa: true }
+      include: { 
+        mesa: {
+          select: {
+            id: true,
+            number: true,
+            location: true,
+            department: true,
+            municipality: true,
+            area: true,
+            address: true,
+            isActive: true,
+            // cargaElectoral no se necesita para close, evitar errores si la migración no se ha ejecutado
+          }
+        }
+      }
     });
     if (!existing) return NextResponse.json({ success: false, error: 'Escrutinio no encontrado' }, { status: 404 });
     

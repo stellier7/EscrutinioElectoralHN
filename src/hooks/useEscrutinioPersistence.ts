@@ -258,8 +258,10 @@ export function useEscrutinioPersistence() {
         useLegislativeVoteStore.getState().clear();
       });
       
-      // Limpiar la clave del último escrutinio
+      // Limpiar las claves del último escrutinio
       localStorage.removeItem('last-escrutinio-key');
+      localStorage.removeItem('last-presidential-escrutinio-id');
+      localStorage.removeItem('last-legislative-escrutinio-id');
     }
     
     // 3. Limpiar estado local

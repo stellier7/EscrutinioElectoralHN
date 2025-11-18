@@ -28,7 +28,19 @@ export async function GET(
         // Remover filtro de status para debugging
       },
       include: {
-        mesa: true,
+        mesa: {
+          select: {
+            id: true,
+            number: true,
+            location: true,
+            department: true,
+            municipality: true,
+            area: true,
+            address: true,
+            isActive: true,
+            // cargaElectoral no se necesita para review, evitar errores si la migración no se ha ejecutado
+          }
+        },
         user: {
           select: {
             id: true,
