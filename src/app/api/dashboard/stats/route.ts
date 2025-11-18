@@ -81,8 +81,24 @@ export async function GET(request: NextRequest) {
         ...(userRole === 'ADMIN' ? {} : { userId: userId }), // Solo admins ven todos
       },
       include: {
-        mesa: true,
-        election: true,
+        mesa: {
+          select: {
+            id: true,
+            number: true,
+            location: true,
+            department: true,
+            municipality: true,
+            area: true,
+            // cargaElectoral no se necesita para el dashboard
+          }
+        },
+        election: {
+          select: {
+            id: true,
+            name: true,
+            isActive: true,
+          }
+        },
       },
       orderBy: {
         createdAt: 'desc',
@@ -99,8 +115,24 @@ export async function GET(request: NextRequest) {
         ...(userRole === 'ADMIN' ? {} : { userId: userId }), // Solo admins ven todos
       },
       include: {
-        mesa: true,
-        election: true,
+        mesa: {
+          select: {
+            id: true,
+            number: true,
+            location: true,
+            department: true,
+            municipality: true,
+            area: true,
+            // cargaElectoral no se necesita para el dashboard
+          }
+        },
+        election: {
+          select: {
+            id: true,
+            name: true,
+            isActive: true,
+          }
+        },
       },
       orderBy: {
         completedAt: 'desc',
@@ -172,10 +204,18 @@ export async function GET(request: NextRequest) {
       data: responseData,
     });
   } catch (error) {
-    console.error('Error fetching dashboard stats:', error);
+    console.error('❌ Error fetching dashboard stats:', error);
+    console.error('❌ Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined,
+    });
     return NextResponse.json({
       success: false,
       error: 'Error interno del servidor',
+      details: process.env.NODE_ENV === 'development' 
+        ? (error instanceof Error ? error.message : 'Unknown error')
+        : undefined,
     }, { status: 500 });
   }
 }
