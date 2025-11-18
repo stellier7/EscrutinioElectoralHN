@@ -22,7 +22,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
     const escrutinioId = params.id;
     const body = await request.json();
-    const { publicUrl, hash } = body as { publicUrl: string; hash?: string };
+    const { publicUrl, hash, actaImageSource } = body as { publicUrl: string; hash?: string; actaImageSource?: string };
     
     console.log('📸 [EVIDENCE API] Evidence data received:', { 
       escrutinioId,
@@ -58,8 +58,12 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     console.log('📸 [EVIDENCE API] Saving evidence to database...');
     const updatedEscrutinio = await prisma.escrutinio.update({
       where: { id: escrutinioId },
-      data: { actaImageUrl: publicUrl, actaImageHash: hash },
-      select: { id: true, actaImageUrl: true }
+      data: { 
+        actaImageUrl: publicUrl, 
+        actaImageHash: hash,
+        actaImageSource: actaImageSource || null
+      },
+      select: { id: true, actaImageUrl: true, actaImageSource: true }
     });
 
     console.log('📸 [EVIDENCE API] Evidence saved successfully:', {

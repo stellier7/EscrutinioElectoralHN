@@ -50,6 +50,7 @@ export default function PresidencialEscrutinio({
 
   // Estados para foto y finalización
   const [actaImage, setActaImage] = useState<File | null>(null);
+  const [actaImageSource, setActaImageSource] = useState<'CAMERA' | 'LIBRARY' | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -202,11 +203,15 @@ export default function PresidencialEscrutinio({
     checkEscrutinioStatus();
   }, [escrutinioId]);
 
-  const handleActaUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleActaUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>, source: 'CAMERA' | 'LIBRARY') => {
     const file = event.target.files?.[0];
     if (file) {
       setActaImage(file);
+      setActaImageSource(source);
+      console.log('📸 [PRESIDENTIAL] Acta seleccionada:', file.name, 'Origen:', source);
     }
+    // Reset input para permitir seleccionar el mismo archivo de nuevo
+    event.target.value = '';
   }, []);
 
   // Función para subir acta si existe
@@ -275,7 +280,8 @@ export default function PresidencialEscrutinio({
         try {
           const evidenceResponse = await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/evidence`, {
             publicUrl: publicUrl,
-            hash: null
+            hash: null,
+            actaImageSource
           }, {
             headers: { 'Authorization': `Bearer ${token}` }
           });
@@ -319,7 +325,8 @@ export default function PresidencialEscrutinio({
         if (token) {
           const evidenceResponse = await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/evidence`, {
             publicUrl: dataUrl,
-            hash: null
+            hash: null,
+            actaImageSource
           }, {
             headers: { 'Authorization': `Bearer ${token}` }
           });
@@ -701,6 +708,57 @@ export default function PresidencialEscrutinio({
             ))}
           </div>
 
+          {/* Botones de Voto en Blanco y Voto Nulo */}
+          <div className="grid grid-cols-2 gap-3 mb-8">
+            <VoteCard
+              id="BLANK_VOTE"
+              name="Voto en Blanco"
+              party="Voto en Blanco"
+              partyColor="#9ca3af"
+              count={counts["BLANK_VOTE"] || 0}
+              isPending={false}
+              disabled={isEscrutinioClosed}
+              onIncrement={() => {
+                if (!isEscrutinioClosed) {
+                  // Validar que no se exceda la carga electoral
+                  if (cargaElectoral !== null && getTotalVotes() >= cargaElectoral) {
+                    alert(`No se pueden agregar más votos. La carga electoral máxima es ${cargaElectoral.toLocaleString()} votos.`);
+                    return;
+                  }
+                  increment("BLANK_VOTE", { escrutinioId, userId, mesaId, gps: gps || undefined, deviceId });
+                }
+              }}
+              onDecrement={() => {
+                if (!isEscrutinioClosed) {
+                  decrement("BLANK_VOTE", { escrutinioId, userId, mesaId, gps: gps || undefined, deviceId });
+                }
+              }}
+            />
+            <VoteCard
+              id="NULL_VOTE"
+              name="Voto Nulo"
+              party="Voto Nulo"
+              partyColor="#6b7280"
+              count={counts["NULL_VOTE"] || 0}
+              isPending={false}
+              disabled={isEscrutinioClosed}
+              onIncrement={() => {
+                if (!isEscrutinioClosed) {
+                  // Validar que no se exceda la carga electoral
+                  if (cargaElectoral !== null && getTotalVotes() >= cargaElectoral) {
+                    alert(`No se pueden agregar más votos. La carga electoral máxima es ${cargaElectoral.toLocaleString()} votos.`);
+                    return;
+                  }
+                  increment("NULL_VOTE", { escrutinioId, userId, mesaId, gps: gps || undefined, deviceId });
+                }
+              }}
+              onDecrement={() => {
+                if (!isEscrutinioClosed) {
+                  decrement("NULL_VOTE", { escrutinioId, userId, mesaId, gps: gps || undefined, deviceId });
+                }
+              }}
+            />
+          </div>
 
           {/* Sección de Control de Escrutinio y Foto */}
           <div className="mt-8 space-y-4">
@@ -781,17 +839,44 @@ export default function PresidencialEscrutinio({
                 Foto del Acta
               </h3>
               <div className="space-y-3">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleActaUpload}
-                  disabled={false}
-                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                />
+                <div className="flex gap-2">
+                  <label className="flex-1 cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={(e) => handleActaUpload(e, 'CAMERA')}
+                      className="hidden"
+                      id="acta-camera-presidential"
+                    />
+                    <div className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg text-sm text-center hover:bg-blue-700 transition-colors">
+                      📷 Tomar foto
+                    </div>
+                  </label>
+                  <label className="flex-1 cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleActaUpload(e, 'LIBRARY')}
+                      className="hidden"
+                      id="acta-library-presidential"
+                    />
+                    <div className="w-full px-4 py-2 bg-gray-600 text-white rounded-lg text-sm text-center hover:bg-gray-700 transition-colors">
+                      🖼️ Seleccionar de galería
+                    </div>
+                  </label>
+                </div>
                 {actaImage && (
-                  <div className="flex items-center gap-2 text-sm text-green-600">
-                    <CheckCircle className="h-4 w-4" />
-                    <span>Foto seleccionada: {actaImage.name}</span>
+                  <div className="p-2 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center gap-2 text-sm text-green-800">
+                      <CheckCircle className="h-4 w-4" />
+                      <span>Foto seleccionada: {actaImage.name}</span>
+                      {actaImageSource && (
+                        <span className="ml-2 text-green-600">
+                          ({actaImageSource === 'CAMERA' ? 'Tomada con cámara' : 'Subida desde galería'})
+                        </span>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>

@@ -17,6 +17,7 @@ interface EscrutinioState {
   escrutinioId: string | null;
   isEscrutinioFinished: boolean;
   actaImage: File | null;
+  actaImageSource: 'CAMERA' | 'LIBRARY' | null;
   location: {
     lat: number;
     lng: number;
@@ -43,6 +44,7 @@ export function useEscrutinioPersistence() {
     escrutinioId: null,
     isEscrutinioFinished: false,
     actaImage: null,
+    actaImageSource: null,
     location: null,
     legislativeCurrentPapeleta: undefined,
     legislativeExpandedParty: undefined,
@@ -63,6 +65,7 @@ export function useEscrutinioPersistence() {
         const essentialData: any = {
           escrutinioId: updatedState.escrutinioId,
           actaImage: updatedState.actaImage,
+          actaImageSource: updatedState.actaImageSource,
           isEscrutinioFinished: updatedState.isEscrutinioFinished,
           location: updatedState.location,
         };
@@ -110,6 +113,7 @@ export function useEscrutinioPersistence() {
       escrutinioId: null,
       isEscrutinioFinished: false,
       actaImage: null,
+      actaImageSource: null,
       location: null,
       legislativeCurrentPapeleta: undefined,
       legislativeExpandedParty: undefined,
@@ -132,6 +136,9 @@ export function useEscrutinioPersistence() {
         }
         if (parsed.actaImage) {
           state.actaImage = parsed.actaImage;
+        }
+        if (parsed.actaImageSource) {
+          state.actaImageSource = parsed.actaImageSource;
         }
         if (parsed.isEscrutinioFinished) {
           state.isEscrutinioFinished = parsed.isEscrutinioFinished;
@@ -239,6 +246,7 @@ export function useEscrutinioPersistence() {
       escrutinioId: null,
       isEscrutinioFinished: false,
       actaImage: null,
+      actaImageSource: null,
       location: null,
       legislativeCurrentPapeleta: undefined,
       legislativeExpandedParty: undefined,

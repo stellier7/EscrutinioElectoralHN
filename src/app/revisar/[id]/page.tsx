@@ -41,6 +41,7 @@ interface EscrutinioData {
     votes: number;
   }>;
   actaUrl?: string;
+  actaImageSource?: string | null;
   initialGps?: {
     latitude: number;
     longitude: number;
@@ -782,9 +783,20 @@ export default function RevisarEscrutinioPage() {
         {escrutinioData.actaUrl ? (
           <div className="bg-white rounded-lg shadow-sm border">
             <div className="p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <Camera className="h-6 w-6 text-primary-600" />
-                <h2 className="text-xl font-semibold text-gray-900">Acta Fotográfica</h2>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <Camera className="h-6 w-6 text-primary-600" />
+                  <h2 className="text-xl font-semibold text-gray-900">Acta Fotográfica</h2>
+                </div>
+                {escrutinioData.actaImageSource && (
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                    escrutinioData.actaImageSource === 'CAMERA' 
+                      ? 'bg-blue-100 text-blue-800' 
+                      : 'bg-gray-100 text-gray-800'
+                  }`}>
+                    {escrutinioData.actaImageSource === 'CAMERA' ? '📷 Tomada con cámara' : '🖼️ Subida desde galería'}
+                  </span>
+                )}
               </div>
               <div className="bg-gray-50 rounded-lg p-4">
                 <img 

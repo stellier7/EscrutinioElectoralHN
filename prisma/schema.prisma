@@ -238,6 +238,7 @@ model Escrutinio {
   // Evidencia
   actaImageUrl    String?
   actaImageHash   String?
+  actaImageSource String?  // 'CAMERA' | 'LIBRARY' - origen de la foto
   
   // Validación
   validationHash  String?

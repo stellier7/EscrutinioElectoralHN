@@ -73,6 +73,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
   const [expandedParty, setExpandedParty] = useState<string | null>(null);
   const [animation, setAnimation] = useState<AnimationState>({ show: false, x: 0, y: 0, partyId: '' });
   const [actaImage, setActaImage] = useState<File | null>(null);
+  const [actaImageSource, setActaImageSource] = useState<'CAMERA' | 'LIBRARY' | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
@@ -639,12 +640,15 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
   }, [getTotalPartyCount]);
 
   // Funciones para manejar foto y cierre de escrutinio
-  const handleActaUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleActaUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>, source: 'CAMERA' | 'LIBRARY') => {
     const file = event.target.files?.[0];
     if (file) {
       setActaImage(file);
-      console.log('📸 [LEGISLATIVE] Acta seleccionada:', file.name);
+      setActaImageSource(source);
+      console.log('📸 [LEGISLATIVE] Acta seleccionada:', file.name, 'Origen:', source);
     }
+    // Reset input para permitir seleccionar el mismo archivo de nuevo
+    event.target.value = '';
   }, []);
 
   const uploadEvidenceIfNeeded = useCallback(async (): Promise<string | null> => {
@@ -700,7 +704,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
         // Guardar la URL en la base de datos
         try {
           const evidenceResponse = await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/evidence`, 
-            { publicUrl }, 
+            { publicUrl, actaImageSource }, 
             { headers: { 'Authorization': `Bearer ${token}` } }
           );
           
@@ -747,7 +751,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
         const token = localStorage.getItem('auth-token');
         if (token) {
           const evidenceResponse = await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/evidence`, 
-            { publicUrl: dataUrl }, 
+            { publicUrl: dataUrl, actaImageSource }, 
             { headers: { 'Authorization': `Bearer ${token}` } }
           );
           
@@ -769,7 +773,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
       setIsUploading(false);
       throw new Error('Error subiendo foto del acta. Por favor intenta nuevamente.');
     }
-  }, [actaImage, escrutinioId]);
+  }, [actaImage, escrutinioId, actaImageSource]);
 
   // Función para proceder con la finalización del escrutinio
   const proceedWithCompletion = useCallback(async () => {
@@ -1425,16 +1429,47 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
               <p className="text-sm text-gray-600">Subir evidencia</p>
             </div>
           </div>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleActaUpload}
-            disabled={false}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
-          />
-          {actaImage && (
-            <p className="text-xs text-green-600 mt-1">✓ {actaImage.name}</p>
-          )}
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              <label className="flex-1 cursor-pointer">
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={(e) => handleActaUpload(e, 'CAMERA')}
+                  className="hidden"
+                  id="acta-camera-legislative"
+                />
+                <div className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg text-sm text-center hover:bg-blue-700 transition-colors">
+                  📷 Tomar foto
+                </div>
+              </label>
+              <label className="flex-1 cursor-pointer">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleActaUpload(e, 'LIBRARY')}
+                  className="hidden"
+                  id="acta-library-legislative"
+                />
+                <div className="w-full px-4 py-2 bg-gray-600 text-white rounded-lg text-sm text-center hover:bg-gray-700 transition-colors">
+                  🖼️ Seleccionar de galería
+                </div>
+              </label>
+            </div>
+            {actaImage && (
+              <div className="p-2 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-xs text-green-800">
+                  ✓ {actaImage.name} 
+                  {actaImageSource && (
+                    <span className="ml-2 text-green-600">
+                      ({actaImageSource === 'CAMERA' ? 'Tomada con cámara' : 'Subida desde galería'})
+                    </span>
+                  )}
+                </p>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Enviar Resultados */}

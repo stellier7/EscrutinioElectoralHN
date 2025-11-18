@@ -306,6 +306,7 @@ export async function GET(
       totalVotes,
       candidates,
       actaUrl,
+      actaImageSource: escrutinio.actaImageSource || null,
       initialGps,
       finalGps,
       user: escrutinio.user,

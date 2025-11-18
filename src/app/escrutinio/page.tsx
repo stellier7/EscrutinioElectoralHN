@@ -567,11 +567,13 @@ function EscrutinioPageContent() {
 
   // counts are managed by store now
 
-  const handleActaUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleActaUpload = (e: React.ChangeEvent<HTMLInputElement>, source: 'CAMERA' | 'LIBRARY') => {
     const file = e.target.files?.[0];
     if (file) {
-      saveState({ actaImage: file });
+      saveState({ actaImage: file, actaImageSource: source });
     }
+    // Reset input para permitir seleccionar el mismo archivo de nuevo
+    e.target.value = '';
   };
 
   const computeSHA256Hex = async (file: File): Promise<string> => {
@@ -605,7 +607,11 @@ function EscrutinioPageContent() {
           body: escrutinioState.actaImage,
         });
         const hash = await computeSHA256Hex(escrutinioState.actaImage);
-        await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioState.escrutinioId!)}/evidence`, { publicUrl, hash });
+        await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioState.escrutinioId!)}/evidence`, { 
+          publicUrl, 
+          hash,
+          actaImageSource: escrutinioState.actaImageSource 
+        });
         return;
       }
     } catch {
@@ -614,7 +620,11 @@ function EscrutinioPageContent() {
     try {
       const dataUrl = await toDataUrl(escrutinioState.actaImage);
       const hash = await computeSHA256Hex(escrutinioState.actaImage);
-      await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioState.escrutinioId!)}/evidence`, { publicUrl: dataUrl, hash });
+      await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioState.escrutinioId!)}/evidence`, { 
+        publicUrl: dataUrl, 
+        hash,
+        actaImageSource: escrutinioState.actaImageSource 
+      });
     } catch {}
   };
 
@@ -1169,23 +1179,37 @@ function EscrutinioPageContent() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Foto del Acta Firmada
                 </label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                  <Camera className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleActaUpload}
-                    className="hidden"
-                    id="acta-upload"
-                    disabled={escrutinioState.isEscrutinioFinished}
-                  />
-                  <label htmlFor="acta-upload" className={`cursor-pointer ${escrutinioState.isEscrutinioFinished ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                    <span className="text-primary-600 hover:text-primary-500 font-medium">
-                      Seleccionar imagen
-                    </span>
-                    <span className="text-gray-500"> o arrastrar aquí</span>
-                  </label>
-                  <p className="text-sm text-gray-500 mt-2">
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    <label className={`flex-1 cursor-pointer ${escrutinioState.isEscrutinioFinished ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        onChange={(e) => handleActaUpload(e, 'CAMERA')}
+                        className="hidden"
+                        id="acta-camera-main"
+                        disabled={escrutinioState.isEscrutinioFinished}
+                      />
+                      <div className={`w-full px-4 py-3 bg-blue-600 text-white rounded-lg text-sm text-center hover:bg-blue-700 transition-colors ${escrutinioState.isEscrutinioFinished ? 'opacity-50' : ''}`}>
+                        📷 Tomar foto
+                      </div>
+                    </label>
+                    <label className={`flex-1 cursor-pointer ${escrutinioState.isEscrutinioFinished ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleActaUpload(e, 'LIBRARY')}
+                        className="hidden"
+                        id="acta-library-main"
+                        disabled={escrutinioState.isEscrutinioFinished}
+                      />
+                      <div className={`w-full px-4 py-3 bg-gray-600 text-white rounded-lg text-sm text-center hover:bg-gray-700 transition-colors ${escrutinioState.isEscrutinioFinished ? 'opacity-50' : ''}`}>
+                        🖼️ Seleccionar de galería
+                      </div>
+                    </label>
+                  </div>
+                  <p className="text-sm text-gray-500 text-center">
                     PNG, JPG hasta 10MB
                   </p>
                 </div>
@@ -1196,6 +1220,11 @@ function EscrutinioPageContent() {
                         <CheckCircle className="h-5 w-5 text-green-600" />
                         <span className="ml-2 text-sm text-green-800">
                           {escrutinioState.actaImage.name} seleccionada
+                          {escrutinioState.actaImageSource && (
+                            <span className="ml-2 text-green-600">
+                              ({escrutinioState.actaImageSource === 'CAMERA' ? 'Tomada con cámara' : 'Subida desde galería'})
+                            </span>
+                          )}
                         </span>
                       </div>
                     </div>
