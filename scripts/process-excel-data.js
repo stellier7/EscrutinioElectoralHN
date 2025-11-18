@@ -25,7 +25,7 @@ function processJRVsFile() {
         department: `${row['CD'] || ''}-${row['NOMBRE DEPARTAMENTO'] || ''}`.trim(),
         municipality: `${row['CM'] || ''}-${row['NOMBRE MUNICIPIO'] || ''}`.trim(),
         area: `${row['CODIGO AREA'] || ''}-${row['DESCRIPCION AREA'] || ''}`.trim(),
-        electoralLoad: row['CARGA ELECTORAL JRV'] || null,
+        cargaElectoral: row['CARGA ELECTORAL JRV'] || null,
         latitude: null, // No disponible en el Excel
         longitude: null, // No disponible en el Excel
       };

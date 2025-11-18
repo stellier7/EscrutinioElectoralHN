@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, AlertCircle, CheckCircle, FileText, Camera, Upload } from 'lucide-react';
+import { Loader2, AlertCircle, CheckCircle, FileText, Camera, Upload, Vote } from 'lucide-react';
 import VoteCard from '@/components/VoteCard';
 import { useVoteStore } from '@/store/voteStore';
 import axios from 'axios';
@@ -56,6 +56,7 @@ export default function PresidencialEscrutinio({
   const [escrutinioStatus, setEscrutinioStatus] = useState<'COMPLETED' | 'CLOSED'>('COMPLETED');
   const [isClosing, setIsClosing] = useState(false);
   const [isReopening, setIsReopening] = useState(false);
+  const [cargaElectoral, setCargaElectoral] = useState<number | null>(null);
 
   // NO limpiar votos automáticamente - los votos se cargan desde el servidor
   useEffect(() => {
@@ -84,7 +85,13 @@ export default function PresidencialEscrutinio({
         
         if (response.data?.success) {
           const status = response.data.data.status;
+          const cargaElectoralData = response.data.data.cargaElectoral;
           console.log('📊 [PRESIDENTIAL] Status del escrutinio:', status);
+          
+          // Guardar carga electoral
+          if (cargaElectoralData !== null && cargaElectoralData !== undefined) {
+            setCargaElectoral(cargaElectoralData);
+          }
           
           // Si el escrutinio está CLOSED o COMPLETED, bloquear la interfaz
           if (status === 'CLOSED') {
@@ -538,7 +545,57 @@ export default function PresidencialEscrutinio({
               {jrvNumber ? `${jrvNumber} - ${jrvLocation || 'N/A'}` : 'Selecciona candidatos para votar'}
             </p>
           </div>
-          
+
+          {/* Carga Electoral */}
+          {cargaElectoral !== null && (
+            <div className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                  <Vote className="h-4 w-4 text-blue-600" />
+                  Carga Electoral
+                </h3>
+                <span className={`text-sm font-bold ${
+                  getTotalVotes() > cargaElectoral ? 'text-red-600' :
+                  getTotalVotes() > cargaElectoral * 0.9 ? 'text-orange-600' :
+                  'text-blue-600'
+                }`}>
+                  {getTotalVotes().toLocaleString()} / {cargaElectoral.toLocaleString()}
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-3 mb-2">
+                <div
+                  className={`h-3 rounded-full transition-all duration-300 ${
+                    getTotalVotes() > cargaElectoral ? 'bg-red-500' :
+                    getTotalVotes() > cargaElectoral * 0.9 ? 'bg-orange-500' :
+                    'bg-blue-500'
+                  }`}
+                  style={{
+                    width: `${Math.min((getTotalVotes() / cargaElectoral) * 100, 100)}%`
+                  }}
+                />
+              </div>
+              <div className="flex items-center justify-between text-xs text-gray-600">
+                <span>
+                  {cargaElectoral > 0 
+                    ? `${((getTotalVotes() / cargaElectoral) * 100).toFixed(1)}% utilizado`
+                    : '0% utilizado'
+                  }
+                </span>
+                {getTotalVotes() > cargaElectoral && (
+                  <span className="text-red-600 font-semibold flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    Excede el máximo
+                  </span>
+                )}
+                {getTotalVotes() <= cargaElectoral && getTotalVotes() > cargaElectoral * 0.9 && (
+                  <span className="text-orange-600 font-semibold flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    Cerca del límite
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Lista de Candidatos */}
           <div className="space-y-3 mb-8">
@@ -555,6 +612,11 @@ export default function PresidencialEscrutinio({
                 disabled={isEscrutinioClosed} // Deshabilitado cuando el escrutinio esté cerrado
                 onIncrement={() => {
                   if (!isEscrutinioClosed) {
+                    // Validar que no se exceda la carga electoral
+                    if (cargaElectoral !== null && getTotalVotes() >= cargaElectoral) {
+                      alert(`No se pueden agregar más votos. La carga electoral máxima es ${cargaElectoral.toLocaleString()} votos.`);
+                      return;
+                    }
                     increment(c.id, { escrutinioId, userId, mesaId, gps: gps || undefined, deviceId });
                   }
                 }}

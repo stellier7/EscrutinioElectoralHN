@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
         department: `${row['CD'] || ''}-${row['NOMBRE DEPARTAMENTO'] || ''}`.trim(),
         municipality: `${row['CM'] || ''}-${row['NOMBRE MUNICIPIO'] || ''}`.trim(),
         area: `${row['CODIGO AREA'] || ''}-${row['DESCRIPCION AREA'] || ''}`.trim(),
-        electoralLoad: row['CARGA ELECTORAL JRV'] || null,
+        cargaElectoral: row['CARGA ELECTORAL JRV'] || null,
         latitude: null,
         longitude: null,
         isActive: true

@@ -74,7 +74,7 @@ async function restoreJRVsFast() {
         department: jrv.department,
         municipality: jrv.municipality || 'Sin municipio',
         area: jrv.area || 'Sin área',
-        electoralLoad: parseInt(jrv.electoralLoad) || 0,
+        cargaElectoral: parseInt(jrv.cargaElectoral || jrv.electoralLoad) || 0,
       }));
 
     console.log(`📊 ${mesasData.length} JRVs preparados para inserción`);

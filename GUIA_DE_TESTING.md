@@ -101,7 +101,7 @@ crypto.createHash('sha256').update(snapshot).digest('hex');
 **Objetivo**: Verificar que se alerta cuando se excede carga electoral
 
 **Pasos**:
-1. Crear JRV con `electoralLoad = 100`
+1. Crear JRV con `cargaElectoral = 100`
 2. Iniciar escrutinio para esa JRV
 3. Agregar 110 votos (10% sobre carga)
 4. Verificar en logs:

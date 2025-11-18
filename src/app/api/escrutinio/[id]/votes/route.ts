@@ -113,7 +113,7 @@ export async function POST(
       include: {
         mesa: {
           select: {
-            electoralLoad: true,
+            cargaElectoral: true,
             number: true
           }
         },
@@ -291,7 +291,7 @@ export async function POST(
       where: { id: escrutinioId },
       include: {
         mesa: {
-          select: { electoralLoad: true, number: true }
+          select: { cargaElectoral: true, number: true }
         },
         votes: {
           select: { count: true }
@@ -299,9 +299,9 @@ export async function POST(
       }
     });
 
-    if (updatedEscrutinio?.mesa && updatedEscrutinio.mesa.electoralLoad) {
+    if (updatedEscrutinio?.mesa && updatedEscrutinio.mesa.cargaElectoral) {
       const totalVotes = updatedEscrutinio.votes.reduce((sum, vote) => sum + vote.count, 0);
-      const cargaElectoral = updatedEscrutinio.mesa.electoralLoad;
+      const cargaElectoral = updatedEscrutinio.mesa.cargaElectoral;
       const margin = 1.10; // 10% de margen
 
       if (totalVotes > cargaElectoral * margin) {

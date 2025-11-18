@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
         department: true,
         municipality: true,
         area: true,
-        electoralLoad: true,
+        cargaElectoral: true,
         latitude: true,
         longitude: true,
       },
@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
         department: true,
         municipality: true,
         area: true,
-        electoralLoad: true,
+        cargaElectoral: true,
         latitude: true,
         longitude: true,
       }

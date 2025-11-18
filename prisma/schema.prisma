@@ -155,7 +155,7 @@ model Mesa {
   department      String    // Departamento de la JRV
   municipality    String?   // Municipio
   area            String?   // Área (urbana/rural)
-  electoralLoad   Int?      // Carga electoral
+  cargaElectoral   Int?      // Carga electoral
   latitude        Float?
   longitude       Float?
   isActive        Boolean   @default(true)

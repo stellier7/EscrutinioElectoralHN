@@ -66,7 +66,7 @@ async function seedJRVs() {
           department: jrv.department,
           municipality: jrv.municipality,
           area: jrv.area,
-          electoralLoad: jrv.electoralLoad,
+          cargaElectoral: jrv.cargaElectoral || jrv.electoralLoad,
           latitude: jrv.latitude,
           longitude: jrv.longitude,
         }));

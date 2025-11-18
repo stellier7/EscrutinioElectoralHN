@@ -135,7 +135,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           "department" TEXT NOT NULL,
           "municipality" TEXT,
           "area" TEXT,
-          "electoralLoad" INTEGER,
+          "cargaElectoral" INTEGER,
           "latitude" DOUBLE PRECISION,
           "longitude" DOUBLE PRECISION,
           "isActive" BOOLEAN NOT NULL DEFAULT true,

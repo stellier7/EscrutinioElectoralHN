@@ -27,7 +27,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         userId: true,
         mesa: {
           select: {
-            number: true
+            number: true,
+            cargaElectoral: true
           }
         }
       }
@@ -53,7 +54,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       data: {
         id: escrutinio.id,
         status: escrutinio.status,
-        mesaNumber: escrutinio.mesa.number
+        mesaNumber: escrutinio.mesa.number,
+        cargaElectoral: escrutinio.mesa.cargaElectoral
       }
     });
 
