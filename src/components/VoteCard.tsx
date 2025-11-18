@@ -97,7 +97,7 @@ export function VoteCard({ id, name, party, partyColor = '#e5e7eb', number, coun
       data-testid={`vote-card-${id}`}
     >
       {/* Símbolo + grande a la izquierda */}
-      <div className="flex items-center justify-center px-3 sm:px-4 py-2 sm:py-4">
+      <div className="flex items-center justify-center px-2 sm:px-3 py-2 sm:py-4">
         <div className={clsx(
           'text-4xl sm:text-5xl font-light select-none',
           disabled ? 'text-gray-300' : 'text-gray-500'
@@ -110,8 +110,12 @@ export function VoteCard({ id, name, party, partyColor = '#e5e7eb', number, coun
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div>
-              <div className="text-base font-semibold text-gray-800 drop-shadow-sm">{partyConfig.name}</div>
-              <div className="text-sm text-gray-700 drop-shadow-sm">{formatInitialSurname(name)}{number !== undefined ? ` • Lista ${number}` : ''}</div>
+              <div className="text-base font-semibold text-gray-800 drop-shadow-sm">
+                {party && party.trim() !== '' ? partyConfig.name : name}
+              </div>
+              {party && party.trim() !== '' && (
+                <div className="text-sm text-gray-700 drop-shadow-sm">{formatInitialSurname(name)}{number !== undefined ? ` • Lista ${number}` : ''}</div>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2">

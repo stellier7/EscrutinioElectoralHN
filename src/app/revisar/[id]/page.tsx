@@ -680,9 +680,14 @@ export default function RevisarEscrutinioPage() {
                   return <LegislativeReview candidates={escrutinioData.candidates} />;
                 })()
               ) : (
-                // Mostrar votos presidenciales como antes (ordenados por número)
+                // Mostrar votos presidenciales como antes (ordenados por número, con votos especiales al final)
                 escrutinioData.candidates
-                  .sort((a: any, b: any) => a.number - b.number)
+                  .sort((a: any, b: any) => {
+                    // Los candidatos especiales (número 998 y 999) van al final
+                    if (a.number >= 998 && b.number < 998) return 1;
+                    if (a.number < 998 && b.number >= 998) return -1;
+                    return a.number - b.number;
+                  })
                   .map((candidate) => (
                   <div 
                     key={candidate.id}

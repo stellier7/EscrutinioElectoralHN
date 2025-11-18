@@ -87,6 +87,20 @@ export const PARTY_CONFIGS: Record<string, PartyConfig> = {
     color: '#2563eb', // Azul
     logoUrl: '/logos/pnh-logo.svg',
     description: 'Partido Nacional de Honduras'
+  },
+  'BLANK': {
+    id: 'BLANK',
+    name: 'Voto en Blanco',
+    shortName: 'Voto en Blanco',
+    color: '#9ca3af', // Gris medio
+    description: 'Voto en Blanco'
+  },
+  'NULL': {
+    id: 'NULL',
+    name: 'Voto Nulo',
+    shortName: 'Voto Nulo',
+    color: '#6b7280', // Gris oscuro
+    description: 'Voto Nulo'
   }
 };
 

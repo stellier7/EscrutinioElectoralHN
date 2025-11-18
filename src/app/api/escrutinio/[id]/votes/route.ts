@@ -156,102 +156,160 @@ export async function POST(
       electionLevel: escrutinio.electionLevel
     });
 
-    // NUEVA: Validar y marcar batches procesados para prevenir duplicados
-    const processedBatches: string[] = [];
-    if (Array.isArray(body.votes)) {
-      for (const vote of body.votes) {
-        if (vote.clientBatchId) {
-          // Verificar si este batch ya fue procesado
-          const existingBatch = await prisma.processedBatch.findUnique({
-            where: { clientBatchId: vote.clientBatchId }
-          });
-          
-          if (existingBatch) {
-            console.warn(`⚠️ [VOTES API] Batch duplicado detectado: ${vote.clientBatchId}`);
-            continue; // Saltar este voto, ya fue procesado
-          }
-          
-          // Marcar batch como procesado ANTES de aplicar votos
-          await prisma.processedBatch.create({
-            data: {
-              clientBatchId: vote.clientBatchId,
-              escrutinioId: escrutinioId,
-              userId: payload.userId,
-              processedVotes: 1
-            }
-          });
-          
-          processedBatches.push(vote.clientBatchId);
-        }
-      }
-    }
-
     // Procesar votos según el nivel de elección
     if (escrutinio.electionLevel === 'PRESIDENTIAL') {
       // Para presidencial: body.votes puede ser array de deltas o array de counts
       if (Array.isArray(body.votes)) {
-        for (const vote of body.votes) {
-          if (vote.candidateId) {
-            // Si tiene 'delta', es un delta (incremento/decremento)
-            if (typeof vote.delta === 'number') {
-              // Aplicar delta al conteo actual
-              const currentVote = await prisma.vote.findFirst({
-                where: {
-                  escrutinioId: escrutinioId,
-                  candidateId: vote.candidateId
-                }
+        // CRÍTICO: Procesar todos los votos en una transacción para evitar duplicados
+        await prisma.$transaction(async (tx) => {
+          for (const vote of body.votes) {
+            // CRÍTICO: Verificar batch duplicado ANTES de procesar cada voto
+            if (vote.clientBatchId) {
+              const existingBatch = await tx.processedBatch.findUnique({
+                where: { clientBatchId: vote.clientBatchId }
               });
+              
+              if (existingBatch) {
+                console.warn(`⚠️ [VOTES API] Batch duplicado detectado y saltado: ${vote.clientBatchId}`);
+                continue; // Saltar este voto completamente, ya fue procesado
+              }
+            }
+            
+            if (vote.candidateId) {
+              // Manejar candidatos especiales (BLANK_VOTE, NULL_VOTE)
+              let actualCandidateId = vote.candidateId;
+              
+              if (vote.candidateId === 'BLANK_VOTE' || vote.candidateId === 'NULL_VOTE') {
+                // Buscar o crear candidato especial
+                const specialCandidateName = vote.candidateId === 'BLANK_VOTE' ? 'Voto en Blanco' : 'Voto Nulo';
+                const specialCandidateParty = vote.candidateId === 'BLANK_VOTE' ? 'BLANK' : 'NULL';
+                
+                let specialCandidate = await tx.candidate.findFirst({
+                  where: {
+                    electionId: escrutinio.electionId,
+                    name: specialCandidateName,
+                    party: specialCandidateParty,
+                    electionLevel: 'PRESIDENTIAL'
+                  }
+                });
+                
+                if (!specialCandidate) {
+                  // Crear candidato especial si no existe
+                  specialCandidate = await tx.candidate.create({
+                    data: {
+                      name: specialCandidateName,
+                      party: specialCandidateParty,
+                      number: vote.candidateId === 'BLANK_VOTE' ? 999 : 998, // Números especiales
+                      electionId: escrutinio.electionId,
+                      electionLevel: 'PRESIDENTIAL',
+                      isActive: true
+                    }
+                  });
+                  console.log(`➕ [VOTES API] Candidato especial creado: ${specialCandidateName} (ID: ${specialCandidate.id})`);
+                }
+                
+                actualCandidateId = specialCandidate.id;
+              }
+              
+              // Si tiene 'delta', es un delta (incremento/decremento)
+              if (typeof vote.delta === 'number') {
+                // Aplicar delta al conteo actual
+                const currentVote = await tx.vote.findFirst({
+                  where: {
+                    escrutinioId: escrutinioId,
+                    candidateId: actualCandidateId
+                  }
+                });
 
-              const currentCount = currentVote?.count || 0;
-              const newCount = Math.max(0, currentCount + vote.delta);
+                const currentCount = currentVote?.count || 0;
+                const newCount = Math.max(0, currentCount + vote.delta);
 
-              if (newCount > 0) {
-                if (currentVote) {
-                  await prisma.vote.update({
-                    where: { id: currentVote.id },
-                    data: { count: newCount }
+                if (newCount > 0) {
+                  if (currentVote) {
+                    await tx.vote.update({
+                      where: { id: currentVote.id },
+                      data: { count: newCount }
+                    });
+                  } else {
+                    await tx.vote.create({
+                      data: {
+                        escrutinioId: escrutinioId,
+                        candidateId: actualCandidateId,
+                        count: newCount
+                      }
+                    });
+                  }
+                } else if (currentVote) {
+                  // Si el conteo llega a 0, eliminar el voto
+                  await tx.vote.delete({
+                    where: { id: currentVote.id }
+                  });
+                }
+                
+                // CRÍTICO: Marcar batch como procesado DESPUÉS de aplicar el voto exitosamente
+                if (vote.clientBatchId) {
+                  try {
+                    await tx.processedBatch.create({
+                      data: {
+                        clientBatchId: vote.clientBatchId,
+                        escrutinioId: escrutinioId,
+                        userId: payload.userId,
+                        processedVotes: 1
+                      }
+                    });
+                  } catch (batchError: any) {
+                    // Si falla (por ejemplo, ya existe), solo loguear, no fallar el voto
+                    if (batchError.code !== 'P2002') { // P2002 = unique constraint violation
+                      console.error('Error marcando batch como procesado:', batchError);
+                    }
+                  }
+                }
+              } else if (typeof vote.count === 'number' && vote.count > 0) {
+                // Si tiene 'count', es un conteo absoluto
+                const existingVote = await tx.vote.findFirst({
+                  where: {
+                    escrutinioId: escrutinioId,
+                    candidateId: actualCandidateId
+                  }
+                });
+
+                if (existingVote) {
+                  await tx.vote.update({
+                    where: { id: existingVote.id },
+                    data: { count: vote.count }
                   });
                 } else {
-                  await prisma.vote.create({
+                  await tx.vote.create({
                     data: {
                       escrutinioId: escrutinioId,
-                      candidateId: vote.candidateId,
-                      count: newCount
+                      candidateId: actualCandidateId,
+                      count: vote.count
                     }
                   });
                 }
-              } else if (currentVote) {
-                // Si el conteo llega a 0, eliminar el voto
-                await prisma.vote.delete({
-                  where: { id: currentVote.id }
-                });
-              }
-            } else if (typeof vote.count === 'number' && vote.count > 0) {
-              // Si tiene 'count', es un conteo absoluto
-              const existingVote = await prisma.vote.findFirst({
-                where: {
-                  escrutinioId: escrutinioId,
-                  candidateId: vote.candidateId
-                }
-              });
-
-              if (existingVote) {
-                await prisma.vote.update({
-                  where: { id: existingVote.id },
-                  data: { count: vote.count }
-                });
-              } else {
-                await prisma.vote.create({
-                  data: {
-                    escrutinioId: escrutinioId,
-                    candidateId: vote.candidateId,
-                    count: vote.count
+                
+                // CRÍTICO: Marcar batch como procesado DESPUÉS de aplicar el voto exitosamente
+                if (vote.clientBatchId) {
+                  try {
+                    await tx.processedBatch.create({
+                      data: {
+                        clientBatchId: vote.clientBatchId,
+                        escrutinioId: escrutinioId,
+                        userId: payload.userId,
+                        processedVotes: 1
+                      }
+                    });
+                  } catch (batchError: any) {
+                    // Si falla (por ejemplo, ya existe), solo loguear, no fallar el voto
+                    if (batchError.code !== 'P2002') { // P2002 = unique constraint violation
+                      console.error('Error marcando batch como procesado:', batchError);
+                    }
                   }
-                });
+                }
               }
             }
           }
-        }
+        });
       }
     } else if (escrutinio.electionLevel === 'LEGISLATIVE') {
       // Para legislativo: body.votes es un objeto { "party_slot": count }

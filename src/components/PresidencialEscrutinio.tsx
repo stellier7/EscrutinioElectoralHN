@@ -601,39 +601,11 @@ export default function PresidencialEscrutinio({
                 JRV {jrvNumber || 'N/A'}
               </div>
               <div className="text-xs text-gray-500">
-                {(() => {
-                  // Usar información del servidor si los props no tienen la info correcta
-                  // Check if jrvLocation is invalid (equals number, 'N/A', or is empty)
-                  const isJrvLocationInvalid = !jrvLocation || 
-                    jrvLocation === 'N/A' || 
-                    jrvLocation === jrvNumber || 
-                    jrvLocation === `JRV ${jrvNumber}` ||
-                    (typeof jrvLocation === 'string' && jrvLocation.trim() === '');
-                  
-                  // Check if department is invalid
-                  const isDepartmentInvalid = !department || 
-                    department === 'N/A' || 
-                    (typeof department === 'string' && department.trim() === '');
-                  
-                  // Prioritize server data if props are invalid, otherwise use props
-                  const location = isJrvLocationInvalid 
-                    ? (mesaLocationFromServer || jrvLocation || 'N/A')
-                    : jrvLocation;
-                  const dept = isDepartmentInvalid 
-                    ? (mesaDepartmentFromServer || department || 'N/A')
-                    : department;
-                  
-                  // Format the display string
-                  if (location && location !== 'N/A' && dept && dept !== 'N/A') {
-                    return `${location} - ${dept}`;
-                  } else if (location && location !== 'N/A') {
-                    return location;
-                  } else if (dept && dept !== 'N/A') {
-                    return dept;
-                  } else {
-                    return 'N/A';
-                  }
-                })()}
+                {cargaElectoral !== null && cargaElectoral !== undefined ? (
+                  `Carga Electoral: ${cargaElectoral.toLocaleString()}`
+                ) : (
+                  'Carga Electoral: Cargando...'
+                )}
               </div>
             </div>
           </div>
@@ -648,11 +620,39 @@ export default function PresidencialEscrutinio({
               Conteo de Votos Presidenciales
             </h2>
             <div className="text-sm text-gray-600">
-              {cargaElectoral !== null && cargaElectoral !== undefined ? (
-                <div>Carga Electoral: {cargaElectoral.toLocaleString()}</div>
-              ) : (
-                <div>Carga Electoral: Cargando...</div>
-              )}
+              {(() => {
+                // Usar información del servidor si los props no tienen la info correcta
+                // Check if jrvLocation is invalid (equals number, 'N/A', or is empty)
+                const isJrvLocationInvalid = !jrvLocation || 
+                  jrvLocation === 'N/A' || 
+                  jrvLocation === jrvNumber || 
+                  jrvLocation === `JRV ${jrvNumber}` ||
+                  (typeof jrvLocation === 'string' && jrvLocation.trim() === '');
+                
+                // Check if department is invalid
+                const isDepartmentInvalid = !department || 
+                  department === 'N/A' || 
+                  (typeof department === 'string' && department.trim() === '');
+                
+                // Prioritize server data if props are invalid, otherwise use props
+                const location = isJrvLocationInvalid 
+                  ? (mesaLocationFromServer || jrvLocation || 'N/A')
+                  : jrvLocation;
+                const dept = isDepartmentInvalid 
+                  ? (mesaDepartmentFromServer || department || 'N/A')
+                  : department;
+                
+                // Format the display string
+                if (location && location !== 'N/A' && dept && dept !== 'N/A') {
+                  return `${location} - ${dept}`;
+                } else if (location && location !== 'N/A') {
+                  return location;
+                } else if (dept && dept !== 'N/A') {
+                  return dept;
+                } else {
+                  return 'N/A';
+                }
+              })()}
             </div>
           </div>
 
@@ -713,7 +713,7 @@ export default function PresidencialEscrutinio({
             <VoteCard
               id="BLANK_VOTE"
               name="Voto en Blanco"
-              party="Voto en Blanco"
+              party=""
               partyColor="#9ca3af"
               count={counts["BLANK_VOTE"] || 0}
               isPending={false}
@@ -737,7 +737,7 @@ export default function PresidencialEscrutinio({
             <VoteCard
               id="NULL_VOTE"
               name="Voto Nulo"
-              party="Voto Nulo"
+              party=""
               partyColor="#6b7280"
               count={counts["NULL_VOTE"] || 0}
               isPending={false}

@@ -202,7 +202,16 @@ export const useVoteStore = create<State & Actions>()(
           if (response.data?.success && response.data.data) {
             console.log('📊 [PRESIDENTIAL STORE] Votos cargados del servidor:', response.data.data);
             const serverCounts = response.data.data.reduce((acc: Record<string, number>, vote: any) => {
-              acc[vote.candidateId] = vote.count;
+              // Mapear candidatos especiales de vuelta a BLANK_VOTE y NULL_VOTE
+              let candidateId = vote.candidateId;
+              if (vote.candidate) {
+                if (vote.candidate.name === 'Voto en Blanco' || vote.candidate.party === 'BLANK') {
+                  candidateId = 'BLANK_VOTE';
+                } else if (vote.candidate.name === 'Voto Nulo' || vote.candidate.party === 'NULL') {
+                  candidateId = 'NULL_VOTE';
+                }
+              }
+              acc[candidateId] = vote.count;
               return acc;
             }, {});
             console.log('📊 [PRESIDENTIAL STORE] Counts procesados:', serverCounts);
