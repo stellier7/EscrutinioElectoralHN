@@ -307,6 +307,7 @@ export function useEscrutinioPersistence() {
           escrutinioId: null,
           isEscrutinioFinished: false,
           actaImage: null,
+          actaImageSource: null,
           location: null,
           legislativeCurrentPapeleta: undefined,
           legislativeExpandedParty: undefined,
