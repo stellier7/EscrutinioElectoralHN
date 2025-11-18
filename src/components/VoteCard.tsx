@@ -114,7 +114,7 @@ export function VoteCard({ id, name, party, partyColor = '#e5e7eb', number, coun
                 {party && party.trim() !== '' ? partyConfig.name : name}
               </div>
               {party && party.trim() !== '' && (
-                <div className="text-sm text-gray-700 drop-shadow-sm">{formatInitialSurname(name)}{number !== undefined ? ` • Lista ${number}` : ''}</div>
+              <div className="text-sm text-gray-700 drop-shadow-sm">{formatInitialSurname(name)}{number !== undefined ? ` • Lista ${number}` : ''}</div>
               )}
             </div>
           </div>

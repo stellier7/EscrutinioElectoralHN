@@ -162,7 +162,7 @@ export async function POST(
       if (Array.isArray(body.votes)) {
         // CRÍTICO: Procesar todos los votos en una transacción para evitar duplicados
         await prisma.$transaction(async (tx) => {
-          for (const vote of body.votes) {
+        for (const vote of body.votes) {
             // CRÍTICO: Verificar batch duplicado ANTES de procesar cada voto
             if (vote.clientBatchId) {
               const existingBatch = await tx.processedBatch.findUnique({
@@ -175,7 +175,7 @@ export async function POST(
               }
             }
             
-            if (vote.candidateId) {
+          if (vote.candidateId) {
               // Manejar candidatos especiales (BLANK_VOTE, NULL_VOTE)
               let actualCandidateId = vote.candidateId;
               
@@ -211,40 +211,40 @@ export async function POST(
                 actualCandidateId = specialCandidate.id;
               }
               
-              // Si tiene 'delta', es un delta (incremento/decremento)
-              if (typeof vote.delta === 'number') {
-                // Aplicar delta al conteo actual
+            // Si tiene 'delta', es un delta (incremento/decremento)
+            if (typeof vote.delta === 'number') {
+              // Aplicar delta al conteo actual
                 const currentVote = await tx.vote.findFirst({
-                  where: {
-                    escrutinioId: escrutinioId,
+                where: {
+                  escrutinioId: escrutinioId,
                     candidateId: actualCandidateId
-                  }
-                });
+                }
+              });
 
-                const currentCount = currentVote?.count || 0;
-                const newCount = Math.max(0, currentCount + vote.delta);
+              const currentCount = currentVote?.count || 0;
+              const newCount = Math.max(0, currentCount + vote.delta);
 
-                if (newCount > 0) {
-                  if (currentVote) {
+              if (newCount > 0) {
+                if (currentVote) {
                     await tx.vote.update({
-                      where: { id: currentVote.id },
-                      data: { count: newCount }
-                    });
-                  } else {
+                    where: { id: currentVote.id },
+                    data: { count: newCount }
+                  });
+                } else {
                     await tx.vote.create({
-                      data: {
-                        escrutinioId: escrutinioId,
+                    data: {
+                      escrutinioId: escrutinioId,
                         candidateId: actualCandidateId,
-                        count: newCount
-                      }
-                    });
-                  }
-                } else if (currentVote) {
-                  // Si el conteo llega a 0, eliminar el voto
-                  await tx.vote.delete({
-                    where: { id: currentVote.id }
+                      count: newCount
+                    }
                   });
                 }
+              } else if (currentVote) {
+                // Si el conteo llega a 0, eliminar el voto
+                  await tx.vote.delete({
+                  where: { id: currentVote.id }
+                });
+              }
                 
                 // CRÍTICO: Marcar batch como procesado DESPUÉS de aplicar el voto exitosamente
                 if (vote.clientBatchId) {
@@ -264,29 +264,29 @@ export async function POST(
                     }
                   }
                 }
-              } else if (typeof vote.count === 'number' && vote.count > 0) {
-                // Si tiene 'count', es un conteo absoluto
+            } else if (typeof vote.count === 'number' && vote.count > 0) {
+              // Si tiene 'count', es un conteo absoluto
                 const existingVote = await tx.vote.findFirst({
-                  where: {
-                    escrutinioId: escrutinioId,
+                where: {
+                  escrutinioId: escrutinioId,
                     candidateId: actualCandidateId
+                }
+              });
+
+              if (existingVote) {
+                  await tx.vote.update({
+                  where: { id: existingVote.id },
+                  data: { count: vote.count }
+                });
+              } else {
+                  await tx.vote.create({
+                  data: {
+                    escrutinioId: escrutinioId,
+                      candidateId: actualCandidateId,
+                    count: vote.count
                   }
                 });
-
-                if (existingVote) {
-                  await tx.vote.update({
-                    where: { id: existingVote.id },
-                    data: { count: vote.count }
-                  });
-                } else {
-                  await tx.vote.create({
-                    data: {
-                      escrutinioId: escrutinioId,
-                      candidateId: actualCandidateId,
-                      count: vote.count
-                    }
-                  });
-                }
+              }
                 
                 // CRÍTICO: Marcar batch como procesado DESPUÉS de aplicar el voto exitosamente
                 if (vote.clientBatchId) {
@@ -297,7 +297,7 @@ export async function POST(
                         escrutinioId: escrutinioId,
                         userId: payload.userId,
                         processedVotes: 1
-                      }
+            }
                     });
                   } catch (batchError: any) {
                     // Si falla (por ejemplo, ya existe), solo loguear, no fallar el voto
