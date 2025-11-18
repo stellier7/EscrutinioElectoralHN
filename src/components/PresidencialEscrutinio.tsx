@@ -839,8 +839,8 @@ export default function PresidencialEscrutinio({
                 Foto del Acta
               </h3>
               <div className="space-y-3">
-                <div className="flex gap-2">
-                  <label className="flex-1 cursor-pointer">
+                <div>
+                  <label className="cursor-pointer">
                     <input
                       type="file"
                       accept="image/*"
@@ -850,19 +850,7 @@ export default function PresidencialEscrutinio({
                       id="acta-camera-presidential"
                     />
                     <div className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg text-sm text-center hover:bg-blue-700 transition-colors">
-                      📷 Tomar foto
-                    </div>
-                  </label>
-                  <label className="flex-1 cursor-pointer">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleActaUpload(e, 'LIBRARY')}
-                      className="hidden"
-                      id="acta-library-presidential"
-                    />
-                    <div className="w-full px-4 py-2 bg-gray-600 text-white rounded-lg text-sm text-center hover:bg-gray-700 transition-colors">
-                      🖼️ Seleccionar de galería
+                      Tomar foto
                     </div>
                   </label>
                 </div>
