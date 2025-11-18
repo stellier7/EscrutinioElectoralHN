@@ -27,8 +27,9 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         userId: true,
         mesa: {
           select: {
+            id: true,
             number: true,
-            cargaElectoral: true
+            // cargaElectoral se obtendrá después si existe
           }
         }
       }
@@ -49,13 +50,25 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       );
     }
 
+    // Intentar obtener cargaElectoral de forma segura usando $queryRaw
+    let cargaElectoral: number | null = null;
+    try {
+      const result = await prisma.$queryRaw<Array<{ cargaElectoral: number | null }>>`
+        SELECT "cargaElectoral" FROM "Mesa" WHERE id = ${escrutinio.mesa.id}
+      `.catch(() => null);
+      cargaElectoral = result?.[0]?.cargaElectoral ?? null;
+    } catch (error) {
+      // Si falla, cargaElectoral permanece null (columna puede no existir aún)
+      console.warn('⚠️ [STATUS API] No se pudo obtener cargaElectoral (columna puede no existir aún):', error);
+    }
+
     return NextResponse.json({
       success: true,
       data: {
         id: escrutinio.id,
         status: escrutinio.status,
         mesaNumber: escrutinio.mesa.number,
-        cargaElectoral: escrutinio.mesa.cargaElectoral
+        cargaElectoral: cargaElectoral
       }
     });
 

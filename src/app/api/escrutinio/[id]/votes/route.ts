@@ -39,7 +39,19 @@ export async function GET(
           }
         },
         election: true,
-        mesa: true
+        mesa: {
+          select: {
+            id: true,
+            number: true,
+            location: true,
+            department: true,
+            municipality: true,
+            area: true,
+            address: true,
+            isActive: true,
+            // cargaElectoral no se necesita para GET, evitar errores si la migración no se ha ejecutado
+          }
+        }
       }
     });
 
@@ -113,8 +125,8 @@ export async function POST(
       include: {
         mesa: {
           select: {
-            cargaElectoral: true,
-            number: true
+            number: true,
+            // cargaElectoral se obtendrá después si existe
           }
         },
         votes: {
@@ -286,47 +298,64 @@ export async function POST(
       }
     }
 
-    // Validar límites de votos vs carga electoral
-    const updatedEscrutinio = await prisma.escrutinio.findUnique({
-      where: { id: escrutinioId },
-      include: {
-        mesa: {
-          select: { cargaElectoral: true, number: true }
-        },
-        votes: {
-          select: { count: true }
-        }
-      }
-    });
-
-    if (updatedEscrutinio?.mesa && updatedEscrutinio.mesa.cargaElectoral) {
-      const totalVotes = updatedEscrutinio.votes.reduce((sum, vote) => sum + vote.count, 0);
-      const cargaElectoral = updatedEscrutinio.mesa.cargaElectoral;
-      const margin = 1.10; // 10% de margen
-
-      if (totalVotes > cargaElectoral * margin) {
-        // Loguear anomalía
-        try {
-          await prisma.auditLog.create({
-            data: {
-              userId: payload.userId,
-              action: 'CORRECTION',
-              description: `Vote overflow detected: ${totalVotes} > ${cargaElectoral} (JRV ${updatedEscrutinio.mesa.number})`,
-              metadata: JSON.stringify({
-                escrutinioId,
-                totalVotes,
-                cargaElectoral,
-                jrvNumber: updatedEscrutinio.mesa.number,
-                overflow: totalVotes - cargaElectoral
-              })
+    // Validar límites de votos vs carga electoral (solo si cargaElectoral existe en la BD)
+    try {
+      const updatedEscrutinio = await prisma.escrutinio.findUnique({
+        where: { id: escrutinioId },
+        include: {
+          mesa: {
+            select: { 
+              id: true,
+              number: true,
+              // Intentar obtener cargaElectoral, pero no fallar si no existe
             }
-          });
-        } catch (auditError) {
-          console.error('Failed to log vote overflow anomaly:', auditError);
+          },
+          votes: {
+            select: { count: true }
+          }
         }
+      });
 
-        console.warn(`⚠️ [VOTES API] Vote overflow detected in JRV ${updatedEscrutinio.mesa.number}: ${totalVotes} > ${cargaElectoral}`);
+      // Intentar obtener cargaElectoral de forma segura
+      if (updatedEscrutinio?.mesa) {
+        // Usar $queryRaw para obtener cargaElectoral de forma segura (evita errores de TypeScript)
+        const mesaWithCarga = await prisma.$queryRaw<Array<{ cargaElectoral: number | null }>>`
+          SELECT "cargaElectoral" FROM "Mesa" WHERE id = ${updatedEscrutinio.mesa.id}
+        `.catch(() => null); // Si falla, continuar sin validación
+
+        const cargaElectoral = mesaWithCarga?.[0]?.cargaElectoral;
+        if (cargaElectoral) {
+          const totalVotes = updatedEscrutinio.votes.reduce((sum, vote) => sum + vote.count, 0);
+          const margin = 1.10; // 10% de margen
+
+          if (totalVotes > cargaElectoral * margin) {
+            // Loguear anomalía
+            try {
+              await prisma.auditLog.create({
+                data: {
+                  userId: payload.userId,
+                  action: 'CORRECTION',
+                  description: `Vote overflow detected: ${totalVotes} > ${cargaElectoral} (JRV ${updatedEscrutinio.mesa.number})`,
+                  metadata: JSON.stringify({
+                    escrutinioId,
+                    totalVotes,
+                    cargaElectoral,
+                    jrvNumber: updatedEscrutinio.mesa.number,
+                    overflow: totalVotes - cargaElectoral
+                  })
+                }
+              });
+            } catch (auditError) {
+              console.error('Failed to log vote overflow anomaly:', auditError);
+            }
+
+            console.warn(`⚠️ [VOTES API] Vote overflow detected in JRV ${updatedEscrutinio.mesa.number}: ${totalVotes} > ${cargaElectoral}`);
+          }
+        }
       }
+    } catch (cargaError) {
+      // Si hay error al acceder a cargaElectoral, continuar sin validación
+      console.warn('⚠️ [VOTES API] No se pudo validar carga electoral (columna puede no existir aún):', cargaError);
     }
 
     return NextResponse.json({
