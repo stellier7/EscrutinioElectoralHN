@@ -34,7 +34,15 @@ export async function GET(
         completedAt: null, // No finalizado
       },
       include: {
-        mesa: true,
+        mesa: {
+          select: {
+            id: true,
+            number: true,
+            location: true,
+            department: true,
+            // No incluir cargaElectoral para evitar errores si la migración no se ha ejecutado
+          }
+        },
         user: {
           select: {
             id: true,

@@ -88,15 +88,34 @@ export async function POST(request: Request) {
     }
 
     // Ensure Mesa exists by number and is active; create placeholder if not exists
+    // Usar select para evitar problemas con cargaElectoral si la migración no se ha ejecutado
     let mesa = await prisma.mesa.findFirst({ 
       where: { 
         number: mesaNumber,
         isActive: true 
-      } 
+      },
+      select: {
+        id: true,
+        number: true,
+        location: true,
+        department: true,
+        municipality: true,
+        area: true,
+        address: true,
+        isActive: true,
+        // No incluir cargaElectoral para evitar errores si la migración no se ha ejecutado
+      }
     });
     if (!mesa) {
       // Verificar si existe pero está inactiva
-      const inactiveMesa = await prisma.mesa.findUnique({ where: { number: mesaNumber } });
+      const inactiveMesa = await prisma.mesa.findUnique({ 
+        where: { number: mesaNumber },
+        select: {
+          id: true,
+          number: true,
+          isActive: true,
+        }
+      });
       if (inactiveMesa) {
         return NextResponse.json({ 
           success: false, 

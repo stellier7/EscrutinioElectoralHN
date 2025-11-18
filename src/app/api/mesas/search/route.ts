@@ -18,6 +18,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Buscar mesas que coincidan con el query
+    // Usar select para evitar problemas con cargaElectoral si la migración no se ha ejecutado
     const mesas = await prisma.mesa.findMany({
       where: exact ? {
         // Exact match
@@ -46,6 +47,16 @@ export async function GET(request: NextRequest) {
           },
         ],
         isActive: true,
+      },
+      select: {
+        id: true,
+        number: true,
+        location: true,
+        department: true,
+        municipality: true,
+        area: true,
+        address: true,
+        // No incluir cargaElectoral para evitar errores si la migración no se ha ejecutado
       },
       take: limit,
       orderBy: [

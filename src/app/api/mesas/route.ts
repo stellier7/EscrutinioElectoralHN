@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
         department: true,
         municipality: true,
         area: true,
-        cargaElectoral: true,
+        // cargaElectoral temporalmente removido hasta que se ejecute la migración
         latitude: true,
         longitude: true,
       },
@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
         department: true,
         municipality: true,
         area: true,
-        cargaElectoral: true,
+        // cargaElectoral temporalmente removido hasta que se ejecute la migración
         latitude: true,
         longitude: true,
       }
