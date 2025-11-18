@@ -413,7 +413,8 @@ function EscrutinioPageContent() {
       console.log('✅ [ESCRUTINIO] Ubicación GPS obtenida exitosamente:', result);
       setGpsError(null); // Limpiar error si se obtuvo exitosamente
       
-      // Si ya hay escrutinio activo, verificar su status antes de decidir qué hacer
+      // Si ya hay escrutinio activo, limpiar estado local para permitir crear uno nuevo
+      // El GPS solo se obtiene al iniciar un nuevo escrutinio, no se actualiza
       if (escrutinioState.escrutinioId) {
         try {
           console.log('🔍 Verificando status del escrutinio existente:', escrutinioState.escrutinioId);
@@ -427,12 +428,10 @@ function EscrutinioPageContent() {
             const status = statusResponse.data.data.status;
             console.log('📊 Status del escrutinio:', status);
             
-            // Solo actualizar GPS si el escrutinio está ACTIVO (PENDING o IN_PROGRESS)
+            // Si el escrutinio está activo, no permitir crear uno nuevo sin cerrar primero
             if (status === 'PENDING' || status === 'IN_PROGRESS') {
-              console.log('📍 [ESCRUTINIO] Actualizando GPS de escrutinio activo:', escrutinioState.escrutinioId);
-              saveState({ location: result });
-              setGpsSuccess(true);
-              setTimeout(() => setGpsSuccess(false), 3000);
+              console.log('⚠️ [ESCRUTINIO] Ya hay un escrutinio activo, no se puede obtener GPS nuevamente');
+              alert('Ya hay un escrutinio activo. El GPS solo se obtiene al iniciar un nuevo escrutinio.');
               setIsStarting(false);
               return;
             } else {
@@ -1055,27 +1054,15 @@ function EscrutinioPageContent() {
                 );
               }
               
-              // Si ya tenemos ubicación guardada, mostrar estado
+              // Si ya tenemos ubicación guardada, mostrar mensaje de éxito permanente
               if (escrutinioState.location) {
                 return (
-                  <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <MapPin className="h-5 w-5 text-blue-600 mr-2" />
-                        <div>
-                          <p className="text-sm font-medium text-blue-800">Ubicación guardada</p>
-                          <p className="text-xs text-blue-700">
-                            Precisión: ±{Math.round(escrutinioState.location.accuracy || 0)}m
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => handleGetLocation(escrutinioState.selectedLevel)}
-                        disabled={isStarting}
-                        className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {isStarting ? 'Actualizando...' : 'Actualizar'}
-                      </button>
+                  <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center">
+                      <CheckCircle className="h-5 w-5 text-green-600 mr-2" />
+                      <span className="text-sm text-green-800">
+                        ✅ GPS obtenido correctamente. Ubicación registrada para el escrutinio.
+                      </span>
                     </div>
                   </div>
                 );
@@ -1114,6 +1101,27 @@ function EscrutinioPageContent() {
                   <p className="text-gray-600">
                     Obteniendo ubicación GPS y creando escrutinio...
                   </p>
+                </div>
+              </div>
+            ) : !escrutinioState.location || !escrutinioState.escrutinioId ? (
+              // No mostrar el escrutinio si no hay GPS o escrutinioId
+              // Esto asegura que el GPS se obtenga antes de continuar
+              <div className="bg-white p-6 rounded-lg shadow-sm border">
+                <div className="text-center py-8">
+                  <AlertCircle className="h-12 w-12 text-amber-500 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">GPS Requerido</h3>
+                  <p className="text-gray-600 mb-4">
+                    Se necesita obtener la ubicación GPS para iniciar el escrutinio.
+                  </p>
+                  {!gpsError && (
+                    <button
+                      onClick={() => handleGetLocation(escrutinioState.selectedLevel)}
+                      disabled={isStarting || !escrutinioState.selectedLevel}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isStarting ? 'Obteniendo GPS...' : 'Obtener Ubicación GPS'}
+                    </button>
+                  )}
                 </div>
               </div>
             ) : escrutinioState.selectedLevel === 'LEGISLATIVE' ? (

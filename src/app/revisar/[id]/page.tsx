@@ -405,207 +405,124 @@ export default function RevisarEscrutinioPage() {
           </div>
         </div>
 
-        {/* Ubicación GPS */}
-        {(escrutinioData.initialGps || escrutinioData.finalGps) ? (
-          <div className="bg-white rounded-lg shadow-sm border mb-6">
-            <div className="p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <Navigation className="h-5 w-5 text-green-600" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-900">Ubicación del Escrutinio</h2>
-                  <p className="text-sm text-gray-600">Coordenadas GPS capturadas durante el escrutinio</p>
+        {/* Ubicación GPS - Mostrar solo una ubicación (priorizar inicial) */}
+        {(() => {
+          // Priorizar GPS inicial, sino usar GPS final
+          const gpsToShow = escrutinioData.initialGps || escrutinioData.finalGps;
+          
+          if (!gpsToShow) {
+            return (
+              <div className="bg-white rounded-lg shadow-sm border mb-6">
+                <div className="p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-gray-100 rounded-lg">
+                      <Navigation className="h-5 w-5 text-gray-600" />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-semibold text-gray-900">Ubicación del Escrutinio</h2>
+                      <p className="text-sm text-gray-600">Ubicación GPS no disponible</p>
+                    </div>
+                  </div>
+                  <div className="text-center py-4">
+                    <p className="text-gray-500">No se pudo capturar la ubicación GPS durante este escrutinio.</p>
+                  </div>
                 </div>
               </div>
-              
-              <div className="space-y-6">
-                {/* GPS Inicial */}
-                {escrutinioData.initialGps && (
-                  <div className="border rounded-lg p-4">
-                    <div className="mb-3">
-                      <h3 className="text-md font-semibold text-gray-900">📍 Ubicación cuando se inició el escrutinio</h3>
-                    </div>
-                    
-                    {escrutinioData.gpsHidden ? (
-                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                        <div className="flex items-center gap-2 text-yellow-800">
-                          <span className="text-sm font-medium">Ubicación oculta por privacidad</span>
-                        </div>
-                        <p className="text-sm text-yellow-700 mt-1">
-                          Razón: {escrutinioData.gpsHiddenReason}
-                        </p>
-                        <p className="text-xs text-yellow-600 mt-1">
-                          Ocultado el {new Date(escrutinioData.gpsHiddenAt!).toLocaleString()}
-                        </p>
+            );
+          }
+          
+          return (
+            <div className="bg-white rounded-lg shadow-sm border mb-6">
+              <div className="p-6">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <Navigation className="h-5 w-5 text-green-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900">Ubicación del Escrutinio</h2>
+                    <p className="text-sm text-gray-600">Coordenadas GPS capturadas durante el escrutinio</p>
+                  </div>
+                </div>
+                
+                <div className="border rounded-lg p-4">
+                  {escrutinioData.gpsHidden ? (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                      <div className="flex items-center gap-2 text-yellow-800">
+                        <span className="text-sm font-medium">Ubicación oculta por privacidad</span>
                       </div>
-                    ) : (
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <div className="flex justify-between">
-                              <span className="text-sm text-gray-600">Latitud:</span>
-                              <span className="text-sm font-mono text-gray-900">
-                                {escrutinioData.initialGps.latitude.toFixed(6)}
-                              </span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-sm text-gray-600">Longitud:</span>
-                              <span className="text-sm font-mono text-gray-900">
-                                {escrutinioData.initialGps.longitude.toFixed(6)}
-                              </span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-sm text-gray-600">Precisión:</span>
-                              <span className="text-sm font-mono text-gray-900">
-                                ±{escrutinioData.initialGps.accuracy.toFixed(0)}m
-                              </span>
-                            </div>
+                      <p className="text-sm text-yellow-700 mt-1">
+                        Razón: {escrutinioData.gpsHiddenReason}
+                      </p>
+                      <p className="text-xs text-yellow-600 mt-1">
+                        Ocultado el {new Date(escrutinioData.gpsHiddenAt!).toLocaleString()}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <div className="flex justify-between">
+                            <span className="text-sm text-gray-600">Latitud:</span>
+                            <span className="text-sm font-mono text-gray-900">
+                              {gpsToShow.latitude.toFixed(6)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-sm text-gray-600">Longitud:</span>
+                            <span className="text-sm font-mono text-gray-900">
+                              {gpsToShow.longitude.toFixed(6)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-sm text-gray-600">Precisión:</span>
+                            <span className="text-sm font-mono text-gray-900">
+                              ±{gpsToShow.accuracy.toFixed(0)}m
+                            </span>
                           </div>
                         </div>
-                        
-                        <div className="flex flex-col items-center gap-2">
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => window.open(getGoogleMapsUrl(escrutinioData.initialGps!.latitude, escrutinioData.initialGps!.longitude), '_blank')}
-                            className="flex items-center gap-2"
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                            Ver en Google Maps
-                          </Button>
-                          {user?.role === 'ADMIN' && (
-                            escrutinioData.gpsHidden ? (
-                              <Button
-                                variant="secondary"
-                                size="sm"
-                                onClick={handleShowGps}
-                                disabled={isUpdatingGps}
-                                className="flex items-center gap-2"
-                              >
-                                Mostrar Ubicación
-                              </Button>
-                            ) : (
-                              <Button
-                                variant="secondary"
-                                size="sm"
-                                onClick={() => setShowHideModal(true)}
-                                disabled={isUpdatingGps}
-                                className="flex items-center gap-2"
-                              >
-                                Ocultar Ubicación
-                              </Button>
-                            )
-                          )}
-                        </div>
                       </div>
-                    )}
-                  </div>
-                )}
-
-                {/* GPS Final */}
-                {escrutinioData.finalGps && (
-                  <div className="border rounded-lg p-4">
-                    <div className="mb-3">
-                      <h3 className="text-md font-semibold text-gray-900">📍 Ubicación cuando se cerró el escrutinio</h3>
+                      
+                      <div className="flex flex-col items-center gap-2">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => window.open(getGoogleMapsUrl(gpsToShow.latitude, gpsToShow.longitude), '_blank')}
+                          className="flex items-center gap-2"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                          Ver en Google Maps
+                        </Button>
+                        {user?.role === 'ADMIN' && (
+                          escrutinioData.gpsHidden ? (
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={handleShowGps}
+                              disabled={isUpdatingGps}
+                              className="flex items-center gap-2"
+                            >
+                              Mostrar Ubicación
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => setShowHideModal(true)}
+                              disabled={isUpdatingGps}
+                              className="flex items-center gap-2"
+                            >
+                              Ocultar Ubicación
+                            </Button>
+                          )
+                        )}
+                      </div>
                     </div>
-                    
-                    {escrutinioData.gpsHidden ? (
-                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                        <div className="flex items-center gap-2 text-yellow-800">
-                          <span className="text-sm font-medium">Ubicación oculta por privacidad</span>
-                        </div>
-                        <p className="text-sm text-yellow-700 mt-1">
-                          Razón: {escrutinioData.gpsHiddenReason}
-                        </p>
-                        <p className="text-xs text-yellow-600 mt-1">
-                          Ocultado el {new Date(escrutinioData.gpsHiddenAt!).toLocaleString()}
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <div className="flex justify-between">
-                              <span className="text-sm text-gray-600">Latitud:</span>
-                              <span className="text-sm font-mono text-gray-900">
-                                {escrutinioData.finalGps.latitude.toFixed(6)}
-                              </span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-sm text-gray-600">Longitud:</span>
-                              <span className="text-sm font-mono text-gray-900">
-                                {escrutinioData.finalGps.longitude.toFixed(6)}
-                              </span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-sm text-gray-600">Precisión:</span>
-                              <span className="text-sm font-mono text-gray-900">
-                                ±{escrutinioData.finalGps.accuracy.toFixed(0)}m
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="flex flex-col items-center gap-2">
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => window.open(getGoogleMapsUrl(escrutinioData.finalGps!.latitude, escrutinioData.finalGps!.longitude), '_blank')}
-                            className="flex items-center gap-2"
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                            Ver en Google Maps
-                          </Button>
-                          {user?.role === 'ADMIN' && (
-                            escrutinioData.gpsHidden ? (
-                              <Button
-                                variant="secondary"
-                                size="sm"
-                                onClick={handleShowGps}
-                                disabled={isUpdatingGps}
-                                className="flex items-center gap-2"
-                              >
-                                Mostrar Ubicación
-                              </Button>
-                            ) : (
-                              <Button
-                                variant="secondary"
-                                size="sm"
-                                onClick={() => setShowHideModal(true)}
-                                disabled={isUpdatingGps}
-                                className="flex items-center gap-2"
-                              >
-                                Ocultar Ubicación
-                              </Button>
-                            )
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="bg-white rounded-lg shadow-sm border mb-6">
-            <div className="p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 bg-gray-100 rounded-lg">
-                  <Navigation className="h-5 w-5 text-gray-600" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-900">Ubicación del Escrutinio</h2>
-                  <p className="text-sm text-gray-600">Ubicación GPS no disponible</p>
+                  )}
                 </div>
               </div>
-              <div className="text-center py-4">
-                <p className="text-gray-500">No se pudo capturar la ubicación GPS durante este escrutinio.</p>
-              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Estadísticas de Papeletas (solo para escrutinios legislativos) */}
         {escrutinioData.electionLevel === 'LEGISLATIVE' && escrutinioData.papeletasStats && (
