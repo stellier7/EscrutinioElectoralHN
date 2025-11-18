@@ -71,6 +71,11 @@ export default function PresidencialEscrutinio({
   // Cargar votos desde servidor - solo limpiar si es un NUEVO escrutinio
   useEffect(() => {
     if (escrutinioId) {
+      // Verificar si es un escrutinio nuevo (recién creado)
+      const isNewEscrutinio = typeof window !== 'undefined' && 
+        localStorage.getItem('is-new-escrutinio') === 'true' &&
+        localStorage.getItem('new-escrutinio-id') === escrutinioId;
+      
       // Solo limpiar si es un NUEVO escrutinio (diferente al anterior)
       if (lastEscrutinioIdRef.current !== escrutinioId) {
         console.log('🔄 [PRESIDENTIAL] Nuevo escrutinio detectado, limpiando store local...');
@@ -85,14 +90,24 @@ export default function PresidencialEscrutinio({
         console.log('🔄 [PRESIDENTIAL] Mismo escrutinio, manteniendo votos del store');
       }
       
-      // Cargar votos desde el servidor para el escrutinioId correcto
-      console.log('📊 [PRESIDENTIAL] Cargando votos desde servidor para escrutinio:', escrutinioId);
-      const { loadFromServer } = useVoteStore.getState();
-      loadFromServer(escrutinioId).then(() => {
-        console.log('✅ [PRESIDENTIAL] Votos cargados desde servidor');
-      }).catch((error) => {
-        console.error('❌ [PRESIDENTIAL] Error cargando votos desde servidor:', error);
-      });
+      // Solo cargar votos del servidor si NO es un escrutinio nuevo
+      // Los escrutinios nuevos deben empezar de 0
+      if (!isNewEscrutinio) {
+        console.log('📊 [PRESIDENTIAL] Cargando votos desde servidor para escrutinio:', escrutinioId);
+        const { loadFromServer } = useVoteStore.getState();
+        loadFromServer(escrutinioId).then(() => {
+          console.log('✅ [PRESIDENTIAL] Votos cargados desde servidor');
+        }).catch((error) => {
+          console.error('❌ [PRESIDENTIAL] Error cargando votos desde servidor:', error);
+        });
+      } else {
+        console.log('🆕 [PRESIDENTIAL] Escrutinio nuevo detectado, NO cargando votos del servidor (empezando de 0)');
+        // Limpiar el flag después de usarlo
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('is-new-escrutinio');
+          localStorage.removeItem('new-escrutinio-id');
+        }
+      }
     } else {
       // Si no hay escrutinioId, resetear el ref
       lastEscrutinioIdRef.current = null;

@@ -173,6 +173,25 @@ function EscrutinioPageContent() {
       return;
     }
 
+    // CRITICAL: Limpiar TODO antes de iniciar un nuevo escrutinio
+    console.log('🧹 [LEVEL SELECT] Limpiando stores y localStorage antes de iniciar nuevo escrutinio');
+    
+    // Limpiar stores de votos
+    voteStore.clear();
+    if (typeof window !== 'undefined') {
+      import('@/store/legislativeVoteStore').then(({ useLegislativeVoteStore }) => {
+        useLegislativeVoteStore.getState().clear();
+      });
+      
+      // Limpiar localStorage keys de escrutinioId anterior
+      localStorage.removeItem('last-presidential-escrutinio-id');
+      localStorage.removeItem('last-legislative-escrutinio-id');
+      localStorage.removeItem('last-escrutinio-key');
+      
+      // Marcar que el próximo escrutinio será nuevo (no cargar votos del servidor)
+      localStorage.setItem('is-new-escrutinio', 'true');
+    }
+
     // Si hay advertencia activa, crear nuevo escrutinio y mover el anterior a "Recientes"
     if (showJRVWarning && activeEscrutinio) {
       console.log('🔄 Creando nuevo escrutinio para JRV con escrutinio activo');
@@ -462,6 +481,9 @@ function EscrutinioPageContent() {
         if (typeof window !== 'undefined') {
           localStorage.removeItem('last-presidential-escrutinio-id');
           localStorage.removeItem('last-legislative-escrutinio-id');
+          // Marcar que este es un escrutinio nuevo (no cargar votos del servidor)
+          localStorage.setItem('is-new-escrutinio', 'true');
+          localStorage.setItem('new-escrutinio-id', newEscrutinioId);
         }
         
         // Mostrar mensaje de éxito por un momento

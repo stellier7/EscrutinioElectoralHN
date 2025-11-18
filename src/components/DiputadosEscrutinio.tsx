@@ -172,6 +172,11 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
   // Cargar votos desde servidor - solo limpiar si es un NUEVO escrutinio
   useEffect(() => {
     if (escrutinioId) {
+      // Verificar si es un escrutinio nuevo (recién creado)
+      const isNewEscrutinio = typeof window !== 'undefined' && 
+        localStorage.getItem('is-new-escrutinio') === 'true' &&
+        localStorage.getItem('new-escrutinio-id') === escrutinioId;
+      
       // Solo limpiar si es un NUEVO escrutinio (diferente al anterior)
       if (lastEscrutinioIdRef.current !== escrutinioId) {
         console.log('🔄 [LEGISLATIVE] Nuevo escrutinio detectado, limpiando store local...');
@@ -189,12 +194,23 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
         console.log('🔄 [LEGISLATIVE] Mismo escrutinio, manteniendo votos del store');
       }
       
-      console.log('📊 [LEGISLATIVE] Cargando votos desde servidor para escrutinio:', escrutinioId);
-      loadVotesFromServer(escrutinioId).then(() => {
-        console.log('✅ [LEGISLATIVE] Votos cargados desde servidor');
-      }).catch((error) => {
-        console.error('❌ [LEGISLATIVE] Error cargando votos desde servidor:', error);
-      });
+      // Solo cargar votos del servidor si NO es un escrutinio nuevo
+      // Los escrutinios nuevos deben empezar de 0
+      if (!isNewEscrutinio) {
+        console.log('📊 [LEGISLATIVE] Cargando votos desde servidor para escrutinio:', escrutinioId);
+        loadVotesFromServer(escrutinioId).then(() => {
+          console.log('✅ [LEGISLATIVE] Votos cargados desde servidor');
+        }).catch((error) => {
+          console.error('❌ [LEGISLATIVE] Error cargando votos desde servidor:', error);
+        });
+      } else {
+        console.log('🆕 [LEGISLATIVE] Escrutinio nuevo detectado, NO cargando votos del servidor (empezando de 0)');
+        // Limpiar el flag después de usarlo
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('is-new-escrutinio');
+          localStorage.removeItem('new-escrutinio-id');
+        }
+      }
     } else {
       // Si no hay escrutinioId, resetear los refs
       lastEscrutinioIdRef.current = null;
