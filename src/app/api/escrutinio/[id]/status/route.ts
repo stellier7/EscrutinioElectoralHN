@@ -54,6 +54,9 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
     // Obtener cargaElectoral directamente del select
     const cargaElectoral = escrutinio.mesa.cargaElectoral ?? null;
+    
+    // Debug log
+    console.log('📍 [STATUS API] cargaElectoral para JRV', escrutinio.mesa.number, ':', cargaElectoral);
 
     return NextResponse.json({
       success: true,

@@ -159,12 +159,14 @@ export default function PresidencialEscrutinio({
           console.log('📍 [DEBUG] department prop:', department);
           console.log('📊 [PRESIDENTIAL] Status del escrutinio:', status);
           
-          // Guardar carga electoral
+          // Guardar carga electoral (incluir 0 como valor válido)
           if (cargaElectoralData !== null && cargaElectoralData !== undefined) {
             setCargaElectoral(cargaElectoralData);
             console.log('📍 [DEBUG] cargaElectoral state set to:', cargaElectoralData);
           } else {
             console.log('📍 [DEBUG] cargaElectoral is null/undefined, not setting state');
+            console.log('📍 [DEBUG] cargaElectoralData type:', typeof cargaElectoralData);
+            console.log('📍 [DEBUG] cargaElectoralData value:', cargaElectoralData);
           }
           
           // Guardar información de la mesa desde el servidor para usar si los props no tienen la info correcta
@@ -605,6 +607,12 @@ export default function PresidencialEscrutinio({
                   `Carga Electoral: ${cargaElectoral.toLocaleString()}`
                 ) : (
                   'Carga Electoral: Cargando...'
+                )}
+                {/* Debug: mostrar estado actual */}
+                {process.env.NODE_ENV === 'development' && (
+                  <span className="ml-2 text-xs text-gray-400">
+                    (state: {String(cargaElectoral)})
+                  </span>
                 )}
               </div>
             </div>
