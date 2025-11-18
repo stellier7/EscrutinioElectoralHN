@@ -599,7 +599,7 @@ export default function PresidencialEscrutinio({
                   ) : (
                     <>
                       <AlertCircle className="h-4 w-4" />
-                      {isEscrutinioClosed ? 'Editar Escrutinio' : 'Cerrar Escrutinio'}
+                      {isEscrutinioClosed ? 'Corregir Escrutinio' : 'Cerrar Escrutinio'}
                     </>
                   )}
                 </button>
@@ -632,7 +632,7 @@ export default function PresidencialEscrutinio({
                     ) : (
                       <>
                         <FileText className="h-4 w-4" />
-                        Editar Escrutinio
+                        Corregir Escrutinio
                       </>
                     )}
                   </button>

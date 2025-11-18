@@ -1381,7 +1381,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
             </div>
             <div>
               <h3 className="font-semibold text-gray-900">
-                {isEscrutinioClosed ? 'Editar Escrutinio' : 'Cerrar Escrutinio'}
+                {isEscrutinioClosed ? 'Corregir Escrutinio' : 'Cerrar Escrutinio'}
               </h3>
               <p className="text-sm text-gray-600">
                 {isEscrutinioClosed ? 'Continuar agregando marcas' : 'Cerrar para tomar foto'}
