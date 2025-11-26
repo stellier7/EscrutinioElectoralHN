@@ -260,6 +260,17 @@ export default function HomePage() {
               </button>
             </div>
 
+            {isLogin && (
+              <div className="text-right">
+                <a
+                  href="/forgot-password"
+                  className="text-sm text-primary-600 hover:text-primary-700"
+                >
+                  ¿Olvidaste tu contraseña?
+                </a>
+              </div>
+            )}
+
             {!isLogin && (
               <Select
                 label="Rol"

@@ -60,6 +60,16 @@ export default function DashboardPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(true);
+  
+  // Estado para cambio de contraseña
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [passwordErrors, setPasswordErrors] = useState<Record<string, string>>({});
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -479,6 +489,154 @@ export default function DashboardPage() {
     </div>
   );
 
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordErrors({});
+    setPasswordSuccess(false);
+
+    // Validación
+    const errors: Record<string, string> = {};
+    if (!passwordForm.currentPassword) {
+      errors.currentPassword = 'La contraseña actual es requerida';
+    }
+    if (!passwordForm.newPassword) {
+      errors.newPassword = 'La nueva contraseña es requerida';
+    } else if (passwordForm.newPassword.length < 6) {
+      errors.newPassword = 'La contraseña debe tener al menos 6 caracteres';
+    }
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      errors.confirmPassword = 'Las contraseñas no coinciden';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setPasswordErrors(errors);
+      return;
+    }
+
+    try {
+      setPasswordLoading(true);
+      const response = await axios.post('/api/auth/change-password', {
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword,
+      });
+
+      if (response.data.success) {
+        setPasswordSuccess(true);
+        setPasswordForm({
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: '',
+        });
+        setTimeout(() => setPasswordSuccess(false), 5000);
+      } else {
+        setPasswordErrors({ general: response.data.error || 'Error al cambiar la contraseña' });
+      }
+    } catch (error: any) {
+      setPasswordErrors({
+        general: error.response?.data?.error || 'Error al cambiar la contraseña',
+      });
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
+  const renderProfile = () => (
+    <div className="space-y-4">
+      <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Información del Perfil</h3>
+        <div className="space-y-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
+            <p className="text-gray-900">{user?.name}</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <p className="text-gray-900">{user?.email}</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Rol</label>
+            <p className="text-gray-900">{getRoleText(user?.role || '')}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Cambiar Contraseña</h3>
+        {passwordSuccess && (
+          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+            <p className="text-sm text-green-800">✅ Contraseña actualizada exitosamente</p>
+          </div>
+        )}
+        {passwordErrors.general && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-sm text-red-800">{passwordErrors.general}</p>
+          </div>
+        )}
+        <form onSubmit={handlePasswordChange} className="space-y-4">
+          <div>
+            <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700 mb-1">
+              Contraseña Actual
+            </label>
+            <input
+              type="password"
+              id="currentPassword"
+              value={passwordForm.currentPassword}
+              onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              required
+            />
+            {passwordErrors.currentPassword && (
+              <p className="mt-1 text-sm text-red-600">{passwordErrors.currentPassword}</p>
+            )}
+          </div>
+          <div>
+            <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-1">
+              Nueva Contraseña
+            </label>
+            <input
+              type="password"
+              id="newPassword"
+              value={passwordForm.newPassword}
+              onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              required
+              minLength={6}
+            />
+            {passwordErrors.newPassword && (
+              <p className="mt-1 text-sm text-red-600">{passwordErrors.newPassword}</p>
+            )}
+          </div>
+          <div>
+            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+              Confirmar Nueva Contraseña
+            </label>
+            <input
+              type="password"
+              id="confirmPassword"
+              value={passwordForm.confirmPassword}
+              onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              required
+              minLength={6}
+            />
+            {passwordErrors.confirmPassword && (
+              <p className="mt-1 text-sm text-red-600">{passwordErrors.confirmPassword}</p>
+            )}
+          </div>
+          <Button
+            type="submit"
+            variant="primary"
+            size="lg"
+            disabled={passwordLoading}
+            className="w-full"
+          >
+            {passwordLoading ? 'Cambiando...' : 'Cambiar Contraseña'}
+          </Button>
+        </form>
+      </div>
+    </div>
+  );
+
   const renderNewEscrutinio = () => (
     <div className="space-y-4">
       <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
@@ -714,6 +872,8 @@ export default function DashboardPage() {
             </Button>
           </div>
         );
+      case 'profile':
+        return renderProfile();
       default:
         return (
           <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200">

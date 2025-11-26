@@ -6,7 +6,7 @@ import { useAuth } from '@/components/AuthProvider';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
-import { ArrowLeft, Calendar, FileSpreadsheet, Users } from 'lucide-react';
+import { ArrowLeft, Calendar, FileSpreadsheet, Users, Mail } from 'lucide-react';
 import JRVUploader from '@/components/JRVUploader';
 // import Toast from '@/components/ui/Toast';
 import type { UserListResponse, UserListFilters, UserApprovalRequest, ApiResponse } from '@/types';
@@ -77,6 +77,9 @@ export default function AdminDashboard() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [showJRVUploader, setShowJRVUploader] = useState(false);
+  const [passwordChangeUserId, setPasswordChangeUserId] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [passwordChangeLoading, setPasswordChangeLoading] = useState(false);
   
   // Filtros
   const [filters, setFilters] = useState<UserListFilters>({
@@ -218,6 +221,40 @@ export default function AdminDashboard() {
       setToast({ message: 'Error de conexión', type: 'error' });
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  const handleChangePassword = async (userId: string) => {
+    if (!newPassword || newPassword.length < 6) {
+      setToast({ message: 'La contraseña debe tener al menos 6 caracteres', type: 'error' });
+      return;
+    }
+
+    try {
+      setPasswordChangeLoading(true);
+      const response = await fetch(`/api/admin/users/${userId}/change-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ newPassword }),
+      });
+
+      const result: ApiResponse = await response.json();
+
+      if (result.success) {
+        setToast({ message: result.message || 'Contraseña actualizada exitosamente', type: 'success' });
+        setPasswordChangeUserId(null);
+        setNewPassword('');
+      } else {
+        setToast({ message: result.error || 'Error al cambiar la contraseña', type: 'error' });
+      }
+    } catch (error) {
+      console.error('Error changing password:', error);
+      setToast({ message: 'Error al cambiar la contraseña', type: 'error' });
+    } finally {
+      setPasswordChangeLoading(false);
     }
   };
 
@@ -417,6 +454,24 @@ export default function AdminDashboard() {
               Ver Solicitudes
             </Button>
           </div>
+
+          {/* Gestión de Campañas y Broadcast */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center mb-4">
+              <Mail className="h-6 w-6 text-green-600 mr-2" />
+              <h2 className="text-lg font-semibold text-gray-900">Campañas y Broadcast</h2>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">
+              Envía emails y WhatsApp masivos a voluntarios. Crea eventos y gestiona confirmaciones de asistencia.
+            </p>
+            <Button
+              onClick={() => router.push('/admin/campaigns')}
+              className="w-full"
+            >
+              <Mail className="h-4 w-4 mr-2" />
+              Gestionar Campañas
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -597,12 +652,72 @@ export default function AdminDashboard() {
                           Reaprobar
                         </Button>
                       )}
+                      
+                      {/* Botón para cambiar contraseña - disponible para todos los estados */}
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => {
+                          setPasswordChangeUserId(user.id);
+                          setNewPassword('');
+                        }}
+                        className="ml-2"
+                      >
+                        Cambiar Contraseña
+                      </Button>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          
+          {/* Modal para cambiar contraseña */}
+          {passwordChangeUserId && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  Cambiar Contraseña
+                </h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Usuario: {users.find(u => u.id === passwordChangeUserId)?.email}
+                </p>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Nueva Contraseña
+                  </label>
+                  <Input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Mínimo 6 caracteres"
+                    required
+                    minLength={6}
+                  />
+                </div>
+                <div className="flex space-x-3">
+                  <Button
+                    variant="primary"
+                    onClick={() => handleChangePassword(passwordChangeUserId)}
+                    disabled={passwordChangeLoading || !newPassword || newPassword.length < 6}
+                    className="flex-1"
+                  >
+                    {passwordChangeLoading ? 'Cambiando...' : 'Cambiar'}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      setPasswordChangeUserId(null);
+                      setNewPassword('');
+                    }}
+                    className="flex-1"
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
           
           {/* Paginación */}
           {pagination.totalPages > 1 && (

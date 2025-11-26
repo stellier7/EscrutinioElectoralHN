@@ -11,16 +11,16 @@ datasource db {
 }
 
 enum UserRole {
-  OBSERVER        // Observadores entrenados (prioridad alta)
-  VOLUNTEER       // Voluntarios generales (prioridad baja)
-  ADMIN           // Administradores del sistema
+  OBSERVER // Observadores entrenados (prioridad alta)
+  VOLUNTEER // Voluntarios generales (prioridad baja)
+  ADMIN // Administradores del sistema
 }
 
 enum UserStatus {
-  PENDING         // Esperando aprobación
-  APPROVED        // Aprobado y activo
-  REJECTED        // Rechazado
-  SUSPENDED       // Suspendido temporalmente
+  PENDING // Esperando aprobación
+  APPROVED // Aprobado y activo
+  REJECTED // Rechazado
+  SUSPENDED // Suspendido temporalmente
 }
 
 enum ElectionLevel {
@@ -68,381 +68,499 @@ enum PapeletaStatus {
 }
 
 model User {
-  id              String      @id @default(cuid())
-  email           String      @unique
-  password        String
-  name            String
-  role            UserRole    @default(VOLUNTEER)
-  status          UserStatus  @default(PENDING)
-  deviceId        String?     @unique // Un dispositivo por usuario
-  
+  id       String     @id @default(cuid())
+  email    String     @unique
+  password String
+  name     String
+  role     UserRole   @default(VOLUNTEER)
+  status   UserStatus @default(PENDING)
+  deviceId String?    @unique // Un dispositivo por usuario
+
   // Información adicional para aprobación
-  phone           String?
-  organization    String?
-  notes           String?     // Notas del admin sobre el usuario
-  
+  phone        String?
+  organization String?
+  notes        String? // Notas del admin sobre el usuario
+
   // Metadatos de aprobación
   approvedAt      DateTime?
-  approvedBy      String?     // ID del admin que aprobó
+  approvedBy      String? // ID del admin que aprobó
   rejectedAt      DateTime?
-  rejectedBy      String?     // ID del admin que rechazó
+  rejectedBy      String? // ID del admin que rechazó
   rejectionReason String?
-  
-  isActive        Boolean     @default(true)
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-  
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Recuperación de contraseña
+  passwordResetToken      String?
+  passwordResetExpires    DateTime?
+
   // Relaciones
-  escrutinios     Escrutinio[]
-  auditLogs       AuditLog[]
-  offlineQueue    OfflineQueue[]
-  rateLimit       UserRateLimit?
-  checkpoints     EscrutinioCheckpoint[]
-  
+  escrutinios  Escrutinio[]
+  auditLogs    AuditLog[]
+  offlineQueue OfflineQueue[]
+  rateLimit    UserRateLimit?
+  checkpoints  EscrutinioCheckpoint[]
+
   // Relaciones auto-referenciales para aprobación
-  approvedByUser  User?       @relation("UserApproval", fields: [approvedBy], references: [id])
-  rejectedByUser  User?       @relation("UserRejection", fields: [rejectedBy], references: [id])
-  approvedUsers   User[]      @relation("UserApproval")
-  rejectedUsers   User[]      @relation("UserRejection")
-  
+  approvedByUser User?  @relation("UserApproval", fields: [approvedBy], references: [id])
+  rejectedByUser User?  @relation("UserRejection", fields: [rejectedBy], references: [id])
+  approvedUsers  User[] @relation("UserApproval")
+  rejectedUsers  User[] @relation("UserRejection")
+
   // Relaciones para sesiones
-  closedSessions  EscrutinioSession[]
-  
+  closedSessions EscrutinioSession[]
+
   @@map("users")
 }
 
 model Election {
-  id              String         @id @default(cuid())
-  name            String
-  description     String?
-  startDate       DateTime
-  endDate         DateTime
-  isActive        Boolean        @default(true)
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  startDate   DateTime
+  endDate     DateTime
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
   // Relaciones
-  candidates      Candidate[]
-  escrutinios     Escrutinio[]
-  
+  candidates  Candidate[]
+  escrutinios Escrutinio[]
+
   @@map("elections")
 }
 
 model Candidate {
-  id              String    @id @default(cuid())
-  name            String
-  party           String
-  number          Int
-  electionId      String
-  electionLevel   ElectionLevel
-  isActive        Boolean   @default(true)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  
+  id            String        @id @default(cuid())
+  name          String
+  party         String
+  number        Int
+  electionId    String
+  electionLevel ElectionLevel
+  isActive      Boolean       @default(true)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
   // Relaciones
-  election        Election  @relation(fields: [electionId], references: [id])
-  votes           Vote[]
-  
+  election Election @relation(fields: [electionId], references: [id])
+  votes    Vote[]
+
   @@unique([electionId, number, electionLevel])
   @@map("candidates")
 }
 
 model Mesa {
-  id              String    @id @default(cuid())
-  number          String    @unique // JRV number
-  location        String
-  address         String?
-  department      String    // Departamento de la JRV
-  municipality    String?   // Municipio
-  area            String?   // Área (urbana/rural)
-  cargaElectoral   Int?      // Carga electoral
-  latitude        Float?
-  longitude       Float?
-  isActive        Boolean   @default(true)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  
+  id             String   @id @default(cuid())
+  number         String   @unique // JRV number
+  location       String
+  address        String?
+  department     String // Departamento de la JRV
+  municipality   String? // Municipio
+  area           String? // Área (urbana/rural)
+  cargaElectoral Int? // Carga electoral
+  latitude       Float?
+  longitude      Float?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
   // Relaciones
-  escrutinios     Escrutinio[]
-  
+  escrutinios Escrutinio[]
+
   @@map("mesas")
 }
 
 model Department {
-  id              String    @id @default(cuid())
-  name            String    @unique // Nombre del departamento
-  code            Int?      // Código del departamento
-  diputados       Int       @default(0) // Número de diputados
-  isActive        Boolean   @default(true)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  
+  id        String   @id @default(cuid())
+  name      String   @unique // Nombre del departamento
+  code      Int? // Código del departamento
+  diputados Int      @default(0) // Número de diputados
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@map("departments")
 }
 
 model EscrutinioSession {
-  id              String    @id @default(cuid())
-  name            String    // "Test 01", "Elecciones Presidenciales Nov 2025"
-  description     String?
-  isActive        Boolean   @default(false)  // Solo una puede estar activa
-  isClosed        Boolean   @default(false)
-  isTest          Boolean   @default(false)  // Marcar sesión como prueba
-  
-  startedAt       DateTime  @default(now())
-  closedAt       DateTime?
-  closedBy        String?   // Admin que cerró
-  
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  
+  id          String  @id @default(cuid())
+  name        String // "Test 01", "Elecciones Presidenciales Nov 2025"
+  description String?
+  isActive    Boolean @default(false) // Solo una puede estar activa
+  isClosed    Boolean @default(false)
+  isTest      Boolean @default(false) // Marcar sesión como prueba
+
+  startedAt DateTime  @default(now())
+  closedAt  DateTime?
+  closedBy  String? // Admin que cerró
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relaciones
-  escrutinios     Escrutinio[]
-  closedByUser    User?     @relation(fields: [closedBy], references: [id])
-  
+  escrutinios  Escrutinio[]
+  closedByUser User?        @relation(fields: [closedBy], references: [id])
+
   @@map("escrutinio_sessions")
 }
 
 model Escrutinio {
-  id              String              @id @default(cuid())
-  userId          String
-  electionId      String
-  mesaId          String
-  sessionId       String
-  electionLevel   ElectionLevel
-  
+  id            String        @id @default(cuid())
+  userId        String
+  electionId    String
+  mesaId        String
+  sessionId     String
+  electionLevel ElectionLevel
+
   // Geolocalización
-  latitude        Float
-  longitude       Float
+  latitude         Float
+  longitude        Float
   locationAccuracy Float?
-  
+
   // GPS final (cuando se congela/cierra)
   finalLatitude         Float?
   finalLongitude        Float?
   finalLocationAccuracy Float?
-  
+
   // Privacidad de ubicación
-  gpsHidden          Boolean   @default(false)
-  gpsHiddenReason    String?
-  gpsHiddenBy        String?   // Admin que ocultó
-  gpsHiddenAt        DateTime?
-  
+  gpsHidden       Boolean   @default(false)
+  gpsHiddenReason String?
+  gpsHiddenBy     String? // Admin que ocultó
+  gpsHiddenAt     DateTime?
+
   // Estados
-  status          TransmissionStatus  @default(PENDING)
-  isCompleted     Boolean            @default(false)
-  
+  status      TransmissionStatus @default(PENDING)
+  isCompleted Boolean            @default(false)
+
   // Metadatos
-  startedAt       DateTime           @default(now())
-  completedAt     DateTime?
-  transmittedAt   DateTime?
-  
+  startedAt     DateTime  @default(now())
+  completedAt   DateTime?
+  transmittedAt DateTime?
+
   // Evidencia
   actaImageUrl    String?
   actaImageHash   String?
-  actaImageSource String?  // 'CAMERA' | 'LIBRARY' - origen de la foto
-  
+  actaImageSource String? // 'CAMERA' | 'LIBRARY' - origen de la foto
+
   // Validación
-  validationHash  String?
-  encryptedData   String?
-  
+  validationHash String?
+  encryptedData  String?
+
   // Sistema de prioridad y cola
-  priority        Int                @default(0) // 0 = normal, 1 = alta (observadores)
-  
+  priority Int @default(0) // 0 = normal, 1 = alta (observadores)
+
   // Seguimiento de versiones para edits
-  originalData    Json?              // Datos originales antes del primer close
-  hasEdits        Boolean            @default(false) // Indica si ha sido editado después de cerrar
-  editCount       Int                @default(0) // Número de veces que ha sido editado
-  queuePosition   Int?               // Posición en cola si hay congestión
-  
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
-  
+  originalData  Json? // Datos originales antes del primer close
+  hasEdits      Boolean @default(false) // Indica si ha sido editado después de cerrar
+  editCount     Int     @default(0) // Número de veces que ha sido editado
+  queuePosition Int? // Posición en cola si hay congestión
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relaciones
-  user            User               @relation(fields: [userId], references: [id])
-  election        Election           @relation(fields: [electionId], references: [id])
-  mesa            Mesa               @relation(fields: [mesaId], references: [id])
-  session         EscrutinioSession  @relation(fields: [sessionId], references: [id])
-  votes           Vote[]
-  corrections     Correction[]
-  papeletas       Papeleta[]
-  checkpoints     EscrutinioCheckpoint[]
+  user             User                   @relation(fields: [userId], references: [id])
+  election         Election               @relation(fields: [electionId], references: [id])
+  mesa             Mesa                   @relation(fields: [mesaId], references: [id])
+  session          EscrutinioSession      @relation(fields: [sessionId], references: [id])
+  votes            Vote[]
+  corrections      Correction[]
+  papeletas        Papeleta[]
+  checkpoints      EscrutinioCheckpoint[]
   processedBatches ProcessedBatch[]
-  
+
   @@map("escrutinios")
 }
 
 model EscrutinioCheckpoint {
-  id              String    @id @default(cuid())
-  escrutinioId    String
-  userId          String
-  action          String    // 'FREEZE' o 'UNFREEZE'
-  votesSnapshot   Json      // Snapshot de los votos en ese momento
-  snapshotHash    String?   // SHA-256 hash del snapshot para verificación de integridad
-  timestamp       DateTime  @default(now())
-  
+  id            String   @id @default(cuid())
+  escrutinioId  String
+  userId        String
+  action        String // 'FREEZE' o 'UNFREEZE'
+  votesSnapshot Json // Snapshot de los votos en ese momento
+  snapshotHash  String? // SHA-256 hash del snapshot para verificación de integridad
+  timestamp     DateTime @default(now())
+
   // Metadatos adicionales
-  deviceId        String?
-  gpsLatitude     Float?
-  gpsLongitude    Float?
-  gpsAccuracy     Float?
-  
-  createdAt       DateTime  @default(now())
-  
+  deviceId     String?
+  gpsLatitude  Float?
+  gpsLongitude Float?
+  gpsAccuracy  Float?
+
+  createdAt DateTime @default(now())
+
   // Relaciones
-  escrutinio      Escrutinio @relation(fields: [escrutinioId], references: [id], onDelete: Cascade)
-  user            User       @relation(fields: [userId], references: [id])
-  
+  escrutinio Escrutinio @relation(fields: [escrutinioId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id])
+
   @@map("escrutinio_checkpoints")
 }
 
 model Vote {
-  id              String    @id @default(cuid())
-  escrutinioId    String
-  candidateId     String
-  count           Int       @default(0)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  
+  id           String   @id @default(cuid())
+  escrutinioId String
+  candidateId  String
+  count        Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
   // Relaciones
-  escrutinio      Escrutinio @relation(fields: [escrutinioId], references: [id], onDelete: Cascade)
-  candidate       Candidate  @relation(fields: [candidateId], references: [id])
-  
+  escrutinio Escrutinio @relation(fields: [escrutinioId], references: [id], onDelete: Cascade)
+  candidate  Candidate  @relation(fields: [candidateId], references: [id])
+
   @@unique([escrutinioId, candidateId])
   @@map("votes")
 }
 
 model Correction {
-  id              String    @id @default(cuid())
-  escrutinioId    String
-  candidateId     String
-  oldValue        Int
-  newValue        Int
-  reason          String?
-  timestamp       DateTime  @default(now())
-  
+  id           String   @id @default(cuid())
+  escrutinioId String
+  candidateId  String
+  oldValue     Int
+  newValue     Int
+  reason       String?
+  timestamp    DateTime @default(now())
+
   // Relaciones
-  escrutinio      Escrutinio @relation(fields: [escrutinioId], references: [id])
-  
+  escrutinio Escrutinio @relation(fields: [escrutinioId], references: [id])
+
   @@map("corrections")
 }
 
 model AuditLog {
-  id              String         @id @default(cuid())
-  userId          String?
-  action          AuditLogAction
-  description     String
-  metadata        Json?
-  ipAddress       String?
-  userAgent       String?
-  timestamp       DateTime       @default(now())
-  
+  id          String         @id @default(cuid())
+  userId      String?
+  action      AuditLogAction
+  description String
+  metadata    Json?
+  ipAddress   String?
+  userAgent   String?
+  timestamp   DateTime       @default(now())
+
   // Relaciones
-  user            User?          @relation(fields: [userId], references: [id])
-  
+  user User? @relation(fields: [userId], references: [id])
+
   @@map("audit_logs")
 }
 
 model Papeleta {
-  id              String         @id @default(cuid())
-  escrutinioId    String
-  userId          String
-  status          PapeletaStatus @default(OPEN)
-  votesBuffer     Json           @default("[]") // Array de {partyId, casillaNumber, timestamp}
-  
+  id           String         @id @default(cuid())
+  escrutinioId String
+  userId       String
+  status       PapeletaStatus @default(OPEN)
+  votesBuffer  Json           @default("[]") // Array de {partyId, casillaNumber, timestamp}
+
   // Timestamps
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  closedAt        DateTime?
-  anuladaAt       DateTime?
-  anuladaReason   String?
-  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  closedAt      DateTime?
+  anuladaAt     DateTime?
+  anuladaReason String?
+
   // Relaciones
-  escrutinio      Escrutinio     @relation(fields: [escrutinioId], references: [id], onDelete: Cascade)
-  
+  escrutinio Escrutinio @relation(fields: [escrutinioId], references: [id], onDelete: Cascade)
+
   @@map("papeletas")
 }
 
 model SystemConfig {
-  id              String    @id @default(cuid())
-  key             String    @unique
-  value           String
-  description     String?
-  isActive        Boolean   @default(true)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
   @@map("system_config")
 }
 
 // Nueva tabla para manejar cola de uploads offline
 model OfflineQueue {
-  id              String    @id @default(cuid())
-  userId          String
-  action          String    // 'upload_image', 'submit_votes', etc.
-  data            Json      // Datos a procesar cuando regrese conexión
-  priority        Int       @default(0) // 0 = normal, 1 = alta
-  retryCount      Int       @default(0)
-  maxRetries      Int       @default(3)
-  status          String    @default("pending") // pending, processing, completed, failed
-  error           String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  processedAt     DateTime?
-  
+  id          String    @id @default(cuid())
+  userId      String
+  action      String // 'upload_image', 'submit_votes', etc.
+  data        Json // Datos a procesar cuando regrese conexión
+  priority    Int       @default(0) // 0 = normal, 1 = alta
+  retryCount  Int       @default(0)
+  maxRetries  Int       @default(3)
+  status      String    @default("pending") // pending, processing, completed, failed
+  error       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  processedAt DateTime?
+
   // Relaciones
-  user            User      @relation(fields: [userId], references: [id])
-  
+  user User @relation(fields: [userId], references: [id])
+
   @@map("offline_queue")
 }
 
 // Nueva tabla para rate limiting por usuario
 model UserRateLimit {
-  id              String    @id @default(cuid())
-  userId          String    @unique
-  requests        Int       @default(0)
-  windowStart     DateTime  @default(now())
-  lastRequest     DateTime  @default(now())
-  isBlocked       Boolean   @default(false)
-  blockedUntil    DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  
+  id           String    @id @default(cuid())
+  userId       String    @unique
+  requests     Int       @default(0)
+  windowStart  DateTime  @default(now())
+  lastRequest  DateTime  @default(now())
+  isBlocked    Boolean   @default(false)
+  blockedUntil DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
   // Relaciones
-  user            User      @relation(fields: [userId], references: [id])
-  
+  user User @relation(fields: [userId], references: [id])
+
   @@map("user_rate_limits")
 }
 
 // Nueva tabla para prevenir procesamiento de votos duplicados
 model ProcessedBatch {
-  id              String    @id @default(cuid())
-  clientBatchId   String    @unique  // Batch ID generado por el cliente
-  escrutinioId    String
-  userId          String?
-  
+  id            String  @id @default(cuid())
+  clientBatchId String  @unique // Batch ID generado por el cliente
+  escrutinioId  String
+  userId        String?
+
   // Metadatos del procesamiento
-  processedAt     DateTime  @default(now())
-  processedVotes  Int       @default(0)  // Número de votos en este batch
-  
+  processedAt    DateTime @default(now())
+  processedVotes Int      @default(0) // Número de votos en este batch
+
   // Relaciones
-  escrutinio      Escrutinio @relation(fields: [escrutinioId], references: [id], onDelete: Cascade)
-  
+  escrutinio Escrutinio @relation(fields: [escrutinioId], references: [id], onDelete: Cascade)
+
   @@index([escrutinioId, clientBatchId])
-  @@index([processedAt])  // Para limpieza de registros antiguos
+  @@index([processedAt]) // Para limpieza de registros antiguos
   @@map("processed_batches")
 }
 
 // Tabla para solicitudes de voluntarios/observadores
 model VolunteerApplication {
-  id              String    @id @default(cuid())
-  firstName       String
-  lastName        String
-  email           String
-  phone           String
-  role            UserRole  @default(VOLUNTEER) // OBSERVER o VOLUNTEER
-  jrvNumber       String?   // Número de JRV donde quiere votar (opcional)
-  comments        String?   // Comentarios adicionales (opcional)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  
+  id        String   @id @default(cuid())
+  firstName String
+  lastName  String
+  email     String
+  phone     String
+  role      UserRole @default(VOLUNTEER) // OBSERVER o VOLUNTEER
+  jrvNumber String? // Número de JRV donde quiere votar (opcional)
+  comments  String? // Comentarios adicionales (opcional)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relaciones
+  confirmations      EventConfirmation[]
+  campaignRecipients CampaignRecipient[]
+
   @@map("volunteer_applications")
-} 
+}
+
+// Tabla para campañas de broadcast (emails/WhatsApp masivos)
+model Campaign {
+  id          String    @id @default(cuid())
+  name        String // Nombre de la campaña (ej: "Live YouTube Diciembre 2025")
+  description String?
+  eventType   String? // Tipo de evento (ej: "live_youtube", "training", "meeting")
+  eventDate   DateTime? // Fecha del evento
+
+  // Contenido del mensaje
+  emailSubject    String? // Asunto del email
+  emailContent    String? // Contenido HTML del email
+  whatsappContent String? // Contenido del mensaje WhatsApp
+
+  // Filtros de destinatarios
+  targetRole UserRole? // null = todos, OBSERVER, VOLUNTEER
+  targetJrv  String? // Filtrar por JRV específica
+
+  // Estado
+  status      String    @default("draft") // draft, scheduled, sending, completed, cancelled
+  scheduledAt DateTime? // Cuándo se enviará (si está programado)
+  sentAt      DateTime? // Cuándo se envió
+
+  // Estadísticas
+  totalRecipients   Int @default(0)
+  emailsSent        Int @default(0)
+  emailsDelivered   Int @default(0)
+  whatsappSent      Int @default(0)
+  whatsappDelivered Int @default(0)
+
+  createdBy String? // ID del admin que creó la campaña
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relaciones
+  recipients CampaignRecipient[]
+
+  @@map("campaigns")
+}
+
+// Tabla para rastrear destinatarios de campañas
+model CampaignRecipient {
+  id            String  @id @default(cuid())
+  campaignId    String
+  applicationId String? // ID de la solicitud de voluntario (si aplica)
+
+  // Información del destinatario
+  email     String?
+  phone     String?
+  firstName String?
+  lastName  String?
+
+  // Estado de entrega
+  emailSent         Boolean @default(false)
+  emailDelivered    Boolean @default(false)
+  emailError        String?
+  whatsappSent      Boolean @default(false)
+  whatsappDelivered Boolean @default(false)
+  whatsappError     String?
+
+  sentAt      DateTime?
+  deliveredAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relaciones
+  campaign    Campaign              @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  application VolunteerApplication? @relation(fields: [applicationId], references: [id])
+
+  @@index([campaignId])
+  @@index([applicationId])
+  @@map("campaign_recipients")
+}
+
+// Tabla para confirmaciones de asistencia a eventos
+model EventConfirmation {
+  id            String   @id @default(cuid())
+  applicationId String // ID de la solicitud de voluntario
+  eventType     String // Tipo de evento (ej: "live_youtube", "training")
+  eventName     String // Nombre del evento
+  eventDate     DateTime // Fecha del evento
+
+  // Estado de confirmación
+  status      String    @default("pending") // pending, confirmed, declined, maybe
+  confirmedAt DateTime?
+  declinedAt  DateTime?
+
+  // Información adicional
+  notes String? // Notas del voluntario
+
+  // Links de confirmación
+  confirmationToken String @unique // Token único para confirmación
+  confirmationUrl   String // URL completa para confirmar
+
+  // Recordatorios
+  reminderSent   Boolean   @default(false)
+  reminderSentAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relaciones
+  application VolunteerApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@unique([applicationId, eventType, eventDate])
+  @@index([confirmationToken])
+  @@index([eventType, eventDate])
+  @@map("event_confirmations")
+}
