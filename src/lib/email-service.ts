@@ -5,15 +5,15 @@ let resendClient: any = null;
 
 // Try to initialize Resend if available
 try {
-  // Use dynamic import to avoid build errors if resend is not installed
-  const resendModule = eval('require')('resend');
-  if (resendModule && env.RESEND_API_KEY) {
+  // @ts-ignore - resend may not be installed, this is intentional
+  const resendModule = require('resend');
+  if (resendModule && resendModule.Resend && env.RESEND_API_KEY) {
     const Resend = resendModule.Resend;
     resendClient = new Resend(env.RESEND_API_KEY);
   }
 } catch (error) {
   // Resend package not installed, email service will be disabled
-  // This is fine - email service will just return errors
+  // This is fine - email service will just return errors when called
 }
 
 export interface EmailOptions {
