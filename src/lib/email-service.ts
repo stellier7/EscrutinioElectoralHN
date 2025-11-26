@@ -1,17 +1,19 @@
 import { env } from '@/config/env';
 
 // Initialize Resend (optional - only if package is installed)
-let Resend: any = null;
 let resendClient: any = null;
 
+// Try to initialize Resend if available
 try {
-  Resend = require('resend').Resend;
-  if (env.RESEND_API_KEY) {
+  // Use dynamic import to avoid build errors if resend is not installed
+  const resendModule = eval('require')('resend');
+  if (resendModule && env.RESEND_API_KEY) {
+    const Resend = resendModule.Resend;
     resendClient = new Resend(env.RESEND_API_KEY);
   }
 } catch (error) {
   // Resend package not installed, email service will be disabled
-  console.warn('Resend package not installed. Email service disabled.');
+  // This is fine - email service will just return errors
 }
 
 export interface EmailOptions {
@@ -86,10 +88,10 @@ export async function sendEmail(options: EmailOptions): Promise<EmailResult> {
  */
 export async function sendBulkEmails(emails: EmailOptions[]): Promise<EmailResult[]> {
   if (!resendClient) {
-    console.warn('Resend API key not configured. Emails not sent.');
+    console.warn('Resend not available. Emails not sent.');
     return emails.map(() => ({
       success: false,
-      error: 'Resend not configured',
+      error: 'Email service not available',
     }));
   }
 
