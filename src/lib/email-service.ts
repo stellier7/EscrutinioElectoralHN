@@ -1,11 +1,17 @@
-import { Resend } from 'resend';
 import { env } from '@/config/env';
 
-// Initialize Resend
-let resendClient: Resend | null = null;
+// Initialize Resend (optional - only if package is installed)
+let Resend: any = null;
+let resendClient: any = null;
 
-if (env.RESEND_API_KEY) {
-  resendClient = new Resend(env.RESEND_API_KEY);
+try {
+  Resend = require('resend').Resend;
+  if (env.RESEND_API_KEY) {
+    resendClient = new Resend(env.RESEND_API_KEY);
+  }
+} catch (error) {
+  // Resend package not installed, email service will be disabled
+  console.warn('Resend package not installed. Email service disabled.');
 }
 
 export interface EmailOptions {
