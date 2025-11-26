@@ -27,6 +27,19 @@ const envSchema = z.object({
   GOOGLE_MAPS_API_KEY: z.string().optional(),
   SENTRY_DSN: z.string().optional(),
   
+  // Email service (Resend)
+  RESEND_API_KEY: z.string().optional(),
+  RESEND_FROM_EMAIL: z.string().email().optional(),
+  RESEND_FROM_NAME: z.string().optional(),
+  
+  // WhatsApp service (ChatAPI)
+  CHATAPI_API_KEY: z.string().optional(),
+  CHATAPI_INSTANCE_ID: z.string().optional(),
+  CHATAPI_PHONE_NUMBER: z.string().optional(),
+  
+  // App base URL for links
+  APP_BASE_URL: z.string().url().optional(),
+  
   // Seed secret for production
   SEED_SECRET: z.string().optional(),
 });
@@ -57,6 +70,13 @@ try {
       ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS,
       GOOGLE_MAPS_API_KEY: process.env.GOOGLE_MAPS_API_KEY,
       SENTRY_DSN: process.env.SENTRY_DSN,
+      RESEND_API_KEY: process.env.RESEND_API_KEY,
+      RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL,
+      RESEND_FROM_NAME: process.env.RESEND_FROM_NAME,
+      CHATAPI_API_KEY: process.env.CHATAPI_API_KEY,
+      CHATAPI_INSTANCE_ID: process.env.CHATAPI_INSTANCE_ID,
+      CHATAPI_PHONE_NUMBER: process.env.CHATAPI_PHONE_NUMBER,
+      APP_BASE_URL: process.env.APP_BASE_URL || 'http://localhost:3000',
       SEED_SECRET: process.env.SEED_SECRET || 'dev-seed-secret',
     } as any;
   } else {

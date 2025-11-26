@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import type { ApiResponse } from '@/types';
+import { sendWhatsApp, generateWelcomeWhatsApp } from '@/lib/whatsapp-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,11 +45,21 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       },
     });
 
+    // Send welcome WhatsApp - fire and forget
+    // Email service disabled - skip email sending
+    // Don't block the response if notifications fail
+    sendWhatsApp({
+      to: phone,
+      message: generateWelcomeWhatsApp({ firstName, lastName, role }),
+    }).catch((error) => {
+      console.error('Error sending welcome WhatsApp:', error);
+    });
+
     return NextResponse.json({
       success: true,
       data: {
         id: application.id,
-        message: 'Tu solicitud ha sido enviada exitosamente. Nos pondremos en contacto contigo pronto.',
+        message: 'Tu solicitud ha sido enviada exitosamente. Te hemos enviado un email y WhatsApp de confirmación. Nos pondremos en contacto contigo pronto.',
       },
     } as ApiResponse);
 
