@@ -92,9 +92,6 @@ export async function POST(
       where: { id: userId },
       data: {
         password: hashedPassword,
-        // Limpiar tokens de recuperación si existen
-        passwordResetToken: null,
-        passwordResetExpires: null,
       },
     });
 

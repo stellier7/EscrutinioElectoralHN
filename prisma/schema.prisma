@@ -92,10 +92,6 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Recuperación de contraseña
-  passwordResetToken      String?
-  passwordResetExpires    DateTime?
-
   // Relaciones
   escrutinios  Escrutinio[]
   auditLogs    AuditLog[]
