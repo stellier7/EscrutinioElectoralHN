@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../../components/AuthProvider';
 import axios from 'axios';
 import Button from '../../components/ui/Button';
+import { InfoTooltip } from '../../components/ui/InfoTooltip';
 import { 
   Vote, 
   Shield, 
@@ -20,7 +21,8 @@ import {
   Menu,
   X,
   Crown,
-  Clock
+  Clock,
+  Info
 } from 'lucide-react';
 
 interface DashboardStats {
@@ -238,8 +240,11 @@ export default function DashboardPage() {
             <div className="p-2 bg-green-100 rounded-lg">
               <CheckCircle className="h-5 w-5 text-green-600" />
             </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-600">Escrutinios Completados</p>
+            <div className="ml-3 flex-1">
+              <div className="flex items-center gap-1.5">
+                <p className="text-sm font-medium text-gray-600">Escrutinios Completados</p>
+                <InfoTooltip text="Total de actas verificadas por todos los voluntarios y observadores hasta el momento." />
+              </div>
               <p className="text-xl font-bold text-gray-900">
                 {statsLoading ? '...' : stats?.completedEscrutinios || 0}
               </p>
@@ -252,8 +257,11 @@ export default function DashboardPage() {
             <div className="p-2 bg-blue-100 rounded-lg">
               <AlertCircle className="h-5 w-5 text-blue-600" />
             </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-600">Pendientes</p>
+            <div className="ml-3 flex-1">
+              <div className="flex items-center gap-1.5">
+                <p className="text-sm font-medium text-gray-600">Pendientes</p>
+                <InfoTooltip text="JRVs iniciados por otros voluntarios que aún no finalizan su registro." />
+              </div>
               <p className="text-xl font-bold text-gray-900">
                 {statsLoading ? '...' : stats?.pendingEscrutinios || 0}
               </p>
@@ -266,8 +274,11 @@ export default function DashboardPage() {
             <div className="p-2 bg-purple-100 rounded-lg">
               <MapPin className="h-5 w-5 text-purple-600" />
             </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-600">Total de Mesas</p>
+            <div className="ml-3 flex-1">
+              <div className="flex items-center gap-1.5">
+                <p className="text-sm font-medium text-gray-600">Total de Mesas</p>
+                <InfoTooltip text="Número total de mesas asignadas al proceso electoral." />
+              </div>
               <p className="text-xl font-bold text-gray-900">
                 {statsLoading ? '...' : stats?.totalMesas || 0}
               </p>
