@@ -365,7 +365,7 @@ export default function VoluntariosPage() {
               variant="primary"
               size="lg"
               loading={isSubmitting || isLoading}
-              disabled={isSubmitting || isLoading || (turnstileSiteKey && !turnstileToken)}
+              disabled={isSubmitting || isLoading || !!(turnstileSiteKey && !turnstileToken)}
               className="w-full"
             >
               Crear cuenta
