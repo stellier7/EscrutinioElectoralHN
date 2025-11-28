@@ -42,6 +42,10 @@ const envSchema = z.object({
   
   // Seed secret for production
   SEED_SECRET: z.string().optional(),
+  
+  // Cloudflare Turnstile CAPTCHA
+  NEXT_PUBLIC_TURNSTILE_SITE_KEY: z.string().optional(),
+  TURNSTILE_SECRET_KEY: z.string().optional(),
 });
 
 // Parse environment variables with better error handling
@@ -78,6 +82,8 @@ try {
       CHATAPI_PHONE_NUMBER: process.env.CHATAPI_PHONE_NUMBER,
       APP_BASE_URL: process.env.APP_BASE_URL || 'http://localhost:3000',
       SEED_SECRET: process.env.SEED_SECRET || 'dev-seed-secret',
+      NEXT_PUBLIC_TURNSTILE_SITE_KEY: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
+      TURNSTILE_SECRET_KEY: process.env.TURNSTILE_SECRET_KEY,
     } as any;
   } else {
     // In production, provide more specific error information

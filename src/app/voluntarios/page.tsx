@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
 import Button from '@/components/ui/Button';
@@ -8,6 +8,7 @@ import Input from '@/components/ui/Input';
 import SearchInput from '@/components/ui/SearchInput';
 import { InfoTooltip } from '@/components/ui/InfoTooltip';
 import { Vote, ArrowLeft, CheckCircle, Eye, EyeOff } from 'lucide-react';
+import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
 import type { ApiResponse } from '@/types';
 
 interface SearchResult {
@@ -34,6 +35,11 @@ export default function VoluntariosPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [selectedJRV, setSelectedJRV] = useState<SearchResult | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileInstance>(null);
+  
+  // Get Turnstile site key from environment
+  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -85,6 +91,11 @@ export default function VoluntariosPage() {
       newErrors.acceptTerms = 'Debes aceptar los términos y condiciones';
     }
 
+    // Validate Turnstile token if site key is configured
+    if (turnstileSiteKey && !turnstileToken) {
+      newErrors.turnstile = 'Por favor, completa la verificación de seguridad';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -104,6 +115,7 @@ export default function VoluntariosPage() {
         password: formData.password,
         phone: formData.phone.trim() || undefined,
         jrvNumber: formData.jrvNumber || undefined,
+        turnstileToken: turnstileToken || undefined,
       });
 
       // Usuario queda autenticado automáticamente
@@ -114,7 +126,15 @@ export default function VoluntariosPage() {
         router.push('/dashboard');
       }, 2000);
     } catch (error: any) {
-      setErrors({ general: error.message || 'Error al crear la cuenta. Por favor intenta de nuevo.' });
+      const errorMessage = error.message || 'Error al crear la cuenta. Por favor intenta de nuevo.';
+      setErrors({ general: errorMessage });
+      
+      // Reset Turnstile on error (especially CAPTCHA errors)
+      if (turnstileRef.current && (errorMessage.includes('CAPTCHA') || errorMessage.includes('captcha'))) {
+        turnstileRef.current.reset();
+        setTurnstileToken(null);
+      }
+      
       setIsSubmitting(false);
     }
   };
@@ -297,12 +317,55 @@ export default function VoluntariosPage() {
               </div>
             </div>
 
+            {/* Cloudflare Turnstile CAPTCHA */}
+            {turnstileSiteKey && (
+              <div className="flex flex-col items-center">
+                <Turnstile
+                  ref={turnstileRef}
+                  siteKey={turnstileSiteKey}
+                  onSuccess={(token) => {
+                    setTurnstileToken(token);
+                    if (errors.turnstile) {
+                      setErrors(prev => {
+                        const newErrors = { ...prev };
+                        delete newErrors.turnstile;
+                        return newErrors;
+                      });
+                    }
+                  }}
+                  onError={() => {
+                    setTurnstileToken(null);
+                    setErrors(prev => ({
+                      ...prev,
+                      turnstile: 'Error al cargar la verificación de seguridad. Por favor, recarga la página.',
+                    }));
+                  }}
+                  onExpire={() => {
+                    setTurnstileToken(null);
+                    setErrors(prev => ({
+                      ...prev,
+                      turnstile: 'La verificación expiró. Por favor, completa la verificación nuevamente.',
+                    }));
+                  }}
+                  options={{
+                    theme: 'light',
+                    size: 'normal',
+                  }}
+                />
+                {errors.turnstile && (
+                  <p className="mt-2 text-sm text-danger-600 text-center">
+                    {errors.turnstile}
+                  </p>
+                )}
+              </div>
+            )}
+
             <Button
               type="submit"
               variant="primary"
               size="lg"
               loading={isSubmitting || isLoading}
-              disabled={isSubmitting || isLoading}
+              disabled={isSubmitting || isLoading || (turnstileSiteKey && !turnstileToken)}
               className="w-full"
             >
               Crear cuenta

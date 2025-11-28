@@ -43,6 +43,7 @@ export interface RegisterRequest {
   phone?: string;
   jrvNumber?: string;
   acceptTerms?: boolean; // Validated on frontend, not required by backend
+  turnstileToken?: string; // Cloudflare Turnstile CAPTCHA token
 }
 
 export interface AuthResponse {
