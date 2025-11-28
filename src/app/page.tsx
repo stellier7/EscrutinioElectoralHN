@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../components/AuthProvider';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
-import { Eye, EyeOff, Vote, Shield, MapPin } from 'lucide-react';
+import { Eye, EyeOff, Vote, Shield, MapPin, Info } from 'lucide-react';
 
 export default function HomePage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -185,15 +185,28 @@ export default function HomePage() {
               )}
             </div>
 
-            <Button
-              type="submit"
-              variant="primary"
-              size="lg"
-              loading={isLoading}
-              disabled={isLoading}
-            >
-              Iniciar Sesión
-            </Button>
+            <div className="grid grid-cols-2 gap-3">
+              <Button
+                type="submit"
+                variant="primary"
+                size="lg"
+                loading={isLoading}
+                disabled={isLoading}
+                className="w-full"
+              >
+                Iniciar Sesión
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                size="lg"
+                onClick={() => router.push('/informacion')}
+                className="w-full"
+              >
+                <Info className="h-5 w-5 mr-2" />
+                Más Información
+              </Button>
+            </div>
           </form>
 
           <div className="mt-4 text-center">
