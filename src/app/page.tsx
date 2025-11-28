@@ -187,28 +187,32 @@ export default function HomePage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {!isLogin && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-                <div className="flex">
-                  <div className="flex-shrink-0">
-                    <Shield className="h-4 w-4 text-blue-400" />
-                  </div>
-                  <div className="ml-2">
-                    <h3 className="text-xs font-medium text-blue-800">
-                      Información Importante
-                    </h3>
-                    <div className="mt-1 text-xs text-blue-700">
-                      <p>• <strong>Observador:</strong> Personal entrenado con prioridad alta</p>
-                      <p>• <strong>Voluntario:</strong> Ciudadanos generales con prioridad baja</p>
-                      <p>• Tu cuenta será revisada por un administrador antes de ser activada</p>
-                    </div>
+              <div className="alert-card alert-card-info">
+                <div className="alert-card-icon bg-blue-100">
+                  <Shield className="h-4 w-4 text-blue-600" />
+                </div>
+                <div className="alert-card-content">
+                  <h3 className="alert-card-title text-blue-800">
+                    Información Importante
+                  </h3>
+                  <div className="alert-card-message text-blue-700">
+                    <p>• <strong>Observador:</strong> Personal entrenado con prioridad alta</p>
+                    <p>• <strong>Voluntario:</strong> Ciudadanos generales con prioridad baja</p>
+                    <p>• Tu cuenta será revisada por un administrador antes de ser activada</p>
                   </div>
                 </div>
               </div>
             )}
             
             {errors.general && (
-              <div className="error-container">
-                <p className="error-message text-sm">{errors.general}</p>
+              <div className={`alert-card ${
+                errors.general.includes('✅') || errors.general.includes('🎉') 
+                  ? 'alert-card-success' 
+                  : 'alert-card-error'
+              }`}>
+                <div className="alert-card-content">
+                  <p className="alert-card-message">{errors.general}</p>
+                </div>
               </div>
             )}
 

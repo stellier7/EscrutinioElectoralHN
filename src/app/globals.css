@@ -123,6 +123,167 @@
   .success-message {
     @apply text-success-700 text-sm;
   }
+
+  /* Action Card Component - Mobile-first with centered content */
+  .action-card {
+    @apply bg-white rounded-lg border border-gray-200;
+    @apply flex flex-col;
+    @apply p-4 sm:p-6;
+    @apply text-center;
+  }
+
+  .action-card-header {
+    @apply flex flex-col items-center justify-center gap-2;
+    @apply w-full mb-4;
+  }
+
+  .action-card-icon {
+    @apply flex items-center justify-center;
+    @apply p-2 rounded-lg;
+  }
+
+  .action-card-title {
+    @apply font-semibold text-gray-900;
+    @apply text-base sm:text-lg;
+  }
+
+  .action-card-description {
+    @apply text-sm text-gray-600;
+  }
+
+  .action-card-button {
+    @apply w-full;
+    @apply px-4 py-3 sm:px-6 sm:py-3;
+    @apply rounded-lg;
+    @apply font-medium;
+    @apply transition-colors;
+    @apply flex items-center justify-center gap-2;
+  }
+
+  /* Mobile-specific action card adjustments */
+  @media (max-width: 640px) {
+    .action-card {
+      @apply p-6;
+      @apply items-center;
+      @apply justify-center;
+    }
+
+    .action-card-header {
+      @apply items-center;
+      @apply text-center;
+    }
+  }
+
+  /* Alert/Info Card Component - For informational messages */
+  .alert-card {
+    @apply rounded-lg border;
+    @apply p-4 sm:p-5;
+    @apply flex items-start gap-3;
+  }
+
+  .alert-card-success {
+    @apply bg-green-50 border-green-200;
+  }
+
+  .alert-card-info {
+    @apply bg-blue-50 border-blue-200;
+  }
+
+  .alert-card-warning {
+    @apply bg-amber-50 border-amber-200;
+  }
+
+  .alert-card-error {
+    @apply bg-red-50 border-red-200;
+  }
+
+  .alert-card-icon {
+    @apply flex-shrink-0;
+    @apply p-1.5 rounded;
+  }
+
+  .alert-card-content {
+    @apply flex-1;
+    @apply min-w-0;
+  }
+
+  .alert-card-title {
+    @apply font-medium text-sm sm:text-base;
+    @apply mb-1;
+  }
+
+  .alert-card-message {
+    @apply text-xs sm:text-sm;
+  }
+
+  /* Modal Component - For dialogs and confirmations */
+  .modal-overlay {
+    @apply fixed inset-0 bg-black bg-opacity-50;
+    @apply flex items-center justify-center z-50;
+    @apply p-4;
+  }
+
+  .modal-container {
+    @apply bg-white rounded-lg shadow-xl;
+    @apply max-w-md w-full;
+    @apply p-6 sm:p-8;
+    @apply text-center;
+  }
+
+  .modal-header {
+    @apply flex flex-col items-center justify-center;
+    @apply mb-4 sm:mb-6;
+  }
+
+  .modal-icon {
+    @apply mx-auto flex items-center justify-center;
+    @apply h-12 w-12 sm:h-16 sm:w-16;
+    @apply rounded-full mb-4;
+  }
+
+  .modal-title {
+    @apply text-lg sm:text-xl font-semibold text-gray-900;
+    @apply mb-2;
+  }
+
+  .modal-description {
+    @apply text-sm sm:text-base text-gray-600;
+    @apply mb-4 sm:mb-6;
+  }
+
+  .modal-actions {
+    @apply flex flex-col sm:flex-row gap-3;
+    @apply w-full;
+  }
+
+  .modal-button {
+    @apply flex-1;
+    @apply px-4 py-3 sm:px-6 sm:py-3;
+    @apply rounded-lg;
+    @apply font-medium;
+    @apply transition-colors;
+    @apply flex items-center justify-center gap-2;
+  }
+
+  /* Mobile-specific modal adjustments */
+  @media (max-width: 640px) {
+    .modal-container {
+      @apply p-6;
+    }
+
+    .modal-header {
+      @apply items-center;
+      @apply text-center;
+    }
+
+    .modal-actions {
+      @apply flex-col;
+    }
+
+    .modal-button {
+      @apply w-full;
+    }
+  }
 }
 
 @layer utilities {

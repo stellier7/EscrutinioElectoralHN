@@ -1397,44 +1397,40 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
       )}
 
       {/* Action Cards */}
-      <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="mt-8 space-y-4">
         {/* Cerrar/Editar Escrutinio */}
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 bg-orange-100 rounded-lg">
+        <div className="action-card">
+          <div className="action-card-header">
+            <div className="action-card-icon bg-orange-100">
               {isEscrutinioClosed ? <Edit className="h-5 w-5 text-orange-600" /> : <X className="h-5 w-5 text-orange-600" />}
             </div>
-            <div>
-              <h3 className="font-semibold text-gray-900">
-                {isEscrutinioClosed ? 'Corregir Escrutinio' : 'Cerrar Escrutinio'}
-              </h3>
-              <p className="text-sm text-gray-600">
-                {isEscrutinioClosed ? 'Continuar agregando marcas' : 'Cerrar para tomar foto'}
-              </p>
-            </div>
+            <h3 className="action-card-title">
+              {isEscrutinioClosed ? 'Corregir Escrutinio' : 'Cerrar Escrutinio'}
+            </h3>
+            <p className="action-card-description">
+              {isEscrutinioClosed ? 'Continuar agregando marcas' : 'Cerrar para tomar foto'}
+            </p>
           </div>
           <button
             onClick={handleToggleFreeze}
             disabled={isClosing}
-            className="w-full px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:bg-gray-400 disabled:text-gray-200 disabled:cursor-not-allowed transition-colors"
+            className="action-card-button bg-orange-600 text-white hover:bg-orange-700 disabled:bg-gray-400 disabled:text-gray-200 disabled:cursor-not-allowed"
           >
-            {isClosing ? <Loader2 className="h-4 w-4 animate-spin mx-auto" /> : 
+            {isClosing ? <Loader2 className="h-4 w-4 animate-spin" /> : 
              (isEscrutinioClosed ? 'Editar' : 'Cerrar')}
           </button>
         </div>
 
         {/* Foto del Acta */}
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
+        <div className="action-card">
+          <div className="action-card-header">
+            <div className="action-card-icon bg-blue-100">
               <Camera className="h-5 w-5 text-blue-600" />
             </div>
-            <div>
-              <h3 className="font-semibold text-gray-900">Foto del Acta</h3>
-              <p className="text-sm text-gray-600">Subir evidencia</p>
-            </div>
+            <h3 className="action-card-title">Foto del Acta</h3>
+            <p className="action-card-description">Subir evidencia</p>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-3 w-full">
             <div>
               <label className="cursor-pointer">
                 <input
@@ -1445,7 +1441,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
                   className="hidden"
                   id="acta-camera-legislative"
                 />
-                <div className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg text-sm text-center hover:bg-blue-700 transition-colors">
+                <div className="action-card-button bg-blue-600 text-white hover:bg-blue-700">
                   📷 Tomar foto
                 </div>
               </label>
@@ -1462,22 +1458,20 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
         </div>
 
         {/* Enviar Resultados */}
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 bg-green-100 rounded-lg">
+        <div className="action-card">
+          <div className="action-card-header">
+            <div className="action-card-icon bg-green-100">
               <Check className="h-5 w-5 text-green-600" />
             </div>
-            <div>
-              <h3 className="font-semibold text-gray-900">Enviar Resultados</h3>
-              <p className="text-sm text-gray-600">Finalizar escrutinio</p>
-            </div>
+            <h3 className="action-card-title">Enviar Resultados</h3>
+            <p className="action-card-description">Finalizar escrutinio</p>
           </div>
           <button
             onClick={handleCompleteEscrutinio}
             disabled={isCompleting}
-            className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:text-gray-200 disabled:cursor-not-allowed transition-colors"
+            className="action-card-button bg-green-600 text-white hover:bg-green-700 disabled:bg-gray-400 disabled:text-gray-200 disabled:cursor-not-allowed"
           >
-            {isCompleting ? <Loader2 className="h-4 w-4 animate-spin mx-auto" /> : 'Enviar Resultados'}
+            {isCompleting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Enviar Resultados'}
           </button>
         </div>
 
@@ -1521,27 +1515,25 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
 
       {/* Success Modal */}
       {showSuccessModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <CheckCircle className="h-6 w-6 text-green-600" />
+        <div className="modal-overlay">
+          <div className="modal-container">
+            <div className="modal-header">
+              <div className="modal-icon bg-green-100">
+                <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-green-600" />
               </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">¡Escrutinio Completado!</h3>
-                <p className="text-sm text-gray-600">Los resultados han sido enviados exitosamente</p>
-              </div>
+              <h3 className="modal-title">¡Escrutinio Completado!</h3>
+              <p className="modal-description">Los resultados han sido enviados exitosamente</p>
             </div>
-            <div className="flex gap-3">
+            <div className="modal-actions">
               <button
                 onClick={handleReviewEscrutinio}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="modal-button bg-blue-600 text-white hover:bg-blue-700"
               >
                 Revisar Resultados
               </button>
               <button
                 onClick={() => router.push('/dashboard')}
-                className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+                className="modal-button bg-gray-300 text-gray-700 hover:bg-gray-400"
               >
                 Volver
               </button>
@@ -1563,32 +1555,32 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
 
       {/* Modal de Confirmación de Anulación */}
       {showAnularConfirmation && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <div className="text-center">
-              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+        <div className="modal-overlay">
+          <div className="modal-container">
+            <div className="modal-header">
+              <div className="modal-icon bg-red-100">
                 <X className="h-6 w-6 text-red-600" />
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
+              <h3 className="modal-title">
                 Confirmar Anulación
               </h3>
-              <p className="text-sm text-gray-600 mb-6">
+              <p className="modal-description">
                 ¿Seguro que deseas anular esta papeleta? Se perderán todas las marcas.
               </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowAnularConfirmation(false)}
-                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleAnularPapeleta}
-                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                >
-                  Confirmar
-                </button>
-              </div>
+            </div>
+            <div className="modal-actions">
+              <button
+                onClick={() => setShowAnularConfirmation(false)}
+                className="modal-button bg-gray-200 text-gray-800 hover:bg-gray-300"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleAnularPapeleta}
+                className="modal-button bg-red-600 text-white hover:bg-red-700"
+              >
+                Confirmar
+              </button>
             </div>
           </div>
         </div>
