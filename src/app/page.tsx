@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../components/AuthProvider';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
+import ActivityGlimpse from '../components/ActivityGlimpse';
 import { Eye, EyeOff, Vote, Shield, MapPin, Info } from 'lucide-react';
 
 export default function HomePage() {
@@ -215,6 +216,9 @@ export default function HomePage() {
             </p>
           </div>
         </div>
+
+        {/* Activity Glimpse */}
+        <ActivityGlimpse />
 
         {/* Footer */}
         <div className="text-center">
