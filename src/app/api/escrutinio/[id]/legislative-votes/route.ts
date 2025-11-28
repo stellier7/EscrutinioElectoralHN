@@ -5,7 +5,7 @@ import { z } from 'zod';
 
 const LegislativeVoteDeltaSchema = z.object({
   partyId: z.string().min(1),
-  casillaNumber: z.number().int().min(1).max(100),
+  casillaNumber: z.number().int().min(0).max(100), // Permitir 0 para blanco/nulo
   delta: z.number().int().min(-1000).max(1000),
   timestamp: z.number(),
   clientBatchId: z.string().min(1),
@@ -91,58 +91,118 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     // Procesar cada voto
     await prisma.$transaction(async (tx) => {
       for (const v of votes) {
-        // Buscar o crear candidato legislativo
-        let candidate = await tx.candidate.findFirst({
-          where: {
-            electionId: escrutinio.electionId,
-            number: v.casillaNumber,
-            party: v.partyId,
-            electionLevel: 'LEGISLATIVE'
-          }
-        });
-
-        if (!candidate) {
-          // Crear candidato si no existe
-          console.log('➕ [VOTOS-LEGISLATIVOS] Creando nuevo candidato:', v.partyId, v.casillaNumber);
-          candidate = await tx.candidate.create({
-            data: {
-              name: `Diputado ${v.casillaNumber}`,
-              party: v.partyId,
-              number: v.casillaNumber,
+        // Manejar votos blanco/nulo (partyId: BLANK o NULL, casillaNumber: 0)
+        if (v.partyId === 'BLANK' || v.partyId === 'NULL') {
+          const specialCandidateName = v.partyId === 'BLANK' ? 'Voto en Blanco' : 'Voto Nulo';
+          const specialCandidateNumber = v.partyId === 'BLANK' ? 999 : 998;
+          
+          // Buscar o crear candidato especial
+          let candidate = await tx.candidate.findFirst({
+            where: {
               electionId: escrutinio.electionId,
-              electionLevel: 'LEGISLATIVE',
-              isActive: true
+              name: specialCandidateName,
+              party: v.partyId,
+              electionLevel: 'LEGISLATIVE'
             }
           });
-        }
 
-        // Buscar voto existente
-        const existing = await tx.vote.findFirst({
-          where: { 
-            escrutinioId: escrutinioId,
-            candidateId: candidate.id
-          },
-        });
+          if (!candidate) {
+            console.log('➕ [VOTOS-LEGISLATIVOS] Creando candidato especial:', specialCandidateName);
+            candidate = await tx.candidate.create({
+              data: {
+                name: specialCandidateName,
+                party: v.partyId,
+                number: specialCandidateNumber,
+                electionId: escrutinio.electionId,
+                electionLevel: 'LEGISLATIVE',
+                isActive: true
+              }
+            });
+          }
 
-        if (!existing) {
-          // Crear nuevo voto
-          const newCount = Math.max(0, v.delta);
-          console.log('➕ [VOTOS-LEGISLATIVOS] Creando nuevo voto:', v.partyId, v.casillaNumber, 'conteo:', newCount);
-          await tx.vote.create({
-            data: { 
-              escrutinioId, 
-              candidateId: candidate.id, 
-              count: newCount
+          // Buscar voto existente
+          const existing = await tx.vote.findFirst({
+            where: { 
+              escrutinioId: escrutinioId,
+              candidateId: candidate.id
             },
           });
+
+          if (!existing) {
+            // Crear nuevo voto
+            const newCount = Math.max(0, v.delta);
+            console.log('➕ [VOTOS-LEGISLATIVOS] Creando nuevo voto especial:', v.partyId, 'conteo:', newCount);
+            await tx.vote.create({
+              data: { 
+                escrutinioId, 
+                candidateId: candidate.id, 
+                count: newCount
+              },
+            });
+          } else {
+            // Actualizar voto existente
+            const newCount = Math.max(0, existing.count + v.delta);
+            console.log('🔄 [VOTOS-LEGISLATIVOS] Actualizando voto especial:', v.partyId, 'de', existing.count, 'a', newCount);
+            await tx.vote.update({
+              where: { id: existing.id },
+              data: { count: newCount },
+            });
+          }
         } else {
-          // Actualizar voto existente
-          const newCount = Math.max(0, existing.count + v.delta);
-          console.log('🔄 [VOTOS-LEGISLATIVOS] Actualizando voto:', v.partyId, v.casillaNumber, 'de', existing.count, 'a', newCount);
-          await tx.vote.update({
-            where: { id: existing.id },
-            data: { count: newCount },
+          // Procesar votos normales (partidos con casillas)
+          // Buscar o crear candidato legislativo
+          let candidate = await tx.candidate.findFirst({
+            where: {
+              electionId: escrutinio.electionId,
+              number: v.casillaNumber,
+              party: v.partyId,
+              electionLevel: 'LEGISLATIVE'
+            }
           });
+
+          if (!candidate) {
+            // Crear candidato si no existe
+            console.log('➕ [VOTOS-LEGISLATIVOS] Creando nuevo candidato:', v.partyId, v.casillaNumber);
+            candidate = await tx.candidate.create({
+              data: {
+                name: `Diputado ${v.casillaNumber}`,
+                party: v.partyId,
+                number: v.casillaNumber,
+                electionId: escrutinio.electionId,
+                electionLevel: 'LEGISLATIVE',
+                isActive: true
+              }
+            });
+          }
+
+          // Buscar voto existente
+          const existing = await tx.vote.findFirst({
+            where: { 
+              escrutinioId: escrutinioId,
+              candidateId: candidate.id
+            },
+          });
+
+          if (!existing) {
+            // Crear nuevo voto
+            const newCount = Math.max(0, v.delta);
+            console.log('➕ [VOTOS-LEGISLATIVOS] Creando nuevo voto:', v.partyId, v.casillaNumber, 'conteo:', newCount);
+            await tx.vote.create({
+              data: { 
+                escrutinioId, 
+                candidateId: candidate.id, 
+                count: newCount
+              },
+            });
+          } else {
+            // Actualizar voto existente
+            const newCount = Math.max(0, existing.count + v.delta);
+            console.log('🔄 [VOTOS-LEGISLATIVOS] Actualizando voto:', v.partyId, v.casillaNumber, 'de', existing.count, 'a', newCount);
+            await tx.vote.update({
+              where: { id: existing.id },
+              data: { count: newCount },
+            });
+          }
         }
       }
     });

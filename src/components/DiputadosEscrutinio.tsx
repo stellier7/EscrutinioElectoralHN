@@ -124,7 +124,14 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
         
         if (response.data?.success) {
           const status = response.data.data.status;
+          const cargaElectoralData = response.data.data.cargaElectoral;
           console.log('📊 [LEGISLATIVO] Estado del escrutinio:', status);
+          console.log('📊 [LEGISLATIVO] Carga electoral:', cargaElectoralData);
+          
+          // Cargar cargaElectoral
+          if (cargaElectoralData !== null && cargaElectoralData !== undefined) {
+            setCargaElectoral(cargaElectoralData);
+          }
           
           // Si el escrutinio está CLOSED o COMPLETED, bloquear la interfaz
           if (status === 'CLOSED') {
@@ -154,16 +161,25 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
   
   // Estados para sistema de papeletas simplificado
   const [currentPapeleta, setCurrentPapeleta] = useState(1);
+  const [currentPapeletaId, setCurrentPapeletaId] = useState<string | null>(null);
   const [completedPapeletasCount, setCompletedPapeletasCount] = useState(0);
   const [papeletaVotes, setPapeletaVotes] = useState<{[key: string]: number}>({});
   const [showVoteLimitAlert, setShowVoteLimitAlert] = useState(false);
   const [showAnularConfirmation, setShowAnularConfirmation] = useState(false);
+  const [cargaElectoral, setCargaElectoral] = useState<number | null>(null);
+  const [papeletasAnuladas, setPapeletasAnuladas] = useState(0);
 
   // Hook para manejar votos legislativos (como el presidencial)
   const { 
     counts, 
+    blankCount,
+    nullCount,
     increment, 
-    decrement, 
+    decrement,
+    incrementBlank,
+    incrementNull,
+    decrementBlank,
+    decrementNull,
     loadFromServer: loadVotesFromServer,
     getPartyCount,
     getCasillaCount,
@@ -323,6 +339,33 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [escrutinioId, userId, escrutinioState.escrutinioId, escrutinioState.legislativeCurrentPapeleta, escrutinioState.legislativePapeletaVotes, escrutinioState.legislativeCompletedPapeletas]);
+
+  // Inicializar primera papeleta en el servidor cuando el componente se monta
+  useEffect(() => {
+    if (escrutinioId && userId && !currentPapeletaId && !isEscrutinioClosed) {
+      // Create first papeleta
+      const createFirstPapeleta = async () => {
+        try {
+          console.log('🆕 Creando primera papeleta en el servidor...');
+          const token = localStorage.getItem('auth-token');
+          const response = await axios.post(
+            '/api/papeleta/start',
+            { escrutinioId, userId },
+            { headers: { 'Authorization': `Bearer ${token}` } }
+          );
+          if (response.data?.success) {
+            setCurrentPapeletaId(response.data.data.papeletaId);
+            console.log('✅ Primera papeleta creada:', response.data.data.papeletaId);
+          } else {
+            console.error('❌ Error creando primera papeleta:', response.data);
+          }
+        } catch (error: any) {
+          console.error('❌ Error creating first papeleta:', error);
+        }
+      };
+      createFirstPapeleta();
+    }
+  }, [escrutinioId, userId, currentPapeletaId, isEscrutinioClosed]);
 
   // Persistir estado de papeleta cuando cambia
   useEffect(() => {
@@ -543,36 +586,216 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
 
   // Funciones para manejo de papeletas simplificado
   const handleClosePapeleta = useCallback(async () => {
-    console.log('✅ Papeleta cerrada exitosamente');
-    setShowVoteLimitAlert(false);
+    console.log('✅ Intentando cerrar papeleta...');
     
-    // Increment completed papeletas counter
-    const totalVotes = getTotalVotesInPapeleta();
-    const maxVotes = diputadosData?.diputados || 0;
-    
-    // If papeleta is complete (8/8), increment completed counter
-    if (totalVotes === maxVotes) {
-      setCompletedPapeletasCount(prev => prev + 1);
-      console.log('📊 Papeleta completada, contador incrementado');
+    if (!currentPapeletaId || !userId || !escrutinioId) {
+      console.error('❌ Missing required data to close papeleta:', { currentPapeletaId, userId, escrutinioId });
+      alert('Error: No se puede cerrar la papeleta. Faltan datos requeridos.');
+      return;
     }
     
-    // Regresar al primer partido (Demócrata Cristiano)
+    // Validar carga electoral ANTES de cerrar
+    if (cargaElectoral !== null && cargaElectoral !== undefined && escrutinioId) {
+      try {
+        // Obtener conteo actual de papeletas desde el servidor
+        const token = localStorage.getItem('auth-token');
+        const papeletasResponse = await axios.get(
+          `/api/escrutinio/${escrutinioId}/papeletas`,
+          { headers: { 'Authorization': `Bearer ${token}` } }
+        );
+        
+        if (papeletasResponse.data?.success) {
+          const closedPapeletas = papeletasResponse.data.data.closedPapeletas || 0;
+          
+          // Calcular total: papeletas cerradas + anuladas + blanco/nulo + 1 (la que estamos a punto de cerrar)
+          const totalProjected = completedPapeletasCount + blankCount + nullCount + 1;
+          
+          if (totalProjected > cargaElectoral) {
+            alert(`No se pueden cerrar más papeletas. Carga electoral alcanzada: ${totalProjected} > ${cargaElectoral}`);
+            return; // Bloqueo hard - no permitir cerrar
+          }
+        }
+      } catch (error) {
+        console.warn('⚠️ Error validando carga electoral, continuando:', error);
+        // Continuar si hay error en la validación
+      }
+    }
+    
+    setShowVoteLimitAlert(false);
+    
+    // Build votesBuffer from papeletaVotes
+    const votesBuffer = Object.entries(papeletaVotes)
+      .filter(([_, count]) => count > 0)
+      .map(([key, count]) => {
+        const [partyId, casillaNumber] = key.split('-');
+        return {
+          partyId,
+          casillaNumber: parseInt(casillaNumber, 10),
+          count: count
+        };
+      });
+    
+    console.log('📊 VotesBuffer para cerrar papeleta:', votesBuffer);
+    
+    // Call API to close papeleta
+    try {
+      const token = localStorage.getItem('auth-token');
+      const response = await axios.post(
+        `/api/papeleta/${currentPapeletaId}/close`,
+        { userId, votesBuffer },
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
+
+      if (response.data?.success) {
+        console.log('✅ Papeleta cerrada exitosamente en el servidor');
+        
+        // Increment completed papeletas counter
+        const totalVotes = getTotalVotesInPapeleta();
+        const maxVotes = diputadosData?.diputados || 0;
+        
+        // If papeleta is complete (8/8), increment completed counter
+        if (totalVotes === maxVotes) {
+          setCompletedPapeletasCount(prev => prev + 1);
+          console.log('📊 Papeleta completada, contador incrementado');
+        }
+        
+        // Regresar al primer partido (Demócrata Cristiano)
+        if (diputadosData?.parties && diputadosData.parties.length > 0) {
+          setExpandedParty(diputadosData.parties[0].id);
+          console.log('🔄 Regresando al primer partido:', diputadosData.parties[0].id);
+        }
+        
+        // Create new papeleta in server
+        console.log('🔄 Creando nueva papeleta en el servidor...');
+        const newPapeletaResponse = await axios.post(
+          '/api/papeleta/start',
+          { escrutinioId, userId },
+          { headers: { 'Authorization': `Bearer ${token}` } }
+        );
+
+        if (newPapeletaResponse.data?.success) {
+          setCurrentPapeletaId(newPapeletaResponse.data.data.papeletaId);
+          setCurrentPapeleta(prev => prev + 1);
+          setPapeletaVotes({});
+          console.log('✅ Nueva papeleta creada en el servidor:', newPapeletaResponse.data.data.papeletaId);
+        } else {
+          console.error('❌ Error creando nueva papeleta:', newPapeletaResponse.data);
+          alert('Error al crear nueva papeleta. Por favor intenta de nuevo.');
+        }
+      } else {
+        console.error('❌ Error cerrando papeleta:', response.data);
+        alert('Error al cerrar papeleta. Por favor intenta de nuevo.');
+      }
+    } catch (error: any) {
+      console.error('❌ Error closing papeleta:', error);
+      alert(`Error al cerrar papeleta: ${error?.response?.data?.error || error.message || 'Error desconocido'}`);
+    }
+  }, [currentPapeletaId, userId, escrutinioId, diputadosData, getTotalVotesInPapeleta, cargaElectoral, completedPapeletasCount, blankCount, nullCount, papeletaVotes]);
+
+  const handlePapeletaBlanco = useCallback(async () => {
+    console.log('✅ Intentando crear papeleta en blanco...');
+    
+    if (!currentPapeletaId || !userId || !escrutinioId) {
+      console.error('❌ Missing required data to create blank papeleta');
+      alert('Error: No se puede crear papeleta en blanco. Faltan datos requeridos.');
+      return;
+    }
+    
+    // Validar carga electoral ANTES de crear papeleta en blanco
+    if (cargaElectoral !== null && cargaElectoral !== undefined && escrutinioId) {
+      const totalProjected = completedPapeletasCount + blankCount + nullCount + 1; // +1 por la papeleta en blanco
+      
+      if (totalProjected > cargaElectoral) {
+        alert(`No se pueden crear más papeletas. Carga electoral alcanzada: ${totalProjected} > ${cargaElectoral}`);
+        return; // Bloqueo hard - no permitir crear
+      }
+    }
+    
+    // Si la papeleta actual tiene marcas, cerrarla primero
+    const totalVotes = getTotalVotesInPapeleta();
+    if (totalVotes > 0) {
+      console.log('📊 Papeleta actual tiene marcas, cerrando primero...');
+      await handleClosePapeleta();
+      // Después de cerrar, handleClosePapeleta ya crea una nueva papeleta, así que solo necesitamos incrementar blank
+      // Pero esperamos a que termine antes de continuar
+    }
+    
+    // Incrementar contador de blancos
+    incrementBlank({ 
+      escrutinioId: escrutinioId!, 
+      userId: userId!, 
+      mesaId: diputadosData?.jrv.jrv 
+    });
+    
+    // Si no había votos, anular la papeleta actual y crear nueva
+    if (totalVotes === 0 && currentPapeletaId) {
+      try {
+        const token = localStorage.getItem('auth-token');
+        // Anular la papeleta actual (sin votos)
+        await axios.post(
+          `/api/papeleta/${currentPapeletaId}/anular`,
+          { userId, reason: 'Papeleta en blanco' },
+          { headers: { 'Authorization': `Bearer ${token}` } }
+        );
+        
+        // Crear nueva papeleta en el servidor
+        const newPapeletaResponse = await axios.post(
+          '/api/papeleta/start',
+          { escrutinioId, userId },
+          { headers: { 'Authorization': `Bearer ${token}` } }
+        );
+
+        if (newPapeletaResponse.data?.success) {
+          setCurrentPapeletaId(newPapeletaResponse.data.data.papeletaId);
+          setCurrentPapeleta(prev => prev + 1);
+          setPapeletaVotes({});
+          console.log('✅ Nueva papeleta creada después de blanco:', newPapeletaResponse.data.data.papeletaId);
+        }
+      } catch (error: any) {
+        console.error('❌ Error creando papeleta en blanco:', error);
+        alert(`Error al crear papeleta en blanco: ${error?.response?.data?.error || error.message || 'Error desconocido'}`);
+      }
+    }
+    
+    // Limpiar votos de la papeleta actual (si no se cerró)
+    setPapeletaVotes({});
+    
+    // Regresar al primer partido
     if (diputadosData?.parties && diputadosData.parties.length > 0) {
       setExpandedParty(diputadosData.parties[0].id);
-      console.log('🔄 Regresando al primer partido:', diputadosData.parties[0].id);
     }
-    
-    // Crear nueva papeleta automáticamente
-    console.log('🔄 Creando nueva papeleta...');
-    setCurrentPapeleta(prev => prev + 1);
-    setPapeletaVotes({});
-    console.log('✅ Nueva papeleta creada');
-  }, [diputadosData, getTotalVotesInPapeleta]);
+  }, [currentPapeletaId, userId, escrutinioId, getTotalVotesInPapeleta, handleClosePapeleta, incrementBlank, cargaElectoral, completedPapeletasCount, blankCount, nullCount, diputadosData]);
 
   const handleAnularPapeleta = useCallback(async () => {
-    console.log('✅ Papeleta anulada exitosamente');
+    console.log('✅ Intentando anular papeleta...');
+    
+    if (!currentPapeletaId || !userId || !escrutinioId) {
+      console.error('❌ Missing required data to anular papeleta');
+      alert('Error: No se puede anular la papeleta. Faltan datos requeridos.');
+      setShowAnularConfirmation(false);
+      return;
+    }
+    
+    // Validar carga electoral ANTES de anular
+    if (cargaElectoral !== null && cargaElectoral !== undefined && escrutinioId) {
+      const totalProjected = completedPapeletasCount + blankCount + nullCount + 1; // +1 por la papeleta que vamos a anular (contará como nulo)
+      
+      if (totalProjected > cargaElectoral) {
+        alert(`No se pueden anular más papeletas. Carga electoral alcanzada: ${totalProjected} > ${cargaElectoral}`);
+        setShowAnularConfirmation(false);
+        return; // Bloqueo hard - no permitir anular
+      }
+    }
+    
     setShowAnularConfirmation(false);
     setShowVoteLimitAlert(false);
+    
+    // Incrementar contador de nulos (anular papeleta = voto nulo)
+    incrementNull({ 
+      escrutinioId: escrutinioId!, 
+      userId: userId!, 
+      mesaId: diputadosData?.jrv.jrv 
+    });
     
     // Remover votos de la papeleta actual del store principal
     Object.entries(papeletaVotes).forEach(([voteKey, count]) => {
@@ -586,14 +809,48 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
       }
     });
     
-    // Limpiar votos de la papeleta actual
-    setPapeletaVotes({});
+    // Anular papeleta en el servidor
+    try {
+      const token = localStorage.getItem('auth-token');
+      const anularResponse = await axios.post(
+        `/api/papeleta/${currentPapeletaId}/anular`,
+        { userId, reason: 'Anulada por usuario' },
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
+
+      if (anularResponse.data?.success) {
+        console.log('✅ Papeleta anulada exitosamente en el servidor');
+        
+        // Crear nueva papeleta en el servidor
+        const newPapeletaResponse = await axios.post(
+          '/api/papeleta/start',
+          { escrutinioId, userId },
+          { headers: { 'Authorization': `Bearer ${token}` } }
+        );
+
+        if (newPapeletaResponse.data?.success) {
+          setCurrentPapeletaId(newPapeletaResponse.data.data.papeletaId);
+          setCurrentPapeleta(prev => prev + 1);
+          setPapeletaVotes({});
+          console.log('✅ Nueva papeleta creada después de anular:', newPapeletaResponse.data.data.papeletaId);
+        } else {
+          console.error('❌ Error creando nueva papeleta:', newPapeletaResponse.data);
+          alert('Error al crear nueva papeleta. Por favor intenta de nuevo.');
+        }
+      } else {
+        console.error('❌ Error anulando papeleta:', anularResponse.data);
+        alert('Error al anular papeleta. Por favor intenta de nuevo.');
+      }
+    } catch (error: any) {
+      console.error('❌ Error anulando papeleta:', error);
+      alert(`Error al anular papeleta: ${error?.response?.data?.error || error.message || 'Error desconocido'}`);
+    }
     
-    // Crear nueva papeleta automáticamente
-    console.log('🔄 Creando nueva papeleta después de anular...');
-    setCurrentPapeleta(prev => prev + 1);
-    console.log('✅ Nueva papeleta creada');
-  }, [papeletaVotes, decrement]);
+    // Regresar al primer partido
+    if (diputadosData?.parties && diputadosData.parties.length > 0) {
+      setExpandedParty(diputadosData.parties[0].id);
+    }
+  }, [currentPapeletaId, userId, escrutinioId, papeletaVotes, decrement, incrementNull, cargaElectoral, completedPapeletasCount, blankCount, nullCount, diputadosData]);
 
   const handleCloseVoteLimitAlert = useCallback(() => {
     setShowVoteLimitAlert(false);
@@ -1229,16 +1486,25 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
           <div className="flex flex-col sm:flex-row gap-2">
             <button
               onClick={handleClosePapeleta}
-              disabled={getTotalVotesInPapeleta() === 0}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:text-gray-200 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+              disabled={isEscrutinioClosed || getTotalVotesInPapeleta() === 0 || (cargaElectoral !== null && (completedPapeletasCount + blankCount + nullCount + 1) > cargaElectoral)}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:text-gray-200 disabled:cursor-not-allowed transition-colors text-sm font-medium"
             >
               <Check className="h-4 w-4" />
               <span className="hidden sm:inline">Cerrar Papeleta</span>
               <span className="sm:hidden">Cerrar</span>
             </button>
             <button
-              onClick={handleAnularPapeletaFromAlert}
-              disabled={getTotalVotesInPapeleta() === 0}
+              onClick={handlePapeletaBlanco}
+              disabled={isEscrutinioClosed || (cargaElectoral !== null && (completedPapeletasCount + blankCount + nullCount + 1) > cargaElectoral)}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:bg-gray-400 disabled:text-gray-200 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+            >
+              <FileText className="h-4 w-4" />
+              <span className="hidden sm:inline">Papeleta en Blanco</span>
+              <span className="sm:hidden">Blanco</span>
+            </button>
+            <button
+              onClick={() => setShowAnularConfirmation(true)}
+              disabled={isEscrutinioClosed || getTotalVotesInPapeleta() === 0 || (cargaElectoral !== null && (completedPapeletasCount + blankCount + nullCount + 1) > cargaElectoral)}
               className="flex-1 flex items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-gray-400 disabled:text-gray-200 disabled:cursor-not-allowed transition-colors text-sm font-medium"
             >
               <X className="h-4 w-4" />
@@ -1306,13 +1572,25 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
             <span className="font-medium">Papeleta {currentPapeleta}</span>
             {' • '}
             {getTotalVotesInPapeleta()}/{diputadosData.diputados} marcas
-            {completedPapeletasCount > 0 && (
-              <>
-                {' • '}
-                <span className="font-medium">{completedPapeletasCount} papeleta{completedPapeletasCount !== 1 ? 's' : ''} completada{completedPapeletasCount !== 1 ? 's' : ''}</span>
-              </>
-            )}
           </p>
+          {cargaElectoral !== null && (
+            <p className="text-sm mt-1">
+              <span className={currentPapeleta > cargaElectoral ? 'text-red-600 font-semibold' : 'text-blue-600'}>
+                Papeletas: {currentPapeleta} / {cargaElectoral}
+                {currentPapeleta > 0 && (
+                  <span className="text-xs ml-1">
+                    ({completedPapeletasCount} completadas{blankCount > 0 ? ` + ${blankCount} blanco` : ''}{nullCount > 0 ? ` + ${nullCount} nulo` : ''})
+                  </span>
+                )}
+              </span>
+              {currentPapeleta > cargaElectoral && (
+                <span className="ml-2 text-red-600 font-semibold flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  Carga electoral alcanzada
+                </span>
+              )}
+            </p>
+          )}
         </div>
       </div>
 
@@ -1347,20 +1625,28 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
             <div className="flex gap-3">
               <button
                 onClick={handleClosePapeleta}
-                disabled={isEscrutinioClosed || getTotalVotesInPapeleta() === 0}
+                disabled={isEscrutinioClosed || getTotalVotesInPapeleta() === 0 || (cargaElectoral !== null && (completedPapeletasCount + blankCount + nullCount + 1) > cargaElectoral)}
                 className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg disabled:bg-gray-300 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
               >
                 Cerrar Papeleta
               </button>
               <button
+                onClick={handlePapeletaBlanco}
+                disabled={isEscrutinioClosed || (cargaElectoral !== null && (completedPapeletasCount + blankCount + nullCount + 1) > cargaElectoral)}
+                className="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg disabled:bg-gray-300 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
+              >
+                Papeleta en Blanco
+              </button>
+              <button
                 onClick={() => setShowAnularConfirmation(true)}
-                disabled={isEscrutinioClosed || getTotalVotesInPapeleta() === 0}
-                className="flex-1 border border-red-500 text-red-600 hover:bg-red-50 px-4 py-2 rounded-lg disabled:bg-gray-300 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
+                disabled={isEscrutinioClosed || getTotalVotesInPapeleta() === 0 || (cargaElectoral !== null && (completedPapeletasCount + blankCount + nullCount + 1) > cargaElectoral)}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg disabled:bg-gray-300 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
               >
                 Anular Papeleta
               </button>
             </div>
           </div>
+
           {diputadosData.parties.map((party) => (
             <div key={party.id}>
               <div
@@ -1417,7 +1703,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
             className="action-card-button bg-orange-600 text-white hover:bg-orange-700 disabled:bg-gray-400 disabled:text-gray-200 disabled:cursor-not-allowed"
           >
             {isClosing ? <Loader2 className="h-4 w-4 animate-spin" /> : 
-             (isEscrutinioClosed ? 'Editar' : 'Cerrar')}
+             (isEscrutinioClosed ? 'Editar' : 'Cerrar Escrutinio')}
           </button>
         </div>
 

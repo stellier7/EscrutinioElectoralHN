@@ -219,10 +219,51 @@ export async function GET(
         });
       }
       
+      // Procesar votos blanco/nulo (candidatos especiales)
+      const blankVote = escrutinio.votes.find(v => 
+        v.candidate && 
+        v.candidate.electionLevel === 'LEGISLATIVE' &&
+        v.candidate.party === 'BLANK'
+      );
+      
+      const nullVote = escrutinio.votes.find(v => 
+        v.candidate && 
+        v.candidate.electionLevel === 'LEGISLATIVE' &&
+        v.candidate.party === 'NULL'
+      );
+
+      if (blankVote && blankVote.count > 0) {
+        const partyConfig = getPartyConfig('BLANK');
+        candidatesMap.set('BLANK_0', {
+          id: 'BLANK_0',
+          name: 'Voto en Blanco',
+          party: 'BLANK',
+          partyColor: partyConfig.color,
+          number: 999,
+          votes: blankVote.count
+        });
+        totalVotes += blankVote.count;
+      }
+
+      if (nullVote && nullVote.count > 0) {
+        const partyConfig = getPartyConfig('NULL');
+        candidatesMap.set('NULL_0', {
+          id: 'NULL_0',
+          name: 'Voto Nulo',
+          party: 'NULL',
+          partyColor: partyConfig.color,
+          number: 998,
+          votes: nullVote.count
+        });
+        totalVotes += nullVote.count;
+      }
+      
       console.log('📊 Votos legislativos procesados:', {
         totalVotes,
         candidatesCount: candidatesMap.size,
-        candidatesWithVotes: Array.from(candidatesMap.values()).filter(c => c.votes > 0)
+        candidatesWithVotes: Array.from(candidatesMap.values()).filter(c => c.votes > 0),
+        blankVotes: blankVote?.count || 0,
+        nullVotes: nullVote?.count || 0
       });
     }
 
@@ -279,20 +320,110 @@ export async function GET(
 
     // Calcular estadísticas de papeletas (solo para escrutinios legislativos)
     let papeletasStats = null;
-    if (escrutinio.electionLevel === 'LEGISLATIVE' && escrutinio.papeletas) {
-      const totalPapeletas = escrutinio.papeletas.length;
-      const papeletasCerradas = escrutinio.papeletas.filter(p => p.status === 'CLOSED').length;
-      const papeletasAnuladas = escrutinio.papeletas.filter(p => p.status === 'ANULADA').length;
+    if (escrutinio.electionLevel === 'LEGISLATIVE') {
+      // Asegurar que tenemos un array de papeletas (puede ser vacío)
+      let papeletas = escrutinio.papeletas || [];
       
-      papeletasStats = {
+      console.log('📊 [REVIEW API] Calculando estadísticas de papeletas:', {
+        escrutinioId: escrutinio.id,
+        papeletasCount: papeletas.length,
+        papeletas: papeletas.map(p => ({ id: p.id, status: p.status })),
+        papeletasRaw: papeletas
+      });
+      
+      // Debug: Verificar que las papeletas se están cargando correctamente
+      if (papeletas.length === 0) {
+        console.warn('⚠️ [REVIEW API] No se encontraron papeletas en el include, cargando directamente...');
+        // Intentar cargar papeletas directamente si no están en el include
+        try {
+          const directPapeletas = await prisma.papeleta.findMany({
+            where: { escrutinioId: escrutinio.id }
+          });
+          console.log('📊 [REVIEW API] Papeletas cargadas directamente:', directPapeletas.length, directPapeletas.map(p => ({ id: p.id, status: p.status })));
+          if (directPapeletas.length > 0) {
+            papeletas = directPapeletas;
+          }
+        } catch (error) {
+          console.error('❌ [REVIEW API] Error cargando papeletas directamente:', error);
+        }
+      }
+      
+      const totalPapeletas = papeletas.length;
+      const papeletasCerradas = papeletas.filter(p => p.status === 'CLOSED').length;
+      const papeletasAnuladas = papeletas.filter(p => p.status === 'ANULADA').length;
+      const papeletasAbiertas = papeletas.filter(p => p.status === 'OPEN').length;
+      
+      // Contar votos blanco/nulo - buscar en todos los votos
+      const blankVote = escrutinio.votes.find(v => 
+        v.candidate && 
+        v.candidate.electionLevel === 'LEGISLATIVE' &&
+        v.candidate.party === 'BLANK'
+      );
+      
+      const nullVote = escrutinio.votes.find(v => 
+        v.candidate && 
+        v.candidate.electionLevel === 'LEGISLATIVE' &&
+        v.candidate.party === 'NULL'
+      );
+      
+      const blankVotes = blankVote?.count || 0;
+      const nullVotes = nullVote?.count || 0;
+      
+      console.log('📊 [REVIEW API] Conteos individuales:', {
         totalPapeletas,
         papeletasCerradas,
         papeletasAnuladas,
+        papeletasAbiertas,
+        blankVotes,
+        nullVotes,
+        blankVoteFound: !!blankVote,
+        nullVoteFound: !!nullVote,
+        totalVotes: escrutinio.votes.length,
+        votesWithCandidates: escrutinio.votes.filter(v => v.candidate).length,
+        allVoteCandidates: escrutinio.votes.map(v => ({
+          candidateId: v.candidateId,
+          candidateParty: v.candidate?.party,
+          candidateElectionLevel: v.candidate?.electionLevel,
+          count: v.count
+        }))
+      });
+      
+      // Calcular total de papeletas digitales: cerradas + anuladas + blanco + nulo
+      const totalDigitalPapeletas = papeletasCerradas + papeletasAnuladas + blankVotes + nullVotes;
+      
+      // Comparación con conteo físico (solo si existe)
+      let integrityComparison = null;
+      const escrutinioWithPhysical = escrutinio as any; // Type assertion para campos opcionales
+      if (escrutinioWithPhysical.physicalBallotCount !== null && escrutinioWithPhysical.physicalBallotCount !== undefined) {
+        const diferencia = escrutinioWithPhysical.physicalBallotCount - totalDigitalPapeletas;
+        const integrityVerified = diferencia === 0;
+        
+        integrityComparison = {
+          physicalBallotCount: escrutinioWithPhysical.physicalBallotCount,
+          totalDigitalPapeletas,
+          diferencia,
+          integrityVerified,
+          physicalBallotCountTimestamp: escrutinioWithPhysical.physicalBallotCountTimestamp?.toISOString() || null
+        };
+      }
+      
+      // Asegurar que todos los valores son números válidos
+      papeletasStats = {
+        totalPapeletas: Number(totalPapeletas) || 0,
+        papeletasCerradas: Number(papeletasCerradas) || 0,
+        papeletasAnuladas: Number(papeletasAnuladas) || 0,
+        papeletasAbiertas: Number(papeletasAbiertas) || 0,
+        blankVotes: Number(blankVotes) || 0,
+        nullVotes: Number(nullVotes) || 0,
+        totalDigitalPapeletas: Number(totalDigitalPapeletas) || 0,
         escrutinioCorregido: escrutinio.hasEdits || false,
-        vecesCorregido: escrutinio.editCount || 0
+        vecesCorregido: escrutinio.editCount || 0,
+        integrityComparison // Incluir comparación solo si existe physicalBallotCount
       };
       
-      console.log('📊 Estadísticas de papeletas calculadas:', papeletasStats);
+      console.log('📊 [REVIEW API] Estadísticas de papeletas calculadas:', JSON.stringify(papeletasStats, null, 2));
+    } else {
+      console.log('📊 [REVIEW API] No es escrutinio legislativo, omitiendo estadísticas de papeletas');
     }
 
     const escrutinioData: any = {
@@ -329,6 +460,99 @@ export async function GET(
 
   } catch (error) {
     console.error('Error obteniendo escrutinio para revisión:', error);
+    return NextResponse.json(
+      { success: false, error: 'Error interno del servidor' },
+      { status: 500 }
+    );
+  }
+}
+
+// POST /api/escrutinio/[id]/review - Actualizar conteo físico de papeletas (opcional)
+export async function POST(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const authHeader = request.headers.get('authorization') || undefined;
+    const token = AuthUtils.extractTokenFromHeader(authHeader);
+    if (!token) {
+      return NextResponse.json({ success: false, error: 'No autorizado' }, { status: 401 });
+    }
+    const payload = AuthUtils.verifyToken(token);
+    if (!payload) {
+      return NextResponse.json({ success: false, error: 'Token inválido' }, { status: 401 });
+    }
+
+    const escrutinioId = params.id;
+    const body = await request.json();
+    const { physicalBallotCount } = body;
+
+    // Validar que el conteo sea un número >= 0
+    if (physicalBallotCount !== null && physicalBallotCount !== undefined) {
+      if (typeof physicalBallotCount !== 'number' || physicalBallotCount < 0) {
+        return NextResponse.json(
+          { success: false, error: 'El conteo físico debe ser un número mayor o igual a 0' },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Verificar que el escrutinio existe
+    const escrutinio = await prisma.escrutinio.findUnique({
+      where: { id: escrutinioId },
+      include: {
+        papeletas: true
+      }
+    });
+
+    if (!escrutinio) {
+      return NextResponse.json(
+        { success: false, error: 'Escrutinio no encontrado' },
+        { status: 404 }
+      );
+    }
+
+    // Actualizar conteo físico
+    const updatedEscrutinio = await prisma.escrutinio.update({
+      where: { id: escrutinioId },
+      data: {
+        physicalBallotCount: physicalBallotCount !== null && physicalBallotCount !== undefined ? physicalBallotCount : null,
+        physicalBallotCountTimestamp: physicalBallotCount !== null && physicalBallotCount !== undefined ? new Date() : null
+      },
+      include: {
+        papeletas: true
+      }
+    });
+
+    // Calcular comparación automática
+    let integrityComparison = null;
+    if (physicalBallotCount !== null && physicalBallotCount !== undefined && escrutinio.electionLevel === 'LEGISLATIVE') {
+      const papeletasCerradas = updatedEscrutinio.papeletas.filter(p => p.status === 'CLOSED').length;
+      const papeletasAnuladas = updatedEscrutinio.papeletas.filter(p => p.status === 'ANULADA').length;
+      const totalDigitalPapeletas = papeletasCerradas + papeletasAnuladas;
+      const diferencia = physicalBallotCount - totalDigitalPapeletas;
+      const integrityVerified = diferencia === 0;
+
+      integrityComparison = {
+        physicalBallotCount,
+        totalDigitalPapeletas,
+        diferencia,
+        integrityVerified,
+        physicalBallotCountTimestamp: updatedEscrutinio.physicalBallotCountTimestamp?.toISOString() || null
+      };
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        physicalBallotCount: updatedEscrutinio.physicalBallotCount,
+        physicalBallotCountTimestamp: updatedEscrutinio.physicalBallotCountTimestamp?.toISOString() || null,
+        integrityComparison
+      }
+    });
+
+  } catch (error) {
+    console.error('Error actualizando conteo físico:', error);
     return NextResponse.json(
       { success: false, error: 'Error interno del servidor' },
       { status: 500 }

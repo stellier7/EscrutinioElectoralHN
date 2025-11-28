@@ -677,9 +677,11 @@ export default function PresidencialEscrutinio({
                 </span>
               </div>
               {getTotalVotes() >= cargaElectoral && (
-                <div className="mt-2 text-sm text-red-600 font-semibold flex items-center gap-1">
-                  <AlertCircle className="h-4 w-4" />
-                  Se ha alcanzado el máximo de votos permitidos
+                <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="text-sm text-red-600 font-semibold flex items-center gap-1">
+                    <AlertCircle className="h-4 w-4" />
+                    Carga electoral alcanzada - No se pueden agregar más votos
+                  </div>
                 </div>
               )}
             </div>
@@ -706,13 +708,12 @@ export default function PresidencialEscrutinio({
                 number={c.number}
                 count={counts[c.id] || 0}
                 isPending={false} // Sin indicadores de pending - conteo instantáneo
-                disabled={isEscrutinioClosed} // Deshabilitado cuando el escrutinio esté cerrado
+                disabled={isEscrutinioClosed || (cargaElectoral !== null && getTotalVotes() >= cargaElectoral)} // Deshabilitado cuando el escrutinio esté cerrado o carga electoral alcanzada
                 onIncrement={() => {
                   if (!isEscrutinioClosed) {
-                    // Validar que no se exceda la carga electoral
+                    // Validar que no se exceda la carga electoral ANTES de llamar a la API
                     if (cargaElectoral !== null && getTotalVotes() >= cargaElectoral) {
-                      alert(`No se pueden agregar más votos. La carga electoral máxima es ${cargaElectoral.toLocaleString()} votos.`);
-                      return;
+                      return; // Bloqueo hard - no permitir incremento
                     }
                     increment(c.id, { escrutinioId, userId, mesaId, gps: gps || undefined, deviceId });
                   }
@@ -735,13 +736,12 @@ export default function PresidencialEscrutinio({
               partyColor="#9ca3af"
               count={counts["BLANK_VOTE"] || 0}
               isPending={false}
-              disabled={isEscrutinioClosed}
+              disabled={isEscrutinioClosed || (cargaElectoral !== null && getTotalVotes() >= cargaElectoral)} // Deshabilitado cuando carga electoral alcanzada
               onIncrement={() => {
                 if (!isEscrutinioClosed) {
-                  // Validar que no se exceda la carga electoral
+                  // Validar que no se exceda la carga electoral ANTES de llamar a la API
                   if (cargaElectoral !== null && getTotalVotes() >= cargaElectoral) {
-                    alert(`No se pueden agregar más votos. La carga electoral máxima es ${cargaElectoral.toLocaleString()} votos.`);
-                    return;
+                    return; // Bloqueo hard - no permitir incremento
                   }
                   increment("BLANK_VOTE", { escrutinioId, userId, mesaId, gps: gps || undefined, deviceId });
                 }
@@ -759,13 +759,12 @@ export default function PresidencialEscrutinio({
               partyColor="#6b7280"
               count={counts["NULL_VOTE"] || 0}
               isPending={false}
-              disabled={isEscrutinioClosed}
+              disabled={isEscrutinioClosed || (cargaElectoral !== null && getTotalVotes() >= cargaElectoral)} // Deshabilitado cuando carga electoral alcanzada
               onIncrement={() => {
                 if (!isEscrutinioClosed) {
-                  // Validar que no se exceda la carga electoral
+                  // Validar que no se exceda la carga electoral ANTES de llamar a la API
                   if (cargaElectoral !== null && getTotalVotes() >= cargaElectoral) {
-                    alert(`No se pueden agregar más votos. La carga electoral máxima es ${cargaElectoral.toLocaleString()} votos.`);
-                    return;
+                    return; // Bloqueo hard - no permitir incremento
                   }
                   increment("NULL_VOTE", { escrutinioId, userId, mesaId, gps: gps || undefined, deviceId });
                 }

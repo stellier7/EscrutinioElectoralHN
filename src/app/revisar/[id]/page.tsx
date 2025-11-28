@@ -67,8 +67,16 @@ interface EscrutinioData {
     totalPapeletas: number;
     papeletasCerradas: number;
     papeletasAnuladas: number;
+    totalDigitalPapeletas?: number;
     escrutinioCorregido: boolean;
     vecesCorregido: number;
+    integrityComparison?: {
+      physicalBallotCount: number;
+      totalDigitalPapeletas: number;
+      diferencia: number;
+      integrityVerified: boolean;
+      physicalBallotCountTimestamp: string | null;
+    };
   };
 }
 
@@ -105,6 +113,9 @@ export default function RevisarEscrutinioPage() {
   const [showHideModal, setShowHideModal] = useState(false);
   const [hideReason, setHideReason] = useState('');
   const [isUpdatingGps, setIsUpdatingGps] = useState(false);
+  const [physicalBallotCount, setPhysicalBallotCount] = useState<string>('');
+  const [isSavingPhysicalCount, setIsSavingPhysicalCount] = useState(false);
+  const [showPhysicalCountSection, setShowPhysicalCountSection] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -145,6 +156,12 @@ export default function RevisarEscrutinioPage() {
         console.log('📊 Total de votos:', response.data.data.totalVotes);
         console.log('📸 Acta URL recibida:', response.data.data.actaUrl);
         setEscrutinioData(response.data.data);
+        
+        // Inicializar conteo físico si existe
+        if (response.data.data.papeletasStats?.integrityComparison?.physicalBallotCount !== undefined) {
+          setPhysicalBallotCount(String(response.data.data.papeletasStats.integrityComparison.physicalBallotCount));
+          setShowPhysicalCountSection(true);
+        }
       } else {
         throw new Error(response.data.error || 'Error al cargar el escrutinio');
       }
@@ -269,6 +286,44 @@ export default function RevisarEscrutinioPage() {
       }
     } finally {
       setIsUpdatingGps(false);
+    }
+  };
+
+  const handleSavePhysicalCount = async () => {
+    const count = parseInt(physicalBallotCount);
+    if (isNaN(count) || count < 0) {
+      alert('Por favor ingresa un número válido mayor o igual a 0');
+      return;
+    }
+
+    try {
+      setIsSavingPhysicalCount(true);
+      const token = localStorage.getItem('auth-token');
+      
+      if (!token) {
+        alert('Sesión expirada. Por favor inicia sesión nuevamente.');
+        window.location.href = '/';
+        return;
+      }
+
+      const response = await axios.post(`/api/escrutinio/${escrutinioId}/review`, {
+        physicalBallotCount: count
+      }, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.data?.success) {
+        // Recargar datos del escrutinio
+        await loadEscrutinioData();
+        alert('Conteo físico guardado exitosamente');
+      } else {
+        alert('Error guardando conteo físico: ' + response.data?.error);
+      }
+    } catch (error: any) {
+      console.error('❌ Error guardando conteo físico:', error);
+      alert('Error guardando conteo físico: ' + (error?.response?.data?.error || error.message));
+    } finally {
+      setIsSavingPhysicalCount(false);
     }
   };
 
@@ -578,9 +633,107 @@ export default function RevisarEscrutinioPage() {
                   </div>
                 )}
                 {!escrutinioData.papeletasStats.escrutinioCorregido && (
-                  <div className="text-center p-4 bg-gray-50 rounded-lg border">
-                    <div className="text-3xl font-bold text-gray-400 mb-1">-</div>
-                    <div className="text-sm text-gray-500">Sin correcciones</div>
+                  <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="text-3xl font-bold text-blue-600 mb-1">
+                      {escrutinioData.papeletasStats.blankVotes || 0}
+                    </div>
+                    <div className="text-sm text-gray-600">Voto en Blanco</div>
+                  </div>
+                )}
+              </div>
+
+              {/* Sección de Conteo Físico (Opcional) */}
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-md font-semibold text-gray-900">Conteo Físico de Papeletas (Opcional)</h3>
+                    <p className="text-sm text-gray-600">Ingresa el conteo físico para verificación de integridad</p>
+                  </div>
+                  <button
+                    onClick={() => setShowPhysicalCountSection(!showPhysicalCountSection)}
+                    className="text-sm text-blue-600 hover:text-blue-700"
+                  >
+                    {showPhysicalCountSection ? 'Ocultar' : 'Mostrar'}
+                  </button>
+                </div>
+
+                {showPhysicalCountSection && (
+                  <div className="space-y-4">
+                    <div className="flex gap-4 items-end">
+                      <div className="flex-1">
+                        <label htmlFor="physicalCount" className="block text-sm font-medium text-gray-700 mb-2">
+                          Conteo Físico
+                        </label>
+                        <input
+                          type="number"
+                          id="physicalCount"
+                          min="0"
+                          value={physicalBallotCount}
+                          onChange={(e) => setPhysicalBallotCount(e.target.value)}
+                          placeholder="Ej: 50"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      <button
+                        onClick={handleSavePhysicalCount}
+                        disabled={isSavingPhysicalCount || !physicalBallotCount}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                      >
+                        {isSavingPhysicalCount ? 'Guardando...' : 'Guardar'}
+                      </button>
+                    </div>
+
+                    {/* Mostrar comparación si existe */}
+                    {escrutinioData.papeletasStats.integrityComparison && (
+                      <div className={`p-4 rounded-lg border ${
+                        escrutinioData.papeletasStats.integrityComparison.integrityVerified
+                          ? 'bg-green-50 border-green-200'
+                          : 'bg-red-50 border-red-200'
+                      }`}>
+                        <div className="flex items-center gap-2 mb-2">
+                          {escrutinioData.papeletasStats.integrityComparison.integrityVerified ? (
+                            <CheckCircle className="h-5 w-5 text-green-600" />
+                          ) : (
+                            <X className="h-5 w-5 text-red-600" />
+                          )}
+                          <span className={`font-semibold ${
+                            escrutinioData.papeletasStats.integrityComparison.integrityVerified
+                              ? 'text-green-800'
+                              : 'text-red-800'
+                          }`}>
+                            {escrutinioData.papeletasStats.integrityComparison.integrityVerified
+                              ? 'Integridad Verificada'
+                              : 'Discrepancia Detectada'}
+                          </span>
+                        </div>
+                        <div className="text-sm space-y-1">
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Conteo Físico:</span>
+                            <span className="font-medium">{escrutinioData.papeletasStats.integrityComparison.physicalBallotCount}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Conteo Digital:</span>
+                            <span className="font-medium">{escrutinioData.papeletasStats.integrityComparison.totalDigitalPapeletas}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Diferencia:</span>
+                            <span className={`font-medium ${
+                              escrutinioData.papeletasStats.integrityComparison.diferencia === 0
+                                ? 'text-green-600'
+                                : 'text-red-600'
+                            }`}>
+                              {escrutinioData.papeletasStats.integrityComparison.diferencia > 0 ? '+' : ''}
+                              {escrutinioData.papeletasStats.integrityComparison.diferencia}
+                            </span>
+                          </div>
+                          {escrutinioData.papeletasStats.integrityComparison.physicalBallotCountTimestamp && (
+                            <div className="text-xs text-gray-500 mt-2">
+                              Registrado: {new Date(escrutinioData.papeletasStats.integrityComparison.physicalBallotCountTimestamp).toLocaleString()}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
