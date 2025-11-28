@@ -23,11 +23,11 @@ interface EscrutinioState {
     lng: number;
     accuracy?: number;
   } | null;
-  // Legislative-specific UI state
+  // Estado de UI específico para legislativo
   legislativeCurrentPapeleta?: number;
   legislativeExpandedParty?: string | null;
-  legislativePapeletaVotes?: {[key: string]: number}; // casillaNumber -> count (for current party)
-  legislativeCompletedPapeletas?: number; // NEW: Track completed papeletas
+  legislativePapeletaVotes?: {[key: string]: number}; // casillaNumber -> conteo (para partido actual)
+  legislativeCompletedPapeletas?: number; // NUEVO: Rastrear papeletas completadas
 }
 
 const STORAGE_KEY = 'escrutinio-state';
@@ -54,7 +54,7 @@ export function useEscrutinioPersistence() {
 
   // Función para guardar estado en localStorage y URL
   const saveState = useCallback((newState: Partial<EscrutinioState>) => {
-    // Use functional update to avoid dependency on escrutinioState
+    // Usar actualización funcional para evitar dependencia de escrutinioState
     setEscrutinioState(prevState => {
       const updatedState = { ...prevState, ...newState };
       

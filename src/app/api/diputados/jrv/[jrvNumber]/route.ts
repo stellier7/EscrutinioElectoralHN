@@ -100,6 +100,8 @@ export async function GET(
       }
     ];
 
+    // Cada partido tiene department.diputados casillas
+    // Para partido i: casillas desde (i * diputados + 1) hasta ((i + 1) * diputados)
     return NextResponse.json({
       success: true,
       data: {

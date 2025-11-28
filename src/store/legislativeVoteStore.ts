@@ -7,7 +7,7 @@ import { AuditClient } from '@/lib/audit-client';
 export type LegislativeVoteDelta = {
   partyId: string;
   casillaNumber: number;
-  delta: number; // +1 or -1
+  delta: number; // +1 o -1
   timestamp: number;
   clientBatchId: string;
   escrutinioId: string;
@@ -40,7 +40,7 @@ const LegislativeVotePayloadSchema = z.object({
 });
 
 type State = {
-  counts: Record<string, number>; // partyId_casillaNumber -> count
+  counts: Record<string, number>; // partyId_casillaNumber -> conteo
   pendingVotes: LegislativeVoteDelta[]; // Votos pendientes de sincronización
   lastSyncAt?: number;
   context?: { gps?: { latitude: number; longitude: number; accuracy?: number }; deviceId?: string };
@@ -67,7 +67,7 @@ const RETRY_DELAY_MS = 1000;
 
 let syncTimer: ReturnType<typeof setInterval> | null = null;
 let isSyncPausedFlag = false;
-let isSyncing = false; // Backpressure control
+let isSyncing = false; // Control de contrapresión
 let debounceSyncTimer: ReturnType<typeof setTimeout> | null = null;
 
 export const useLegislativeVoteStore = create<State & Actions>()(
@@ -242,12 +242,12 @@ export const useLegislativeVoteStore = create<State & Actions>()(
 
       pauseSync: () => {
         isSyncPausedFlag = true;
-        console.log('⏸️ [LEGISLATIVE VOTE STORE] Auto-sync pausado');
+        console.log('⏸️ [STORE VOTOS LEGISLATIVOS] Auto-sync pausado');
       },
 
       resumeSync: () => {
         isSyncPausedFlag = false;
-        console.log('▶️ [LEGISLATIVE VOTE STORE] Auto-sync reanudado');
+        console.log('▶️ [STORE VOTOS LEGISLATIVOS] Auto-sync reanudado');
         // Reanudar sync si hay votos pendientes
         const { pendingVotes } = get();
         if (pendingVotes.length > 0) {
@@ -318,7 +318,7 @@ async function syncLegislativeVotesForEscrutinio(
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
-      console.log('✅ [LEGISLATIVE-SYNC] Votos guardados exitosamente:', {
+      console.log('✅ [LEGISLATIVO-SYNC] Votos guardados exitosamente:', {
         votesCount: votes.length,
         escrutinioId,
         response: response.data
@@ -338,7 +338,7 @@ async function syncLegislativeVotesForEscrutinio(
     } catch (error: any) {
       retries++;
       
-      console.error(`❌ [LEGISLATIVE-SYNC] Error en intento ${retries}/${MAX_RETRIES}:`, {
+      console.error(`❌ [LEGISLATIVO-SYNC] Error en intento ${retries}/${MAX_RETRIES}:`, {
         message: error?.message,
         response: error?.response?.data,
         status: error?.response?.status,
@@ -347,12 +347,12 @@ async function syncLegislativeVotesForEscrutinio(
       
       if (retries < MAX_RETRIES) {
         // Esperar antes del siguiente intento
-        console.log(`⏳ [LEGISLATIVE-SYNC] Reintentando en ${RETRY_DELAY_MS * retries}ms...`);
+        console.log(`⏳ [LEGISLATIVO-SYNC] Reintentando en ${RETRY_DELAY_MS * retries}ms...`);
         await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS * retries));
       } else {
         // Fallo final: restaurar eventos de auditoría para reintento posterior
         AuditClient.restore(auditEvents as any);
-        console.error('❌ [LEGISLATIVE-SYNC] Error en auto-save legislativo después de reintentos', {
+        console.error('❌ [LEGISLATIVO-SYNC] Error en auto-save legislativo después de reintentos', {
           lastError: error?.response?.data || error?.message,
           votesCount: votes.length
         });
@@ -365,7 +365,7 @@ async function syncLegislativeVotesForEscrutinio(
 function triggerImmediateSync() {
   // Si está pausado, no hacer nada
   if (isSyncPausedFlag) {
-    console.log('⏸️ [LEGISLATIVE] Sync pausado, no se dispara sync inmediato');
+    console.log('⏸️ [LEGISLATIVO] Sync pausado, no se dispara sync inmediato');
     return;
   }
 
@@ -381,12 +381,12 @@ function triggerImmediateSync() {
 
     // Verificar backpressure
     if (isSyncing) {
-      console.log('⏸️ [LEGISLATIVE] Sync anterior en progreso, reintentando en 1s...');
+      console.log('⏸️ [LEGISLATIVO] Sync anterior en progreso, reintentando en 1s...');
       setTimeout(triggerImmediateSync, 1000);
       return;
     }
 
-    console.log('🚀 [LEGISLATIVE IMMEDIATE SYNC] Sincronizando votos inmediatamente');
+    console.log('🚀 [LEGISLATIVO IMMEDIATE SYNC] Sincronizando votos inmediatamente');
     isSyncing = true;
     try {
       await useLegislativeVoteStore.getState().syncPendingVotes();
@@ -412,7 +412,7 @@ function startSilentSync() {
 
     // Backpressure control: no sincronizar si ya hay un sync en progreso
     if (isSyncing) {
-      console.log('⏸️ [LEGISLATIVE] Sync anterior aún en progreso, saltando este ciclo...');
+      console.log('⏸️ [LEGISLATIVO] Sync anterior aún en progreso, saltando este ciclo...');
       return;
     }
 

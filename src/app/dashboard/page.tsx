@@ -142,7 +142,15 @@ export default function DashboardPage() {
     }
   };
 
-  // Helper functions for consistent JRV display
+  // Funciones auxiliares para mostrar JRV de forma consistente
+  const formatElectionLevel = (level: string): string => {
+    const levelMap: Record<string, string> = {
+      'PRESIDENTIAL': 'Presidencial',
+      'LEGISLATIVE': 'Legislativo',
+      'MUNICIPAL': 'Municipal'
+    };
+    return levelMap[level] || level;
+  };
   const formatJRVNumber = (number: string): string => {
     // Pad with zeros to 5 digits: "3" -> "00003"
     return number.padStart(5, '0');
@@ -312,7 +320,7 @@ export default function DashboardPage() {
                   <Clock className="h-3 w-3 text-orange-600" />
                   <div>
                     <p className="text-xs font-medium text-gray-900">JRV {formatJRVNumber(activity.mesaNumber)}</p>
-                    <p className="text-xs text-gray-500">{activity.electionLevel}</p>
+                    <p className="text-xs text-gray-500">{formatElectionLevel(activity.electionLevel)}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
@@ -377,7 +385,7 @@ export default function DashboardPage() {
                   <CheckCircle className="h-3 w-3 text-green-600" />
                   <div>
                     <p className="text-xs font-medium text-gray-900">JRV {formatJRVNumber(activity.mesaNumber)}</p>
-                    <p className="text-xs text-gray-500">{activity.electionLevel}</p>
+                    <p className="text-xs text-gray-500">{formatElectionLevel(activity.electionLevel)}</p>
                   </div>
                 </div>
                 <Button
@@ -422,7 +430,7 @@ export default function DashboardPage() {
                     <p className="text-xs text-gray-500">
                       {new Date(activity.completedAt).toLocaleDateString()}
                     </p>
-                    <p className="text-xs text-green-600 font-medium">{activity.electionLevel}</p>
+                    <p className="text-xs text-green-600 font-medium">{formatElectionLevel(activity.electionLevel)}</p>
                   </div>
                   <Button
                     variant="secondary"
@@ -695,8 +703,8 @@ export default function DashboardPage() {
                     <p className="text-xs text-gray-500">{formatDepartment(activity.department)}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-500">{activity.electionLevel}</span>
+                  <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500">{formatElectionLevel(activity.electionLevel)}</span>
                   <div className="flex items-center gap-1 flex-shrink-0">
                     <Button
                       variant="primary"
@@ -787,7 +795,7 @@ export default function DashboardPage() {
                     <p className="text-xs text-gray-500">
                       {new Date(activity.completedAt).toLocaleDateString()}
                     </p>
-                    <p className="text-xs text-green-600 font-medium">{activity.electionLevel}</p>
+                    <p className="text-xs text-green-600 font-medium">{formatElectionLevel(activity.electionLevel)}</p>
                   </div>
                   <Button
                     variant="secondary"

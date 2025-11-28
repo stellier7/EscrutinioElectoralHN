@@ -6,27 +6,27 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('🔄 Review sessions API called');
+    console.log('🔄 API de sesiones de revisión llamada');
     
     // Autenticación
     const authHeader = request.headers.get('authorization') || undefined;
     const token = AuthUtils.extractTokenFromHeader(authHeader);
     if (!token) {
-      console.log('❌ No authorization header found');
+      console.log('❌ No se encontró header de autorización');
       return NextResponse.json({ success: false, error: 'No autorizado' }, { status: 401 });
     }
     const payload = AuthUtils.verifyToken(token);
     if (!payload) {
-      console.log('❌ Invalid token');
+      console.log('❌ Token inválido');
       return NextResponse.json({ success: false, error: 'Token inválido' }, { status: 401 });
     }
     
-    console.log('✅ User authenticated:', { userId: payload.userId, role: payload.role });
+    console.log('✅ Usuario autenticado:', { userId: payload.userId, role: payload.role });
 
     const userId = payload.userId;
     const userRole = payload.role;
 
-    // Get all sessions ordered by startedAt DESC (most recent first)
+    // Obtener todas las sesiones ordenadas por startedAt DESC (más recientes primero)
     const sessions = await prisma.escrutinioSession.findMany({
       orderBy: {
         startedAt: 'desc'
@@ -34,8 +34,8 @@ export async function GET(request: NextRequest) {
       include: {
         escrutinios: {
           where: {
-            status: 'COMPLETED', // Only completed escrutinios
-            ...(userRole === 'ADMIN' ? {} : { userId: userId }), // Filter by user role
+            status: 'COMPLETED', // Solo escrutinios completados
+            ...(userRole === 'ADMIN' ? {} : { userId: userId }), // Filtrar por rol de usuario
           },
           include: {
             mesa: true,
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    // Transform sessions data
+    // Transformar datos de sesiones
     const sessionsData = sessions.map(session => ({
       id: session.id,
       name: session.name,
@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
       }
     }));
 
-    console.log('📊 Sessions data prepared:', {
+    console.log('📊 Datos de sesiones preparados:', {
       totalSessions: sessionsData.length,
       activeSessions: sessionsData.filter(s => s.isActive).length,
       closedSessions: sessionsData.filter(s => s.isClosed).length
@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
       }
     });
   } catch (error) {
-    console.error('Error fetching review sessions:', error);
+    console.error('Error obteniendo sesiones de revisión:', error);
     return NextResponse.json({
       success: false,
       error: 'Error interno del servidor',

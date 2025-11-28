@@ -9,7 +9,7 @@ import { VoteLimitAlert } from './ui/VoteLimitAlert';
 import { getTransparentColor } from '@/lib/party-config';
 import { useEscrutinioPersistence } from '@/hooks/useEscrutinioPersistence';
 
-// Utility function to generate block-based slot ranges for legislative elections
+// Función utilitaria para generar rangos de casillas basados en bloques para elecciones legislativas
 export function generatePartySlotRanges(seatCount: number, partyCount: number): Array<{ start: number; end: number; range: string; casillas: number[] }> {
   const ranges = [];
   for (let i = 0; i < partyCount; i++) {
@@ -124,18 +124,18 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
         
         if (response.data?.success) {
           const status = response.data.data.status;
-          console.log('📊 [LEGISLATIVE] Status del escrutinio:', status);
+          console.log('📊 [LEGISLATIVO] Estado del escrutinio:', status);
           
           // Si el escrutinio está CLOSED o COMPLETED, bloquear la interfaz
           if (status === 'CLOSED') {
             setIsEscrutinioClosed(true);
             setEscrutinioStatus('CLOSED');
-            console.log('🔒 [LEGISLATIVE] Escrutinio cerrado - bloqueando interfaz');
+            console.log('🔒 [LEGISLATIVO] Escrutinio cerrado - bloqueando interfaz');
             onEscrutinioStatusChange?.(status);
           } else if (status === 'COMPLETED') {
             setIsEscrutinioClosed(true);
             setEscrutinioStatus('COMPLETED');
-            console.log('✅ [LEGISLATIVE] Escrutinio completado - bloqueando interfaz');
+            console.log('✅ [LEGISLATIVO] Escrutinio completado - bloqueando interfaz');
             onEscrutinioStatusChange?.(status);
           } else {
             // Notificar status activo también
@@ -184,8 +184,8 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
       const isFirstEscrutinio = lastEscrutinioIdRef.current === null;
       
       if (isDifferentEscrutinio || isFirstEscrutinio) {
-        console.log('🔄 [LEGISLATIVE] Nuevo escrutinio detectado, limpiando store local...');
-        console.log('📊 [LEGISLATIVE] Escrutinio anterior:', lastEscrutinioIdRef.current, '→ Nuevo:', escrutinioId);
+        console.log('🔄 [LEGISLATIVO] Nuevo escrutinio detectado, limpiando store local...');
+        console.log('📊 [LEGISLATIVO] Escrutinio anterior:', lastEscrutinioIdRef.current, '→ Nuevo:', escrutinioId);
         // CRITICAL: Limpiar el store ANTES de cualquier otra operación
         clearVotes();
         lastEscrutinioIdRef.current = escrutinioId;
@@ -197,20 +197,20 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
         isStateInitializedRef.current = false;
         isInitializingRef.current = true; // Permitir inicialización del nuevo escrutinio
       } else {
-        console.log('🔄 [LEGISLATIVE] Mismo escrutinio, manteniendo votos del store');
+        console.log('🔄 [LEGISLATIVO] Mismo escrutinio, manteniendo votos del store');
       }
       
       // Solo cargar votos del servidor si NO es un escrutinio nuevo
       // Los escrutinios nuevos deben empezar de 0
       if (!isNewEscrutinio && !isFirstEscrutinio && !isDifferentEscrutinio) {
-        console.log('📊 [LEGISLATIVE] Cargando votos desde servidor para escrutinio:', escrutinioId);
+        console.log('📊 [LEGISLATIVO] Cargando votos desde servidor para escrutinio:', escrutinioId);
         loadVotesFromServer(escrutinioId).then(() => {
-          console.log('✅ [LEGISLATIVE] Votos cargados desde servidor');
+          console.log('✅ [LEGISLATIVO] Votos cargados desde servidor');
         }).catch((error) => {
-          console.error('❌ [LEGISLATIVE] Error cargando votos desde servidor:', error);
+          console.error('❌ [LEGISLATIVO] Error cargando votos desde servidor:', error);
         });
       } else {
-        console.log('🆕 [LEGISLATIVE] Escrutinio nuevo detectado, NO cargando votos del servidor (empezando de 0)');
+        console.log('🆕 [LEGISLATIVO] Escrutinio nuevo detectado, NO cargando votos del servidor (empezando de 0)');
         // Limpiar el flag después de usarlo
         if (typeof window !== 'undefined') {
           localStorage.removeItem('is-new-escrutinio');
@@ -398,7 +398,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
             diputados
           });
 
-          console.log('✅ [LEGISLATIVE] Datos de diputados cargados desde endpoint correcto:', { jrvInfo, parties });
+          console.log('✅ [LEGISLATIVO] Datos de diputados cargados desde endpoint correcto:', { jrvInfo, parties });
           
           // Debug: Log de cada partido y sus casillas
           parties.forEach((party: any) => {
@@ -413,7 +413,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
           setError('No se encontraron datos para esta JRV');
         }
       } catch (err: any) {
-        console.error('❌ [LEGISLATIVE] Error cargando datos de diputados:', err);
+        console.error('❌ [LEGISLATIVO] Error cargando datos de diputados:', err);
         setError(err?.response?.data?.error || 'Error cargando datos de la JRV');
       } finally {
         setLoading(false);
@@ -428,18 +428,18 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
     setExpandedParty(partyId);
   }, []);
 
-  // Handle grid slot click - toggle vote using legislative store (like presidential)
+  // Manejar click en casilla de la grilla - alternar voto usando store legislativo (como presidencial)
   const handleSlotClick = useCallback(async (partyId: string, slotNumber: number, event: React.MouseEvent) => {
-    console.log('🖱️ [LEGISLATIVE] Click en casilla:', partyId, slotNumber);
+    console.log('🖱️ [LEGISLATIVO] Click en casilla:', partyId, slotNumber);
     
     if (!userId || !escrutinioId) {
-      console.log('❌ [LEGISLATIVE] Click bloqueado - userId:', userId, 'escrutinioId:', escrutinioId);
+      console.log('❌ [LEGISLATIVO] Click bloqueado - userId:', userId, 'escrutinioId:', escrutinioId);
       setError('No hay usuario o escrutinio válido');
       return;
     }
     
     if (isEscrutinioClosed) {
-      console.log('🔒 [LEGISLATIVE] Click en casilla ignorado - escrutinio cerrado');
+      console.log('🔒 [LEGISLATIVO] Click en casilla ignorado - escrutinio cerrado');
       return;
     }
 
@@ -454,7 +454,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
 
     // TOGGLE: If already has a vote, remove it (toggle off)
     if (currentVoteCount > 0) {
-      console.log('➖ [LEGISLATIVE] Quitando voto (toggle off):', partyId, slotNumber);
+      console.log('➖ [LEGISLATIVO] Quitando voto (toggle off):', partyId, slotNumber);
       
       // Remove vote from current papeleta
       setPapeletaVotes(prev => {
@@ -478,13 +478,13 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
     const currentVotes = Object.values(papeletaVotes).reduce((sum, count) => sum + count, 0);
 
     if (currentVotes >= voteLimit) {
-      console.log('⚠️ [LEGISLATIVE] Límite de votos alcanzado en papeleta');
+      console.log('⚠️ [LEGISLATIVO] Límite de votos alcanzado en papeleta');
       setShowVoteLimitAlert(true);
       return;
     }
 
     // Add vote to current papeleta (toggle on)
-    console.log('➕ [LEGISLATIVE] Agregando voto (toggle on):', partyId, slotNumber);
+    console.log('➕ [LEGISLATIVO] Agregando voto (toggle on):', partyId, slotNumber);
     
     setPapeletaVotes(prev => ({
       ...prev,
@@ -635,7 +635,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
   const getTotalPartyCount = useCallback((partyId: string): number => {
     // Usar el store legislativo directamente (como el presidencial)
     const count = getPartyCount(partyId);
-    console.log(`📊 [LEGISLATIVE] Partido ${partyId}: total=${count}`);
+    console.log(`📊 [LEGISLATIVO] Partido ${partyId}: total=${count}`);
     return count;
   }, [getPartyCount]);
 
@@ -650,7 +650,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
     if (file) {
       setActaImage(file);
       setActaImageSource(source);
-      console.log('📸 [LEGISLATIVE] Acta seleccionada:', file.name, 'Origen:', source);
+      console.log('📸 [LEGISLATIVO] Acta seleccionada:', file.name, 'Origen:', source);
     }
     // Reset input para permitir seleccionar el mismo archivo de nuevo
     event.target.value = '';
@@ -658,20 +658,20 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
 
   const uploadEvidenceIfNeeded = useCallback(async (): Promise<string | null> => {
     if (!actaImage || !escrutinioId) {
-      console.log('📸 [LEGISLATIVE] No hay acta para subir');
+      console.log('📸 [LEGISLATIVO] No hay acta para subir');
       return null;
     }
 
     // Validar token antes de proceder
     const token = localStorage.getItem('auth-token');
     if (!token) {
-      console.error('📸 [LEGISLATIVE] No hay token de autenticación');
+      console.error('📸 [LEGISLATIVO] No hay token de autenticación');
       throw new Error('No hay token de autenticación. Por favor inicia sesión nuevamente.');
     }
 
     try {
       setIsUploading(true);
-      console.log('📸 [LEGISLATIVE] Subiendo acta...');
+      console.log('📸 [LEGISLATIVO] Subiendo acta...');
 
       // Intentar subir a S3 primero
       const presignResponse = await axios.post('/api/upload/presign', {
@@ -682,7 +682,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
-      console.log('📸 [LEGISLATIVE] Presign response:', presignResponse.data);
+      console.log('📸 [LEGISLATIVO] Presign response:', presignResponse.data);
 
       if (presignResponse.data?.success && presignResponse.data.data) {
         const { uploadUrl, publicUrl } = presignResponse.data.data as { uploadUrl: string; publicUrl: string };
@@ -691,7 +691,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
           throw new Error('URLs de presign inválidas');
         }
         
-        console.log('📸 [LEGISLATIVE] Uploading to:', uploadUrl.substring(0, 50) + '...');
+        console.log('📸 [LEGISLATIVO] Uploading to:', uploadUrl.substring(0, 50) + '...');
         
         // Subir archivo a S3
         const uploadResponse = await fetch(uploadUrl, {
@@ -704,7 +704,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
           throw new Error(`Error subiendo archivo a S3: ${uploadResponse.status} ${uploadResponse.statusText}`);
         }
 
-        console.log('📸 [LEGISLATIVE] Acta subida a S3:', publicUrl);
+        console.log('📸 [LEGISLATIVO] Acta subida a S3:', publicUrl);
         
         // Guardar la URL en la base de datos
         try {
@@ -714,12 +714,12 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
           );
           
           if (evidenceResponse.data?.success) {
-            console.log('📸 [LEGISLATIVE] URL guardada exitosamente en base de datos');
+            console.log('📸 [LEGISLATIVO] URL guardada exitosamente en base de datos');
           } else {
-            console.warn('📸 [LEGISLATIVE] URL guardada pero respuesta no exitosa:', evidenceResponse.data);
+            console.warn('📸 [LEGISLATIVO] URL guardada pero respuesta no exitosa:', evidenceResponse.data);
           }
         } catch (error: any) {
-          console.error('📸 [LEGISLATIVE] Error guardando URL en DB:', error);
+          console.error('📸 [LEGISLATIVO] Error guardando URL en DB:', error);
           // Continuar aunque falle el guardado de evidence, ya tenemos la URL
         }
         
@@ -729,14 +729,14 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
         throw new Error('Respuesta de presign inválida o sin éxito');
       }
     } catch (error: any) {
-      console.error('📸 [LEGISLATIVE] Error subiendo a S3:', error);
+      console.error('📸 [LEGISLATIVO] Error subiendo a S3:', error);
       setIsUploading(false);
       // Continuar con fallback
     }
 
     // Fallback: convertir a dataUrl
     try {
-      console.log('📸 [LEGISLATIVE] Usando fallback: convirtiendo a dataUrl');
+      console.log('📸 [LEGISLATIVO] Usando fallback: convirtiendo a dataUrl');
       setIsUploading(true);
       
       const toDataUrl = (file: File): Promise<string> => {
@@ -749,7 +749,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
       };
       
       const dataUrl = await toDataUrl(actaImage);
-      console.log('📸 [LEGISLATIVE] Fallback exitoso, dataUrl length:', dataUrl.length);
+      console.log('📸 [LEGISLATIVO] Fallback exitoso, dataUrl length:', dataUrl.length);
       
       // Guardar la URL en la base de datos
       try {
@@ -761,20 +761,20 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
           );
           
           if (evidenceResponse.data?.success) {
-            console.log('📸 [LEGISLATIVE] DataURL guardada exitosamente en base de datos');
+            console.log('📸 [LEGISLATIVO] DataURL guardada exitosamente en base de datos');
           } else {
-            console.warn('📸 [LEGISLATIVE] DataURL guardada pero respuesta no exitosa:', evidenceResponse.data);
+            console.warn('📸 [LEGISLATIVO] DataURL guardada pero respuesta no exitosa:', evidenceResponse.data);
           }
         }
       } catch (error: any) {
-        console.error('📸 [LEGISLATIVE] Error guardando DataURL en DB:', error);
+        console.error('📸 [LEGISLATIVO] Error guardando DataURL en DB:', error);
         // Continuar aunque falle el guardado
       }
       
       setIsUploading(false);
       return dataUrl;
     } catch (error: any) {
-      console.error('📸 [LEGISLATIVE] Fallback también falló:', error);
+      console.error('📸 [LEGISLATIVO] Fallback también falló:', error);
       setIsUploading(false);
       throw new Error('Error subiendo foto del acta. Por favor intenta nuevamente.');
     }
@@ -803,11 +803,11 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
       // 1. Subir foto si existe
       if (actaImage) {
         try {
-          console.log('📸 [LEGISLATIVE] Subiendo foto antes de completar...');
+          console.log('📸 [LEGISLATIVO] Subiendo foto antes de completar...');
           const evidenceUrl = await uploadEvidenceIfNeeded();
           
           if (!evidenceUrl) {
-            console.warn('📸 [LEGISLATIVE] No se pudo obtener URL de evidence');
+            console.warn('📸 [LEGISLATIVO] No se pudo obtener URL de evidence');
             const shouldContinue = confirm(
               'No se pudo subir la foto del acta. ¿Deseas continuar sin foto?'
             );
@@ -816,10 +816,10 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
               return;
             }
           } else {
-            console.log('✅ [LEGISLATIVE] Foto subida exitosamente');
+            console.log('✅ [LEGISLATIVO] Foto subida exitosamente');
           }
         } catch (uploadError: any) {
-          console.error('📸 [LEGISLATIVE] Error subiendo foto:', uploadError);
+          console.error('📸 [LEGISLATIVO] Error subiendo foto:', uploadError);
           const shouldContinue = confirm(
             `Hubo un error al subir la foto del acta: ${uploadError.message || 'Error desconocido'}. ¿Deseas continuar sin foto?`
           );
@@ -829,7 +829,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
           }
         }
       } else {
-        console.log('📸 [LEGISLATIVE] No hay foto para subir');
+        console.log('📸 [LEGISLATIVO] No hay foto para subir');
       }
       
       // 2. Guardar snapshot del conteo actual antes de completar
@@ -841,7 +841,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
         currentPapeleta: currentPapeleta
       };
       
-      console.log('📊 [LEGISLATIVE] Guardando snapshot del conteo:', snapshotData);
+      console.log('📊 [LEGISLATIVO] Guardando snapshot del conteo:', snapshotData);
       
       const completeResponse = await axios.post(`/api/escrutinio/${encodeURIComponent(escrutinioId)}/complete`, {
         originalData: snapshotData
@@ -853,12 +853,12 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
         throw new Error(completeResponse.data?.error || 'Error completando escrutinio');
       }
       
-      console.log('✅ [LEGISLATIVE] Escrutinio completado exitosamente');
+      console.log('✅ [LEGISLATIVO] Escrutinio completado exitosamente');
       
       // 3. Mostrar modal de éxito
       setShowSuccessModal(true);
     } catch (error: any) {
-      console.error('❌ [LEGISLATIVE] Error completando escrutinio:', error);
+      console.error('❌ [LEGISLATIVO] Error completando escrutinio:', error);
       const errorMessage = error?.response?.data?.error || error?.message || 'Error completando escrutinio';
       setError(errorMessage);
       
@@ -877,7 +877,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
 
     // Verificar si hay foto del acta
     if (!actaImage) {
-      console.warn('⚠️ [LEGISLATIVE] Intentando enviar sin foto del acta');
+      console.warn('⚠️ [LEGISLATIVO] Intentando enviar sin foto del acta');
       setShowNoPhotoWarning(true);
       return;
     }
@@ -887,7 +887,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
 
   // Función para revisar escrutinio
   const handleReviewEscrutinio = useCallback(() => {
-    console.log('📋 [LEGISLATIVE] Navegando a revisar escrutinio:', escrutinioId);
+    console.log('📋 [LEGISLATIVO] Navegando a revisar escrutinio:', escrutinioId);
     
     // Limpiar estado de papeleta persistido
     saveState({
@@ -913,7 +913,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
       return;
     }
     
-    console.log('🔄 [LEGISLATIVE] Toggle freeze escrutinio:', escrutinioId, 'Current state:', isEscrutinioClosed);
+    console.log('🔄 [LEGISLATIVO] Toggle freeze escrutinio:', escrutinioId, 'Current state:', isEscrutinioClosed);
     setIsClosing(true);
     setError(null);
     
@@ -924,11 +924,11 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
       // CRÍTICO: Si estamos descongelando (UNFREEZE), llamar al endpoint /reopen primero
       // para actualizar el estado en la base de datos de CLOSED a COMPLETED
       if (action === 'UNFREEZE') {
-        console.log('🔄 [LEGISLATIVE] Actualizando estado del escrutinio en servidor...');
+        console.log('🔄 [LEGISLATIVO] Actualizando estado del escrutinio en servidor...');
         await axios.post(`/api/escrutinio/${escrutinioId}/reopen`, {}, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
-        console.log('✅ [LEGISLATIVE] Estado del escrutinio actualizado a COMPLETED en servidor');
+        console.log('✅ [LEGISLATIVO] Estado del escrutinio actualizado a COMPLETED en servidor');
       }
       
       // CRÍTICO: Si estamos congelando (FREEZE), pausar sync antes de capturar snapshot
@@ -938,7 +938,7 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
         const { pauseSync, resumeSync } = useLegislativeVoteStore.getState();
         
         pauseSync();
-        console.log('⏸️ [LEGISLATIVE] Auto-sync pausado para evitar race conditions');
+        console.log('⏸️ [LEGISLATIVO] Auto-sync pausado para evitar race conditions');
         
         // Esperar un momento para que cualquier operación pendiente se complete
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -964,9 +964,9 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
             accuracy: position.coords.accuracy
           };
           
-          console.log('📍 [LEGISLATIVE] GPS final capturado:', finalGps);
+          console.log('📍 [LEGISLATIVO] GPS final capturado:', finalGps);
         } catch (gpsError) {
-          console.warn('⚠️ [LEGISLATIVE] No se pudo obtener GPS final:', gpsError);
+          console.warn('⚠️ [LEGISLATIVO] No se pudo obtener GPS final:', gpsError);
           // Continuar sin GPS
         }
       }
@@ -992,31 +992,31 @@ export default function DiputadosEscrutinio({ jrvNumber, escrutinioId, userId, o
         }, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
-        console.log('📍 [LEGISLATIVE] GPS final enviado al servidor');
+        console.log('📍 [LEGISLATIVO] GPS final enviado al servidor');
       }
       
       // CRÍTICO: Reanudar auto-sync después de completar operaciones
       if (action === 'FREEZE') {
         const { resumeSync } = useLegislativeVoteStore.getState();
         resumeSync();
-        console.log('▶️ [LEGISLATIVE] Auto-sync reanudado');
+        console.log('▶️ [LEGISLATIVO] Auto-sync reanudado');
       }
       
       if (isEscrutinioClosed) {
         // Descongelar - cambiar estado local
-        console.log('✅ [LEGISLATIVE] Descongelando escrutinio localmente');
+        console.log('✅ [LEGISLATIVO] Descongelando escrutinio localmente');
         setEscrutinioStatus('OPEN');
         setIsEscrutinioClosed(false);
       } else {
         // Congelar - cambiar estado local
-        console.log('✅ [LEGISLATIVE] Congelando escrutinio localmente');
+        console.log('✅ [LEGISLATIVO] Congelando escrutinio localmente');
         setEscrutinioStatus('CLOSED');
         setIsEscrutinioClosed(true);
       }
       
-      console.log(`✅ [LEGISLATIVE] Checkpoint ${action} guardado exitosamente`);
+      console.log(`✅ [LEGISLATIVO] Checkpoint ${action} guardado exitosamente`);
     } catch (error: any) {
-      console.error('❌ [LEGISLATIVE] Error toggle freeze:', error);
+      console.error('❌ [LEGISLATIVO] Error toggle freeze:', error);
       const errorMessage = error?.response?.data?.error || error?.message || 'Error cambiando estado';
       setError(errorMessage);
     } finally {

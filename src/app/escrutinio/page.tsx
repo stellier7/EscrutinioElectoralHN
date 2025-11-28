@@ -51,6 +51,16 @@ interface Candidate {
   electionLevel: string;
 }
 
+// Función para formatear el nivel de elección
+const formatElectionLevel = (level: string): string => {
+  const levelMap: Record<string, string> = {
+    'PRESIDENTIAL': 'Presidencial',
+    'LEGISLATIVE': 'Legislativo',
+    'MUNICIPAL': 'Municipal'
+  };
+  return levelMap[level] || level;
+};
+
 function EscrutinioPageContent() {
   const { user } = useAuth();
   const router = useRouter();
@@ -219,7 +229,7 @@ function EscrutinioPageContent() {
           try {
             const parsed = JSON.parse(savedState);
             // Si el escrutinioId actual es de tipo presidencial, limpiarlo
-            // (esto se manejará mejor en saveState)
+            // (esto se manejará mejor en saveState - ya está en español)
             localStorage.setItem('escrutinio-state', JSON.stringify(parsed));
           } catch (error) {
             console.warn('Error limpiando datos presidenciales:', error);
@@ -445,7 +455,7 @@ function EscrutinioPageContent() {
             };
             console.log('✅ [ESCRUTINIO] Información de mesa obtenida:', mesaInfo);
             
-            // Save the complete mesa info
+            // Guardar la información completa de la mesa
             saveState({
               selectedMesa: normalizedJRV,
               selectedMesaInfo: mesaInfo
@@ -825,7 +835,7 @@ function EscrutinioPageContent() {
                     </h3>
                     <p className="text-sm text-orange-700 mb-3">
                       JRV <strong>{activeEscrutinio.mesaNumber}</strong> ya tiene un escrutinio abierto.<br/>
-                      Nivel: <strong>{activeEscrutinio.electionLevel}</strong> | Iniciado por: <strong>{activeEscrutinio.user.name}</strong>
+                      Nivel: <strong>{formatElectionLevel(activeEscrutinio.electionLevel)}</strong> | Iniciado por: <strong>{activeEscrutinio.user.name}</strong>
                     </p>
                     <div className="flex gap-2">
                       <button
@@ -973,7 +983,7 @@ function EscrutinioPageContent() {
           </div>
         )}
 
-        {/* Step 2: Vote Counting */}
+        {/* Paso 2: Conteo de Votos */}
         {escrutinioState.currentStep === 2 && (
           <div className="bg-white p-6 rounded-lg shadow-sm border">
             <h2 className="text-lg font-semibold text-gray-900 mb-4 hidden sm:block">Conteo de Votos</h2>

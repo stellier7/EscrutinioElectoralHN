@@ -62,7 +62,7 @@ export default function PresidencialEscrutinio({
   const [mesaLocationFromServer, setMesaLocationFromServer] = useState<string | null>(null);
   const [mesaDepartmentFromServer, setMesaDepartmentFromServer] = useState<string | null>(null);
 
-  // Debug: Log state changes
+  // Depuración: Registrar cambios de estado
   useEffect(() => {
     console.log('📍 [DEBUG] mesaLocationFromServer state:', mesaLocationFromServer);
     console.log('📍 [DEBUG] mesaDepartmentFromServer state:', mesaDepartmentFromServer);
@@ -91,8 +91,8 @@ export default function PresidencialEscrutinio({
       const isFirstEscrutinio = lastEscrutinioIdRef.current === null;
       
       if (isDifferentEscrutinio || isFirstEscrutinio) {
-        console.log('🔄 [PRESIDENTIAL] Nuevo escrutinio detectado, limpiando store local...');
-        console.log('📊 [PRESIDENTIAL] Escrutinio anterior:', lastEscrutinioIdRef.current, '→ Nuevo:', escrutinioId);
+        console.log('🔄 [PRESIDENCIAL] Nuevo escrutinio detectado, limpiando store local...');
+        console.log('📊 [PRESIDENCIAL] Escrutinio anterior:', lastEscrutinioIdRef.current, '→ Nuevo:', escrutinioId);
         // CRITICAL: Limpiar el store ANTES de cualquier otra operación
         clearVotes();
         lastEscrutinioIdRef.current = escrutinioId;
@@ -101,21 +101,21 @@ export default function PresidencialEscrutinio({
           localStorage.setItem('last-presidential-escrutinio-id', escrutinioId);
         }
       } else {
-        console.log('🔄 [PRESIDENTIAL] Mismo escrutinio, manteniendo votos del store');
+        console.log('🔄 [PRESIDENCIAL] Mismo escrutinio, manteniendo votos del store');
       }
       
       // Solo cargar votos del servidor si NO es un escrutinio nuevo
       // Los escrutinios nuevos deben empezar de 0
       if (!isNewEscrutinio && !isFirstEscrutinio && !isDifferentEscrutinio) {
-        console.log('📊 [PRESIDENTIAL] Cargando votos desde servidor para escrutinio:', escrutinioId);
+        console.log('📊 [PRESIDENCIAL] Cargando votos desde servidor para escrutinio:', escrutinioId);
         const { loadFromServer } = useVoteStore.getState();
         loadFromServer(escrutinioId).then(() => {
-          console.log('✅ [PRESIDENTIAL] Votos cargados desde servidor');
+          console.log('✅ [PRESIDENCIAL] Votos cargados desde servidor');
         }).catch((error) => {
-          console.error('❌ [PRESIDENTIAL] Error cargando votos desde servidor:', error);
+          console.error('❌ [PRESIDENCIAL] Error cargando votos desde servidor:', error);
         });
       } else {
-        console.log('🆕 [PRESIDENTIAL] Escrutinio nuevo detectado, NO cargando votos del servidor (empezando de 0)');
+        console.log('🆕 [PRESIDENCIAL] Escrutinio nuevo detectado, NO cargando votos del servidor (empezando de 0)');
         // Limpiar el flag después de usarlo
         if (typeof window !== 'undefined') {
           localStorage.removeItem('is-new-escrutinio');
@@ -155,14 +155,14 @@ export default function PresidencialEscrutinio({
           const mesaLocation = response.data.data.mesaLocation;
           const mesaDepartment = response.data.data.mesaDepartment;
           
-          // Debug logging
+          // Registro de depuración
           console.log('📍 [DEBUG] Response from status API:', response.data.data);
           console.log('📍 [DEBUG] mesaLocation:', mesaLocation);
           console.log('📍 [DEBUG] mesaDepartment:', mesaDepartment);
           console.log('📍 [DEBUG] cargaElectoral:', cargaElectoralData);
           console.log('📍 [DEBUG] jrvLocation prop:', jrvLocation);
           console.log('📍 [DEBUG] department prop:', department);
-          console.log('📊 [PRESIDENTIAL] Status del escrutinio:', status);
+          console.log('📊 [PRESIDENCIAL] Status del escrutinio:', status);
           
           // Guardar carga electoral (incluir 0 como valor válido)
           if (cargaElectoralData !== null && cargaElectoralData !== undefined) {
@@ -188,12 +188,12 @@ export default function PresidencialEscrutinio({
           if (status === 'CLOSED') {
             setIsEscrutinioClosed(true);
             setEscrutinioStatus('CLOSED');
-            console.log('🔒 [PRESIDENTIAL] Escrutinio cerrado - bloqueando interfaz');
+            console.log('🔒 [PRESIDENCIAL] Escrutinio cerrado - bloqueando interfaz');
             onEscrutinioStatusChange?.(status);
           } else if (status === 'COMPLETED') {
             setIsEscrutinioClosed(true);
             setEscrutinioStatus('COMPLETED');
-            console.log('✅ [PRESIDENTIAL] Escrutinio completado - bloqueando interfaz');
+            console.log('✅ [PRESIDENCIAL] Escrutinio completado - bloqueando interfaz');
             onEscrutinioStatusChange?.(status);
           } else {
             // Notificar status activo también
@@ -215,7 +215,7 @@ export default function PresidencialEscrutinio({
     if (file) {
       setActaImage(file);
       setActaImageSource(source);
-      console.log('📸 [PRESIDENTIAL] Acta seleccionada:', file.name, 'Origen:', source);
+      console.log('📸 [PRESIDENCIAL] Acta seleccionada:', file.name, 'Origen:', source);
     }
     // Reset input para permitir seleccionar el mismo archivo de nuevo
     event.target.value = '';
@@ -223,7 +223,7 @@ export default function PresidencialEscrutinio({
 
   // Función para subir acta si existe
   const uploadEvidenceIfNeeded = async (): Promise<string | null> => {
-    console.log('📸 [PRESIDENTIAL] uploadEvidenceIfNeeded called:', { 
+    console.log('📸 [PRESIDENCIAL] uploadEvidenceIfNeeded called:', { 
       actaImage: !!actaImage, 
       escrutinioId,
       actaImageDetails: actaImage ? {
@@ -234,7 +234,7 @@ export default function PresidencialEscrutinio({
       } : null
     });
     if (!actaImage || !escrutinioId) {
-      console.log('📸 [PRESIDENTIAL] No actaImage or escrutinioId, returning null', { 
+      console.log('📸 [PRESIDENCIAL] No actaImage or escrutinioId, returning null', { 
         hasActaImage: !!actaImage, 
         hasEscrutinioId: !!escrutinioId,
         actaImage,
@@ -246,12 +246,12 @@ export default function PresidencialEscrutinio({
     // Validar token antes de proceder
     const token = localStorage.getItem('auth-token');
     if (!token) {
-      console.error('📸 [PRESIDENTIAL] No hay token de autenticación');
+      console.error('📸 [PRESIDENCIAL] No hay token de autenticación');
       throw new Error('No hay token de autenticación. Por favor inicia sesión nuevamente.');
     }
     
     try {
-      console.log('📸 [PRESIDENTIAL] Uploading evidence:', { fileName: actaImage.name, contentType: actaImage.type });
+      console.log('📸 [PRESIDENCIAL] Uploading evidence:', { fileName: actaImage.name, contentType: actaImage.type });
       // Obtener URL de presign para subir la foto
       const presign = await axios.post('/api/upload/presign', {
         escrutinioId,
@@ -261,7 +261,7 @@ export default function PresidencialEscrutinio({
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
-      console.log('📸 [PRESIDENTIAL] Presign response:', presign.data);
+      console.log('📸 [PRESIDENCIAL] Presign response:', presign.data);
       
       if (presign.data?.success && presign.data.data) {
         const { uploadUrl, publicUrl } = presign.data.data as { uploadUrl: string; publicUrl: string };
@@ -270,7 +270,7 @@ export default function PresidencialEscrutinio({
           throw new Error('URLs de presign inválidas');
         }
         
-        console.log('📸 [PRESIDENTIAL] Uploading to:', uploadUrl.substring(0, 50) + '...');
+        console.log('📸 [PRESIDENCIAL] Uploading to:', uploadUrl.substring(0, 50) + '...');
         const uploadResponse = await fetch(uploadUrl, {
           method: 'PUT',
           headers: { 'Content-Type': actaImage.type || 'image/jpeg' },
@@ -281,7 +281,7 @@ export default function PresidencialEscrutinio({
           throw new Error(`Error subiendo archivo a S3: ${uploadResponse.status} ${uploadResponse.statusText}`);
         }
         
-        console.log('📸 [PRESIDENTIAL] Upload successful, publicUrl:', publicUrl);
+        console.log('📸 [PRESIDENCIAL] Upload successful, publicUrl:', publicUrl);
         
         // Guardar la URL en la base de datos
         try {
@@ -294,12 +294,12 @@ export default function PresidencialEscrutinio({
           });
           
           if (evidenceResponse.data?.success) {
-            console.log('📸 [PRESIDENTIAL] Evidence URL guardada exitosamente en BD');
+            console.log('📸 [PRESIDENCIAL] Evidence URL guardada exitosamente en BD');
           } else {
-            console.warn('📸 [PRESIDENTIAL] Evidence guardado pero respuesta no exitosa:', evidenceResponse.data);
+            console.warn('📸 [PRESIDENCIAL] Evidence guardado pero respuesta no exitosa:', evidenceResponse.data);
           }
         } catch (evidenceError: any) {
-          console.error('📸 [PRESIDENTIAL] Error guardando evidence URL en BD:', evidenceError);
+          console.error('📸 [PRESIDENCIAL] Error guardando evidence URL en BD:', evidenceError);
           // Continuar aunque falle el guardado de evidence, ya tenemos la URL
         }
         
@@ -308,12 +308,12 @@ export default function PresidencialEscrutinio({
         throw new Error('Respuesta de presign inválida o sin éxito');
       }
     } catch (error: any) {
-      console.error('📸 [PRESIDENTIAL] S3 upload failed, trying fallback:', error);
+      console.error('📸 [PRESIDENCIAL] S3 upload failed, trying fallback:', error);
       // Fallback: convertir a dataUrl como en legislativo
     }
     
     try {
-      console.log('📸 [PRESIDENTIAL] Using fallback: converting to dataUrl');
+      console.log('📸 [PRESIDENCIAL] Using fallback: converting to dataUrl');
       const toDataUrl = (file: File): Promise<string> => {
         return new Promise((resolve, reject) => {
           const reader = new FileReader();
@@ -324,7 +324,7 @@ export default function PresidencialEscrutinio({
       };
       
       const dataUrl = await toDataUrl(actaImage);
-      console.log('📸 [PRESIDENTIAL] Fallback successful, dataUrl length:', dataUrl.length);
+      console.log('📸 [PRESIDENCIAL] Fallback successful, dataUrl length:', dataUrl.length);
       
       // Guardar la URL en la base de datos también en fallback
       try {
@@ -339,19 +339,19 @@ export default function PresidencialEscrutinio({
           });
           
           if (evidenceResponse.data?.success) {
-            console.log('📸 [PRESIDENTIAL] DataURL guardada exitosamente en BD');
+            console.log('📸 [PRESIDENCIAL] DataURL guardada exitosamente en BD');
           } else {
-            console.warn('📸 [PRESIDENTIAL] DataURL guardado pero respuesta no exitosa:', evidenceResponse.data);
+            console.warn('📸 [PRESIDENCIAL] DataURL guardado pero respuesta no exitosa:', evidenceResponse.data);
           }
         }
       } catch (evidenceError: any) {
-        console.error('📸 [PRESIDENTIAL] Error guardando DataURL en DB:', evidenceError);
+        console.error('📸 [PRESIDENCIAL] Error guardando DataURL en DB:', evidenceError);
         // Continuar aunque falle el guardado
       }
       
       return dataUrl;
     } catch (error) {
-      console.error('📸 [PRESIDENTIAL] Fallback also failed:', error);
+      console.error('📸 [PRESIDENCIAL] Fallback also failed:', error);
       throw new Error('Error subiendo foto del acta. Por favor intenta nuevamente.');
     }
   };
@@ -374,7 +374,7 @@ export default function PresidencialEscrutinio({
     setIsCompleting(true);
     
     try {
-      console.log('📸 [PRESIDENTIAL] handleSendResults - Iniciando proceso:', { 
+      console.log('📸 [PRESIDENCIAL] handleSendResults - Iniciando proceso:', { 
         escrutinioId, 
         actaImage: actaImage ? { name: actaImage.name, size: actaImage.size, type: actaImage.type } : null,
         hasActaImage: !!actaImage
@@ -384,13 +384,13 @@ export default function PresidencialEscrutinio({
       if (actaImage) {
         try {
           const evidenceUrl = await uploadEvidenceIfNeeded();
-          console.log('📸 [PRESIDENTIAL] handleSendResults - evidenceUrl result:', evidenceUrl ? 'URL obtenida' : 'null');
+          console.log('📸 [PRESIDENCIAL] handleSendResults - evidenceUrl result:', evidenceUrl ? 'URL obtenida' : 'null');
           
           if (!evidenceUrl) {
-            console.warn('📸 [PRESIDENTIAL] No se pudo obtener URL de evidence, pero continuando...');
+            console.warn('📸 [PRESIDENCIAL] No se pudo obtener URL de evidence, pero continuando...');
           }
         } catch (uploadError: any) {
-          console.error('📸 [PRESIDENTIAL] Error subiendo acta:', uploadError);
+          console.error('📸 [PRESIDENCIAL] Error subiendo acta:', uploadError);
           // No bloquear el proceso si falla el upload de foto, pero mostrar warning
           const shouldContinue = confirm(
             'Hubo un error al subir la foto del acta. ¿Deseas continuar sin foto?'
@@ -401,7 +401,7 @@ export default function PresidencialEscrutinio({
           }
         }
       } else {
-        console.log('📸 [PRESIDENTIAL] No hay acta para subir');
+        console.log('📸 [PRESIDENCIAL] No hay acta para subir');
       }
       
       // Marcar el escrutinio como completado definitivamente
@@ -409,13 +409,13 @@ export default function PresidencialEscrutinio({
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
-      console.log('✅ [PRESIDENTIAL] Escrutinio completado exitosamente');
+      console.log('✅ [PRESIDENCIAL] Escrutinio completado exitosamente');
       
       // El escrutinio ya está finalizado definitivamente, no cambiar estado local
       setIsCompleting(false);
       setShowSuccessModal(true);
     } catch (error: any) {
-      console.error('❌ [PRESIDENTIAL] Error enviando resultados:', error);
+      console.error('❌ [PRESIDENCIAL] Error enviando resultados:', error);
       setIsCompleting(false);
       
       const errorMessage = error?.response?.data?.error || error?.message || 'Error desconocido';
@@ -436,20 +436,20 @@ export default function PresidencialEscrutinio({
       return;
     }
     
-    console.log('🔄 [PRESIDENTIAL] Congelando escrutinio localmente');
+    console.log('🔄 [PRESIDENCIAL] Congelando escrutinio localmente');
     setIsClosing(true);
     
     // CRÍTICO: Pausar auto-save PRIMERO para evitar race conditions
     const { pauseSync, resumeSync } = useVoteStore.getState();
     pauseSync();
-    console.log('⏸️ [PRESIDENTIAL] Auto-sync pausado para evitar race conditions');
+    console.log('⏸️ [PRESIDENCIAL] Auto-sync pausado para evitar race conditions');
     
     // CRÍTICO: Esperar un momento para que cualquier operación pendiente se complete
     await new Promise(resolve => setTimeout(resolve, 100));
     
     // CRÍTICO: Capturar snapshot de votos DESPUÉS de pausar y flush
     const votesSnapshot = { ...counts };
-    console.log('📸 [PRESIDENTIAL] Snapshot de votos capturado:', votesSnapshot);
+    console.log('📸 [PRESIDENCIAL] Snapshot de votos capturado:', votesSnapshot);
     
     try {
       // Capturar GPS final
@@ -469,9 +469,9 @@ export default function PresidencialEscrutinio({
           accuracy: position.coords.accuracy
         };
         
-        console.log('📍 [PRESIDENTIAL] GPS final capturado:', finalGps);
+        console.log('📍 [PRESIDENCIAL] GPS final capturado:', finalGps);
       } catch (gpsError) {
-        console.warn('⚠️ [PRESIDENTIAL] No se pudo obtener GPS final:', gpsError);
+        console.warn('⚠️ [PRESIDENCIAL] No se pudo obtener GPS final:', gpsError);
         // Continuar sin GPS
       }
 
@@ -492,7 +492,7 @@ export default function PresidencialEscrutinio({
 
       // Log de auditoría se crea automáticamente en el endpoint /api/escrutinio/[id]/close
 
-      console.log('✅ [PRESIDENTIAL] Checkpoint enviado con snapshot correcto');
+      console.log('✅ [PRESIDENCIAL] Checkpoint enviado con snapshot correcto');
 
       // Enviar GPS final al endpoint de cierre
       if (finalGps) {
@@ -501,20 +501,20 @@ export default function PresidencialEscrutinio({
         }, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
-        console.log('📍 [PRESIDENTIAL] GPS final enviado al servidor');
+        console.log('📍 [PRESIDENCIAL] GPS final enviado al servidor');
       }
       
       // Cambiar estado local
       setEscrutinioStatus('CLOSED');
       setIsEscrutinioClosed(true);
-      console.log('✅ [PRESIDENTIAL] Escrutinio congelado localmente y checkpoint guardado');
+      console.log('✅ [PRESIDENCIAL] Escrutinio congelado localmente y checkpoint guardado');
     } catch (error) {
       console.error('Error congelando escrutinio:', error);
       alert(`Error al congelar el escrutinio: ${error instanceof Error ? error.message : 'Error desconocido'}`);
     } finally {
       // CRÍTICO: Reanudar auto-save después de completar todas las operaciones
       resumeSync();
-      console.log('▶️ [PRESIDENTIAL] Auto-sync reanudado');
+      console.log('▶️ [PRESIDENCIAL] Auto-sync reanudado');
       setIsClosing(false);
     }
   };
@@ -525,18 +525,18 @@ export default function PresidencialEscrutinio({
       return;
     }
     
-    console.log('🔄 [PRESIDENTIAL] Descongelando escrutinio localmente');
+    console.log('🔄 [PRESIDENCIAL] Descongelando escrutinio localmente');
     setIsReopening(true);
     try {
       const token = localStorage.getItem('auth-token');
       
       // CRÍTICO: Llamar al endpoint /reopen para actualizar el estado en la base de datos
       // Esto cambia el estado de CLOSED a COMPLETED en la base de datos
-      console.log('🔄 [PRESIDENTIAL] Actualizando estado del escrutinio en servidor...');
+      console.log('🔄 [PRESIDENCIAL] Actualizando estado del escrutinio en servidor...');
       await axios.post(`/api/escrutinio/${escrutinioId}/reopen`, {}, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      console.log('✅ [PRESIDENTIAL] Estado del escrutinio actualizado a COMPLETED en servidor');
+      console.log('✅ [PRESIDENCIAL] Estado del escrutinio actualizado a COMPLETED en servidor');
       
       // Enviar checkpoint al servidor
       await axios.post(`/api/escrutinio/${escrutinioId}/checkpoint`, {
@@ -555,9 +555,9 @@ export default function PresidencialEscrutinio({
       // Cambiar estado local
       setEscrutinioStatus('COMPLETED');
       setIsEscrutinioClosed(false);
-      console.log('✅ [PRESIDENTIAL] Escrutinio descongelado localmente y checkpoint guardado');
+      console.log('✅ [PRESIDENCIAL] Escrutinio descongelado localmente y checkpoint guardado');
     } catch (error: any) {
-      console.error('❌ [PRESIDENTIAL] Error descongelando escrutinio:', error);
+      console.error('❌ [PRESIDENCIAL] Error descongelando escrutinio:', error);
       const errorMessage = error?.response?.data?.error || error?.message || 'Error desconocido';
       alert(`Error al descongelar el escrutinio: ${errorMessage}`);
     } finally {
@@ -612,7 +612,7 @@ export default function PresidencialEscrutinio({
                 ) : (
                   'Carga Electoral: Cargando...'
                 )}
-                {/* Debug: mostrar estado actual */}
+                {/* Depuración: mostrar estado actual */}
                 {process.env.NODE_ENV === 'development' && (
                   <span className="ml-2 text-xs text-gray-400">
                     (state: {String(cargaElectoral)})
@@ -634,19 +634,19 @@ export default function PresidencialEscrutinio({
             <div className="text-sm text-gray-600">
               {(() => {
                 // Usar información del servidor si los props no tienen la info correcta
-                // Check if jrvLocation is invalid (equals number, 'N/A', or is empty)
+                // Verificar si jrvLocation es inválido (igual al número, 'N/A', o está vacío)
                 const isJrvLocationInvalid = !jrvLocation || 
                   jrvLocation === 'N/A' || 
                   jrvLocation === jrvNumber || 
                   jrvLocation === `JRV ${jrvNumber}` ||
                   (typeof jrvLocation === 'string' && jrvLocation.trim() === '');
                 
-                // Check if department is invalid
+                // Verificar si el departamento es inválido
                 const isDepartmentInvalid = !department || 
                   department === 'N/A' || 
                   (typeof department === 'string' && department.trim() === '');
                 
-                // Prioritize server data if props are invalid, otherwise use props
+                // Priorizar datos del servidor si los props son inválidos, de lo contrario usar props
                 const location = isJrvLocationInvalid 
                   ? (mesaLocationFromServer || jrvLocation || 'N/A')
                   : jrvLocation;

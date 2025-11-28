@@ -5,17 +5,17 @@ import { getPartyConfig, getTransparentColor } from '@/lib/party-config';
 
 type Props = {
   id: string;
-  // Title should display full party name (no abbreviations)
+  // El título debe mostrar el nombre completo del partido (sin abreviaciones)
   party: string;
-  // Subtitle should display candidate initial + surname
+  // El subtítulo debe mostrar inicial del candidato + apellido
   name: string;
   partyColor?: string;
   number?: string | number;
   count: number;
   onIncrement: () => void;
   onDecrement: () => void;
-  isPending?: boolean; // pending batch indicator
-  disabled?: boolean; // disable voting buttons
+  isPending?: boolean; // indicador de lote pendiente
+  disabled?: boolean; // deshabilitar botones de votación
 };
 
 export function VoteCard({ id, name, party, partyColor = '#e5e7eb', number, count, onIncrement, onDecrement, isPending, disabled = false }: Props) {

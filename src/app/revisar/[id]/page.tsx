@@ -72,7 +72,7 @@ interface EscrutinioData {
   };
 }
 
-// Helper functions for map links
+// Funciones auxiliares para enlaces de mapas
 const getGoogleMapsUrl = (lat: number, lng: number) => 
   `https://www.google.com/maps?q=${lat},${lng}`;
 
@@ -81,6 +81,16 @@ const getWazeUrl = (lat: number, lng: number) =>
 
 const getAppleMapsUrl = (lat: number, lng: number) => 
   `https://maps.apple.com/?q=${lat},${lng}`;
+
+// Función para formatear el nivel de elección
+const formatElectionLevel = (level: string): string => {
+  const levelMap: Record<string, string> = {
+    'PRESIDENTIAL': 'Presidencial',
+    'LEGISLATIVE': 'Legislativo',
+    'MUNICIPAL': 'Municipal'
+  };
+  return levelMap[level] || level;
+};
 
 export default function RevisarEscrutinioPage() {
   const { user, isLoading } = useAuth();
@@ -122,7 +132,7 @@ export default function RevisarEscrutinioPage() {
         return;
       }
 
-      console.log('🔐 Token encontrado para review:', token.substring(0, 20) + '...');
+      console.log('🔐 Token encontrado para revisión:', token.substring(0, 20) + '...');
       
       // Cargar datos del escrutinio
       const response = await axios.get(`/api/escrutinio/${escrutinioId}/review`, {
@@ -317,7 +327,7 @@ export default function RevisarEscrutinioPage() {
                 variant="secondary"
                 size="sm"
                 onClick={() => {
-                  // Check if this is the user's own escrutinio
+                  // Verificar si este es el escrutinio del usuario
                   const isOwnEscrutinio = escrutinioData?.user?.id === user?.id;
                   
                   if (isOwnEscrutinio) {
@@ -372,7 +382,7 @@ export default function RevisarEscrutinioPage() {
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Nivel Electoral</p>
-                  <p className="font-semibold text-gray-900">{escrutinioData.electionLevel}</p>
+                  <p className="font-semibold text-gray-900">{formatElectionLevel(escrutinioData.electionLevel)}</p>
                 </div>
               </div>
               

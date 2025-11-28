@@ -14,7 +14,7 @@ export type CandidateDisplay = {
 
 export type VoteDelta = {
   candidateId: string;
-  delta: number; // +1 or -1
+  delta: number; // +1 o -1
   timestamp: number;
   clientBatchId: string;
   escrutinioId: string;
@@ -71,7 +71,7 @@ const RETRY_DELAY_MS = 1000;
 
 let syncTimer: ReturnType<typeof setInterval> | null = null;
 let isSyncPausedFlag = false;
-let isSyncing = false; // Backpressure control
+let isSyncing = false; // Control de contrapresión
 let debounceSyncTimer: ReturnType<typeof setTimeout> | null = null;
 
 export const useVoteStore = create<State & Actions>()(
@@ -200,7 +200,7 @@ export const useVoteStore = create<State & Actions>()(
             }
           });
           if (response.data?.success && response.data.data) {
-            console.log('📊 [PRESIDENTIAL STORE] Votos cargados del servidor:', response.data.data);
+            console.log('📊 [STORE PRESIDENCIAL] Votos cargados del servidor:', response.data.data);
             const serverCounts = response.data.data.reduce((acc: Record<string, number>, vote: any) => {
               // Mapear candidatos especiales de vuelta a BLANK_VOTE y NULL_VOTE
               let candidateId = vote.candidateId;
@@ -214,7 +214,7 @@ export const useVoteStore = create<State & Actions>()(
               acc[candidateId] = vote.count;
               return acc;
             }, {});
-            console.log('📊 [PRESIDENTIAL STORE] Counts procesados:', serverCounts);
+            console.log('📊 [STORE PRESIDENCIAL] Conteos procesados:', serverCounts);
             
             // Solo actualizar si los counts realmente cambiaron
             const currentCounts = get().counts;
@@ -245,12 +245,12 @@ export const useVoteStore = create<State & Actions>()(
 
       pauseSync: () => {
         isSyncPausedFlag = true;
-        console.log('⏸️ [VOTE STORE] Auto-sync pausado');
+        console.log('⏸️ [STORE VOTOS] Auto-sync pausado');
       },
 
       resumeSync: () => {
         isSyncPausedFlag = false;
-        console.log('▶️ [VOTE STORE] Auto-sync reanudado');
+        console.log('▶️ [STORE VOTOS] Auto-sync reanudado');
         // Reanudar sync si hay votos pendientes
         const { pendingVotes } = get();
         if (pendingVotes.length > 0) {

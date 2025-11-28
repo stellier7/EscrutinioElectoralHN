@@ -18,6 +18,16 @@ import {
 import { MesaSearchInput } from '@/components/MesaSearchInput';
 import BackButton from '@/components/ui/BackButton';
 
+// Función para formatear el nivel de elección
+const formatElectionLevel = (level: string): string => {
+  const levelMap: Record<string, string> = {
+    'PRESIDENTIAL': 'Presidencial',
+    'LEGISLATIVE': 'Legislativo',
+    'MUNICIPAL': 'Municipal'
+  };
+  return levelMap[level] || level;
+};
+
 interface ResultSummary {
   level: string;
   totalMesas: number;
@@ -798,7 +808,7 @@ export default function ResultadosPage() {
                             <div className="w-3 h-3 rounded-full bg-red-500"></div>
                             <div>
                               <div className="font-medium text-gray-900">
-                                {escrutinio.electionLevel} - {escrutinio.status}
+                                {formatElectionLevel(escrutinio.electionLevel)} - {escrutinio.status}
                               </div>
                               <div className="text-sm text-gray-600">
                                 Por: {escrutinio.user.name} • {escrutinio.voteCount} votos
@@ -837,7 +847,7 @@ export default function ResultadosPage() {
                             <div className="w-3 h-3 rounded-full bg-blue-500"></div>
                             <div>
                               <div className="font-medium text-gray-900">
-                                {escrutinio.electionLevel} - {escrutinio.status}
+                                {formatElectionLevel(escrutinio.electionLevel)} - {escrutinio.status}
                               </div>
                               <div className="text-sm text-gray-600">
                                 Por: {escrutinio.user.name} • {escrutinio.voteCount} votos
@@ -876,7 +886,7 @@ export default function ResultadosPage() {
                             <div className="w-3 h-3 rounded-full bg-green-500"></div>
                             <div>
                               <div className="font-medium text-gray-900">
-                                {escrutinio.electionLevel} - {escrutinio.status}
+                                {formatElectionLevel(escrutinio.electionLevel)} - {escrutinio.status}
                               </div>
                               <div className="text-sm text-gray-600">
                                 Por: {escrutinio.user.name} • {escrutinio.voteCount} votos
@@ -915,7 +925,7 @@ export default function ResultadosPage() {
                             <div className="w-3 h-3 rounded-full bg-purple-500"></div>
                             <div>
                               <div className="font-medium text-gray-900">
-                                {escrutinio.electionLevel} - {escrutinio.status}
+                                {formatElectionLevel(escrutinio.electionLevel)} - {escrutinio.status}
                               </div>
                               <div className="text-sm text-gray-600">
                                 Por: {escrutinio.user.name} • {escrutinio.voteCount} votos

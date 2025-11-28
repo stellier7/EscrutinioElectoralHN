@@ -21,11 +21,11 @@ export async function GET(
     const escrutinioId = params.id;
 
     // Obtener el escrutinio con todos los datos relacionados
-    console.log('🔍 Buscando escrutinio para review:', escrutinioId);
+    console.log('🔍 Buscando escrutinio para revisión:', escrutinioId);
     const escrutinio = await prisma.escrutinio.findUnique({
       where: {
         id: escrutinioId,
-        // Remover filtro de status para debugging
+        // Remover filtro de status para depuración
       },
       include: {
         mesa: {
@@ -38,7 +38,7 @@ export async function GET(
             area: true,
             address: true,
             isActive: true,
-            // cargaElectoral no se necesita para review, evitar errores si la migración no se ha ejecutado
+            // cargaElectoral no se necesita para revisión, evitar errores si la migración no se ha ejecutado
           }
         },
         user: {
@@ -92,7 +92,7 @@ export async function GET(
       // Procesar votos presidenciales (candidates)
       console.log('🔄 Procesando votos presidenciales...');
       console.log('📊 Número de votos en DB:', escrutinio.votes.length);
-      console.log('📊 Votos raw:', escrutinio.votes);
+      console.log('📊 Votos sin procesar:', escrutinio.votes);
       
       escrutinio.votes.forEach(vote => {
         console.log('🗳️ Procesando voto:', {
@@ -134,9 +134,9 @@ export async function GET(
         console.log('📊 Snapshot encontrado en originalData:', snapshotData);
       }
       
-      // Si no hay snapshot, usar los votos de la base de datos (fallback)
+      // Si no hay snapshot, usar los votos de la base de datos (respaldo)
       if (!snapshotData || !snapshotData.partyCounts) {
-        console.log('📊 No hay snapshot, usando votos de DB como fallback...');
+        console.log('📊 No hay snapshot, usando votos de DB como respaldo...');
         
         // Crear candidatos basados en los partidos conocidos
         const parties = ['pdc', 'libre', 'pinu-sd', 'liberal', 'nacional'];
@@ -228,7 +228,7 @@ export async function GET(
 
     const candidates = Array.from(candidatesMap.values());
     
-    console.log('📊 Candidatos finales para review:', {
+    console.log('📊 Candidatos finales para revisión:', {
       electionLevel: escrutinio.electionLevel,
       candidatesCount: candidates.length,
       candidates: candidates,
@@ -237,7 +237,7 @@ export async function GET(
 
     // Obtener la URL de la evidencia si existe
     const actaUrl = escrutinio.actaImageUrl || null;
-    console.log('📸 Acta URL en review API:', {
+    console.log('📸 URL del acta en API de revisión:', {
       escrutinioId: escrutinio.id,
       actaImageUrl: escrutinio.actaImageUrl,
       actaUrl: actaUrl
@@ -265,7 +265,7 @@ export async function GET(
       accuracy: escrutinio.finalLocationAccuracy || 0
     } : null);
 
-    console.log('📍 [REVIEW API] GPS data for escrutinio:', {
+    console.log('📍 [API REVISIÓN] Datos GPS para escrutinio:', {
       escrutinioId: escrutinio.id,
       initialLatitude: escrutinio.latitude,
       initialLongitude: escrutinio.longitude,
@@ -328,7 +328,7 @@ export async function GET(
     });
 
   } catch (error) {
-    console.error('Error fetching escrutinio for review:', error);
+    console.error('Error obteniendo escrutinio para revisión:', error);
     return NextResponse.json(
       { success: false, error: 'Error interno del servidor' },
       { status: 500 }
