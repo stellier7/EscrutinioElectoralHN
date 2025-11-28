@@ -52,52 +52,86 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   if (authError) return authError;
 
   try {
-    const applications = await prisma.volunteerApplication.findMany({
+    const { searchParams } = new URL(request.url);
+    const exportType = searchParams.get('type') || 'full'; // 'emails', 'phones', or 'full'
+
+    // Get all volunteers (Users with role VOLUNTEER)
+    const users = await prisma.user.findMany({
+      where: {
+        role: 'VOLUNTEER',
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        organization: true, // JRV está almacenado aquí
+        status: true,
+        createdAt: true,
+      },
       orderBy: { createdAt: 'desc' },
     });
 
-    // Generate CSV
-    const headers = [
-      'ID',
-      'Nombre',
-      'Apellido',
-      'Email',
-      'Teléfono',
-      'Rol',
-      'JRV',
-      'Comentarios',
-      'Fecha de Solicitud',
-    ];
+    let csvContent: string;
+    let filename: string;
 
-    const rows = applications.map((app: any) => [
-      app.id,
-      app.firstName,
-      app.lastName,
-      app.email,
-      app.phone,
-      app.role === 'OBSERVER' ? 'Observador' : 'Voluntario',
-      app.jrvNumber || '',
-      app.comments ? app.comments.replace(/"/g, '""') : '',
-      app.createdAt.toISOString(),
-    ]);
+    if (exportType === 'emails') {
+      // Solo emails
+      const emails = users
+        .filter(user => user.email)
+        .map(user => user.email);
+      
+      csvContent = ['Email', ...emails].join('\n');
+      filename = `volunteers-emails-${new Date().toISOString().split('T')[0]}.csv`;
+    } else if (exportType === 'phones') {
+      // Solo teléfonos
+      const phones = users
+        .filter(user => user.phone)
+        .map(user => user.phone);
+      
+      csvContent = ['Teléfono', ...phones].join('\n');
+      filename = `volunteers-phones-${new Date().toISOString().split('T')[0]}.csv`;
+    } else {
+      // Completo - toda la información
+      const headers = [
+        'ID',
+        'Nombre',
+        'Email',
+        'Teléfono',
+        'JRV',
+        'Status',
+        'Fecha de Registro',
+      ];
 
-    const csvContent = [
-      headers.join(','),
-      ...rows.map((row: any[]) => row.map((cell: any) => `"${cell}"`).join(',')),
-    ].join('\n');
+      const rows = users.map((user: any) => [
+        user.id,
+        user.name || '',
+        user.email || '',
+        user.phone || '',
+        user.organization || '', // JRV
+        user.status || '',
+        user.createdAt ? new Date(user.createdAt).toISOString() : '',
+      ]);
+
+      csvContent = [
+        headers.join(','),
+        ...rows.map((row: any[]) => row.map((cell: any) => `"${String(cell).replace(/"/g, '""')}"`).join(',')),
+      ].join('\n');
+      filename = `volunteers-complete-${new Date().toISOString().split('T')[0]}.csv`;
+    }
 
     return new NextResponse(csvContent, {
       status: 200,
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': `attachment; filename="volunteer-applications-${new Date().toISOString().split('T')[0]}.csv"`,
+        'Content-Disposition': `attachment; filename="${filename}"`,
       },
     });
   } catch (error) {
-    console.error('Error exporting volunteer applications:', error);
+    console.error('Error exporting volunteers:', error);
     return NextResponse.json({
       success: false,
-      error: 'Error al exportar solicitudes',
+      error: 'Error al exportar voluntarios',
     } as ApiResponse, { status: 500 });
   }
 }

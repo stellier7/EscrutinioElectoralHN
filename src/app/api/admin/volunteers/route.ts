@@ -8,9 +8,9 @@ import { env } from '@/config/env';
 export const dynamic = 'force-dynamic';
 
 const volunteerFiltersSchema = z.object({
-  role: z.enum(['OBSERVER', 'VOLUNTEER']).optional(),
   search: z.string().optional(),
   jrvNumber: z.string().optional(),
+  status: z.enum(['PENDING', 'APPROVED', 'REJECTED', 'SUSPENDED']).optional(),
   page: z.coerce.number().min(1).default(1),
   limit: z.coerce.number().min(1).max(100).default(20),
 });
@@ -64,21 +64,23 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const { searchParams } = new URL(request.url);
     
     const filters = volunteerFiltersSchema.parse({
-      role: searchParams.get('role') || undefined,
       search: searchParams.get('search') || undefined,
       jrvNumber: searchParams.get('jrvNumber') || undefined,
+      status: searchParams.get('status') || undefined,
       page: searchParams.get('page') || '1',
       limit: searchParams.get('limit') || '20',
     });
 
-    const where: any = {};
+    const where: any = {
+      role: 'VOLUNTEER', // Solo usuarios con role VOLUNTEER
+    };
 
-    if (filters.role) {
-      where.role = filters.role;
+    if (filters.status) {
+      where.status = filters.status;
     }
 
     if (filters.jrvNumber) {
-      where.jrvNumber = {
+      where.organization = {
         contains: filters.jrvNumber,
         mode: 'insensitive',
       };
@@ -86,27 +88,36 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     if (filters.search) {
       where.OR = [
-        { firstName: { contains: filters.search, mode: 'insensitive' } },
-        { lastName: { contains: filters.search, mode: 'insensitive' } },
+        { name: { contains: filters.search, mode: 'insensitive' } },
         { email: { contains: filters.search, mode: 'insensitive' } },
         { phone: { contains: filters.search, mode: 'insensitive' } },
       ];
     }
 
-    const [applications, total] = await Promise.all([
-      prisma.volunteerApplication.findMany({
+    const [users, total] = await Promise.all([
+      prisma.user.findMany({
         where,
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          organization: true, // JRV está almacenado aquí
+          status: true,
+          createdAt: true,
+          updatedAt: true,
+        },
         orderBy: { createdAt: 'desc' },
         skip: (filters.page - 1) * filters.limit,
         take: filters.limit,
       }),
-      prisma.volunteerApplication.count({ where }),
+      prisma.user.count({ where }),
     ]);
 
     const totalPages = Math.ceil(total / filters.limit);
 
     const response: PaginatedResponse<any> = {
-      data: applications,
+      data: users,
       total,
       page: filters.page,
       limit: filters.limit,
@@ -118,10 +129,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       data: response,
     } as ApiResponse<PaginatedResponse<any>>);
   } catch (error) {
-    console.error('Error fetching volunteer applications:', error);
+    console.error('Error fetching volunteers:', error);
     return NextResponse.json({
       success: false,
-      error: 'Error al obtener solicitudes',
+      error: 'Error al obtener voluntarios',
     } as ApiResponse, { status: 500 });
   }
 }

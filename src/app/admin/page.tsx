@@ -437,21 +437,21 @@ export default function AdminDashboard() {
             </Button>
           </div>
 
-          {/* Gestión de Voluntarios/Observadores */}
+          {/* Gestión de Voluntarios */}
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center mb-4">
               <Users className="h-6 w-6 text-purple-600 mr-2" />
-              <h2 className="text-lg font-semibold text-gray-900">Gestión de Voluntarios/Observadores</h2>
+              <h2 className="text-lg font-semibold text-gray-900">Gestión de Voluntarios</h2>
             </div>
             <p className="text-sm text-gray-600 mb-4">
-              Revisa y organiza todas las solicitudes de voluntarios y observadores. Puedes exportar los datos para contacto y organización.
+              Revisa y organiza todos los voluntarios registrados. Puedes exportar los datos (emails, teléfonos o información completa) para contacto y organización.
             </p>
             <Button
               onClick={() => router.push('/admin/volunteers')}
               className="w-full"
             >
               <Users className="h-4 w-4 mr-2" />
-              Ver Solicitudes
+              Gestionar Voluntarios
             </Button>
           </div>
 

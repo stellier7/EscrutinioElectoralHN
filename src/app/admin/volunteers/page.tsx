@@ -9,27 +9,34 @@ import Select from '@/components/ui/Select';
 import { ArrowLeft, Download, Users } from 'lucide-react';
 import type { ApiResponse, PaginatedResponse } from '@/types';
 
-interface VolunteerApplication {
+interface Volunteer {
   id: string;
-  firstName: string;
-  lastName: string;
+  name: string;
   email: string;
-  phone: string;
-  role: 'OBSERVER' | 'VOLUNTEER';
-  jrvNumber: string | null;
-  comments: string | null;
+  phone: string | null;
+  organization: string | null; // JRV está almacenado aquí
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'SUSPENDED';
   createdAt: string;
 }
 
-const ROLE_LABELS = {
-  OBSERVER: 'Observador',
-  VOLUNTEER: 'Voluntario',
+const STATUS_LABELS = {
+  PENDING: 'Pendiente',
+  APPROVED: 'Aprobado',
+  REJECTED: 'Rechazado',
+  SUSPENDED: 'Suspendido',
+};
+
+const STATUS_COLORS = {
+  PENDING: 'bg-yellow-100 text-yellow-800',
+  APPROVED: 'bg-green-100 text-green-800',
+  REJECTED: 'bg-red-100 text-red-800',
+  SUSPENDED: 'bg-gray-100 text-gray-800',
 };
 
 export default function AdminVolunteersPage() {
   const { user, isLoading, token } = useAuth();
   const router = useRouter();
-  const [applications, setApplications] = useState<VolunteerApplication[]>([]);
+  const [volunteers, setVolunteers] = useState<Volunteer[]>([]);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState({
     total: 0,
@@ -39,12 +46,14 @@ export default function AdminVolunteersPage() {
   });
   
   const [filters, setFilters] = useState({
-    role: '',
+    status: '',
     search: '',
     jrvNumber: '',
     page: 1,
     limit: 20,
   });
+
+  const [exportType, setExportType] = useState<'full' | 'emails' | 'phones'>('full');
 
   useEffect(() => {
     if (!isLoading && (!user || user.role !== 'ADMIN' || user.status !== 'APPROVED')) {
@@ -54,18 +63,18 @@ export default function AdminVolunteersPage() {
 
   useEffect(() => {
     if (user?.role === 'ADMIN' && token) {
-      fetchApplications();
+      fetchVolunteers();
     }
   }, [user, token, filters]);
 
-  const fetchApplications = async () => {
+  const fetchVolunteers = async () => {
     if (!token) return;
     
     try {
       setLoading(true);
       const params = new URLSearchParams();
       
-      if (filters.role) params.append('role', filters.role);
+      if (filters.status) params.append('status', filters.status);
       if (filters.search) params.append('search', filters.search);
       if (filters.jrvNumber) params.append('jrvNumber', filters.jrvNumber);
       params.append('page', filters.page.toString());
@@ -76,10 +85,10 @@ export default function AdminVolunteersPage() {
           'Authorization': `Bearer ${token}`,
         },
       });
-      const result: ApiResponse<PaginatedResponse<VolunteerApplication>> = await response.json();
+      const result: ApiResponse<PaginatedResponse<Volunteer>> = await response.json();
 
       if (result.success && result.data) {
-        setApplications(result.data.data);
+        setVolunteers(result.data.data);
         setPagination({
           total: result.data.total,
           page: result.data.page,
@@ -88,17 +97,17 @@ export default function AdminVolunteersPage() {
         });
       }
     } catch (error) {
-      console.error('Error fetching applications:', error);
+      console.error('Error fetching volunteers:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleExport = async () => {
+  const handleExport = async (type: 'full' | 'emails' | 'phones' = exportType) => {
     if (!token) return;
     
     try {
-      const response = await fetch('/api/admin/volunteers/export', {
+      const response = await fetch(`/api/admin/volunteers/export?type=${type}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -109,7 +118,13 @@ export default function AdminVolunteersPage() {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `volunteer-applications-${new Date().toISOString().split('T')[0]}.csv`;
+        
+        const typeNames = {
+          full: 'complete',
+          emails: 'emails',
+          phones: 'phones',
+        };
+        a.download = `volunteers-${typeNames[type]}-${new Date().toISOString().split('T')[0]}.csv`;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
@@ -117,7 +132,7 @@ export default function AdminVolunteersPage() {
       }
     } catch (error) {
       console.error('Error exporting:', error);
-      alert('Error al exportar las solicitudes');
+      alert('Error al exportar los voluntarios');
     }
   };
 
@@ -176,20 +191,34 @@ export default function AdminVolunteersPage() {
                   <span className="hidden sm:inline">Regresar</span>
                 </Button>
                 <div>
-                  <h1 className="text-3xl font-bold text-gray-900">Solicitudes de Voluntarios/Observadores</h1>
-                  <p className="mt-2 text-gray-600">Gestiona todas las solicitudes recibidas</p>
+                  <h1 className="text-3xl font-bold text-gray-900">Gestión de Voluntarios</h1>
+                  <p className="mt-2 text-gray-600">Gestiona todos los voluntarios registrados</p>
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleExport}
-                  className="flex items-center gap-2"
-                >
-                  <Download className="h-4 w-4" />
-                  Exportar CSV
-                </Button>
+                <div className="flex items-center gap-2">
+                  <div className="w-40">
+                    <Select
+                      name="exportType"
+                      value={exportType}
+                      onChange={(e) => setExportType(e.target.value as 'full' | 'emails' | 'phones')}
+                      options={[
+                        { value: 'full', label: 'Completo' },
+                        { value: 'emails', label: 'Solo Emails' },
+                        { value: 'phones', label: 'Solo Teléfonos' },
+                      ]}
+                    />
+                  </div>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => handleExport()}
+                    className="flex items-center gap-2"
+                  >
+                    <Download className="h-4 w-4" />
+                    Exportar CSV
+                  </Button>
+                </div>
                 <Button
                   variant="secondary"
                   size="sm"
@@ -211,7 +240,7 @@ export default function AdminVolunteersPage() {
           <div className="flex items-center mb-4">
             <Users className="h-6 w-6 text-blue-600 mr-2" />
             <h2 className="text-lg font-semibold text-gray-900">
-              Total de Solicitudes: {pagination.total}
+              Total de Voluntarios: {pagination.total}
             </h2>
           </div>
         </div>
@@ -221,14 +250,16 @@ export default function AdminVolunteersPage() {
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Filtros</h2>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Select
-              label="Rol"
-              name="role"
-              value={filters.role}
-              onChange={(e) => handleFilterChange('role', e.target.value || '')}
+              label="Status"
+              name="status"
+              value={filters.status}
+              onChange={(e) => handleFilterChange('status', e.target.value || '')}
               options={[
-                { value: '', label: 'Todos los roles' },
-                { value: 'OBSERVER', label: 'Observador' },
-                { value: 'VOLUNTEER', label: 'Voluntario' },
+                { value: '', label: 'Todos los status' },
+                { value: 'APPROVED', label: 'Aprobado' },
+                { value: 'PENDING', label: 'Pendiente' },
+                { value: 'REJECTED', label: 'Rechazado' },
+                { value: 'SUSPENDED', label: 'Suspendido' },
               ]}
             />
             
@@ -250,7 +281,7 @@ export default function AdminVolunteersPage() {
             
             <div className="flex items-end">
               <Button
-                onClick={fetchApplications}
+                onClick={fetchVolunteers}
                 className="w-full"
               >
                 Buscar
@@ -259,11 +290,11 @@ export default function AdminVolunteersPage() {
           </div>
         </div>
 
-        {/* Lista de solicitudes */}
+        {/* Lista de voluntarios */}
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200">
             <h2 className="text-lg font-semibold text-gray-900">
-              Solicitudes ({pagination.total})
+              Voluntarios ({pagination.total})
             </h2>
           </div>
           
@@ -278,54 +309,46 @@ export default function AdminVolunteersPage() {
                     Contacto
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Rol
+                    Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     JRV
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Fecha
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Comentarios
+                    Fecha de Registro
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {applications.map((app) => (
-                  <tr key={app.id} className="hover:bg-gray-50">
+                {volunteers.map((volunteer) => (
+                  <tr key={volunteer.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                        {app.firstName} {app.lastName}
+                        {volunteer.name}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{app.email}</div>
-                      <div className="text-sm text-gray-500">{app.phone}</div>
+                      <div className="text-sm text-gray-900">{volunteer.email}</div>
+                      {volunteer.phone && (
+                        <div className="text-sm text-gray-500">{volunteer.phone}</div>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        app.role === 'OBSERVER' 
-                          ? 'bg-blue-100 text-blue-800' 
-                          : 'bg-green-100 text-green-800'
-                      }`}>
-                        {ROLE_LABELS[app.role]}
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${STATUS_COLORS[volunteer.status]}`}>
+                        {STATUS_LABELS[volunteer.status]}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {app.jrvNumber || '-'}
+                      {volunteer.organization || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(app.createdAt).toLocaleDateString('es-HN', {
+                      {new Date(volunteer.createdAt).toLocaleDateString('es-HN', {
                         year: 'numeric',
                         month: 'short',
                         day: 'numeric',
                         hour: '2-digit',
                         minute: '2-digit',
                       })}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
-                      {app.comments || '-'}
                     </td>
                   </tr>
                 ))}

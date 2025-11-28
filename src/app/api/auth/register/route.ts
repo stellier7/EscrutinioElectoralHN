@@ -16,9 +16,9 @@ const registerSchema = z.object({
   email: z.string().email('Email inválido'),
   password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
   name: z.string().min(2, 'El nombre debe tener al menos 2 caracteres'),
-  role: z.enum(['OBSERVER', 'VOLUNTEER'] as const).default('VOLUNTEER'),
   phone: z.string().optional(),
-  organization: z.string().optional(),
+  jrvNumber: z.string().optional(),
+  acceptTerms: z.boolean().optional(), // Validated on frontend, ignored here
 });
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       } as ApiResponse, { status: 400 });
     }
 
-    const { email, password, name, role, phone, organization } = validationResult.data;
+    const { email, password, name, phone, jrvNumber } = validationResult.data;
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
@@ -54,16 +54,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Create user with PENDING status (requires admin approval)
+    // Create user with APPROVED status (no approval required)
+    // All users register as VOLUNTEER by default
+    // Store jrvNumber in organization field (as per user decision)
     const newUser = await prisma.user.create({
       data: {
         email,
         password: hashedPassword,
         name,
-        role,
-        status: 'PENDING',
-        phone,
-        organization,
+        role: 'VOLUNTEER', // Always VOLUNTEER
+        status: 'APPROVED', // Users are approved immediately
+        phone: phone || null,
+        organization: jrvNumber || null, // Store JRV in organization field
         deviceId: null,
         isActive: true,
       },
@@ -108,8 +110,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({
       success: true,
       data: response,
-      message: 'Usuario registrado exitosamente. Tu cuenta está pendiente de aprobación por un administrador.',
-      requiresApproval: true,
+      message: 'Usuario registrado exitosamente. Tu cuenta ha sido creada y está lista para usar.',
     } as ApiResponse<AuthResponse>);
 
   } catch (error) {

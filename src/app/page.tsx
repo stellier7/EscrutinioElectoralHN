@@ -5,21 +5,17 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../components/AuthProvider';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
-import Select from '../components/ui/Select';
 import { Eye, EyeOff, Vote, Shield, MapPin } from 'lucide-react';
 
 export default function HomePage() {
-  const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    name: '',
-    role: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   
-  const { login, register, isLoading } = useAuth();
+  const { login, isLoading } = useAuth();
   const router = useRouter();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -46,18 +42,6 @@ export default function HomePage() {
       newErrors.password = 'La contraseña debe tener al menos 6 caracteres';
     }
 
-    if (!isLogin) {
-      if (!formData.name) {
-        newErrors.name = 'El nombre es requerido';
-      } else if (formData.name.length < 2) {
-        newErrors.name = 'El nombre debe tener al menos 2 caracteres';
-      }
-
-      if (!formData.role) {
-        newErrors.role = 'El rol es requerido';
-      }
-    }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -68,42 +52,21 @@ export default function HomePage() {
     if (!validateForm()) return;
 
     try {
-      if (isLogin) {
-        const response = await login({
-          email: formData.email,
-          password: formData.password,
-        });
-        
-        // Solo redirigir si el usuario está aprobado
-        if (response.user.status === 'APPROVED') {
-          router.push('/dashboard');
-        } else {
-          setErrors({ general: '✅ Inicio de sesión exitoso. Tu cuenta está pendiente de aprobación por un administrador. Recibirás una notificación cuando sea aprobada.' });
-        }
+      const response = await login({
+        email: formData.email,
+        password: formData.password,
+      });
+      
+      // Solo redirigir si el usuario está aprobado
+      if (response.user.status === 'APPROVED') {
+        router.push('/dashboard');
       } else {
-        const response = await register({
-          email: formData.email,
-          password: formData.password,
-          name: formData.name,
-          role: formData.role as any,
-        });
-        
-        // Solo redirigir si el usuario está aprobado
-        if (response.user.status === 'APPROVED') {
-          router.push('/dashboard');
-        } else {
-          setErrors({ general: '🎉 ¡Registro exitoso! Te has registrado como ' + (formData.role === 'OBSERVER' ? 'Observador' : 'Voluntario') + '. Tu cuenta está pendiente de aprobación por un administrador.' });
-        }
+        setErrors({ general: '✅ Inicio de sesión exitoso. Tu cuenta está pendiente de aprobación por un administrador. Recibirás una notificación cuando sea aprobada.' });
       }
     } catch (error: any) {
       setErrors({ general: error.message });
     }
   };
-
-  const roleOptions = [
-    { value: 'OBSERVER', label: 'Observador' },
-    { value: 'VOLUNTEER', label: 'Voluntario' },
-  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center p-4 safe-top safe-bottom">
@@ -146,64 +109,17 @@ export default function HomePage() {
             className="w-full max-w-sm mx-auto"
           >
             <Vote className="h-5 w-5 mr-2" />
-            Únete como Voluntario u Observador
+            Únete como Voluntario
           </Button>
         </div>
 
         {/* Form - iPhone-sized card */}
         <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 max-w-sm mx-auto">
           <div className="mb-4">
-            <div className="flex rounded-lg bg-gray-100 p-1">
-              <button
-                type="button"
-                className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors touch-target ${
-                  isLogin
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-                onClick={() => {
-                  setIsLogin(true);
-                  setErrors({});
-                }}
-              >
-                Iniciar Sesión
-              </button>
-              <button
-                type="button"
-                className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors touch-target ${
-                  !isLogin
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-                onClick={() => {
-                  setIsLogin(false);
-                  setErrors({});
-                }}
-              >
-                Registrarse
-              </button>
-            </div>
+            <h2 className="text-xl font-semibold text-gray-900 text-center">Iniciar Sesión</h2>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && (
-              <div className="alert-card alert-card-info">
-                <div className="alert-card-icon bg-blue-100">
-                  <Shield className="h-4 w-4 text-blue-600" />
-                </div>
-                <div className="alert-card-content">
-                  <h3 className="alert-card-title text-blue-800">
-                    Información Importante
-                  </h3>
-                  <div className="alert-card-message text-blue-700">
-                    <p>• <strong>Observador:</strong> Personal entrenado con prioridad alta</p>
-                    <p>• <strong>Voluntario:</strong> Ciudadanos generales con prioridad baja</p>
-                    <p>• Tu cuenta será revisada por un administrador antes de ser activada</p>
-                  </div>
-                </div>
-              </div>
-            )}
-            
             {errors.general && (
               <div className={`alert-card ${
                 errors.general.includes('✅') || errors.general.includes('🎉') 
@@ -214,19 +130,6 @@ export default function HomePage() {
                   <p className="alert-card-message">{errors.general}</p>
                 </div>
               </div>
-            )}
-
-            {!isLogin && (
-              <Input
-                label="Nombre completo"
-                name="name"
-                type="text"
-                placeholder="Tu nombre completo"
-                value={formData.name}
-                onChange={handleInputChange}
-                error={errors.name}
-                required
-              />
             )}
 
             <Input
@@ -240,41 +143,47 @@ export default function HomePage() {
               required
             />
 
-            <div className="relative">
-              <Input
-                label="Contraseña"
-                name="password"
-                type={showPassword ? 'text' : 'password'}
-                placeholder="Tu contraseña"
-                value={formData.password}
-                onChange={handleInputChange}
-                error={errors.password}
-                required
-              />
-              <button
-                type="button"
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 touch-target flex items-center justify-center w-6 h-6"
-                onClick={() => setShowPassword(!showPassword)}
-              >
-                {showPassword ? (
-                  <EyeOff className="h-4 w-4" />
-                ) : (
-                  <Eye className="h-4 w-4" />
-                )}
-              </button>
+            <div className="w-full">
+              <label htmlFor="password" className={`block text-sm font-medium mb-1 ${errors.password ? 'text-danger-700' : 'text-gray-700'}`}>
+                Contraseña
+                <span className="text-danger-500 ml-1">*</span>
+              </label>
+              <div className="relative">
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Tu contraseña"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  required
+                  className={`block w-full px-3 py-2 pr-10 border rounded-md shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                    errors.password
+                      ? 'border-danger-300 focus:border-danger-500 focus:ring-danger-500'
+                      : 'border-gray-300 focus:border-primary-500 focus:ring-primary-500'
+                  }`}
+                  aria-invalid={errors.password ? 'true' : 'false'}
+                  aria-describedby={errors.password ? 'password-error' : undefined}
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 touch-target flex items-center justify-center w-6 h-6"
+                  onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+              {errors.password && (
+                <p id="password-error" className="mt-1 text-sm text-danger-600">
+                  {errors.password}
+                </p>
+              )}
             </div>
-
-            {!isLogin && (
-              <Select
-                label="Rol"
-                name="role"
-                options={roleOptions}
-                value={formData.role}
-                onChange={handleInputChange}
-                error={errors.role}
-                required
-              />
-            )}
 
             <Button
               type="submit"
@@ -283,7 +192,7 @@ export default function HomePage() {
               loading={isLoading}
               disabled={isLoading}
             >
-              {isLogin ? 'Iniciar Sesión' : 'Registrarse'}
+              Iniciar Sesión
             </Button>
           </form>
 

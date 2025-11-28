@@ -40,9 +40,9 @@ export interface RegisterRequest {
   email: string;
   password: string;
   name: string;
-  role: 'OBSERVER' | 'VOLUNTEER';
   phone?: string;
-  organization?: string;
+  jrvNumber?: string;
+  acceptTerms?: boolean; // Validated on frontend, not required by backend
 }
 
 export interface AuthResponse {

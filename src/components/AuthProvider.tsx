@@ -145,10 +145,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (response.data.success) {
         const authResponse: AuthResponse = response.data.data;
-        // Solo guardar datos si el usuario está aprobado
-        if (authResponse.user.status === 'APPROVED') {
-          saveAuthData(authResponse);
-        }
+        // Guardar datos de autenticación inmediatamente después del registro
+        // El usuario queda autenticado aunque su status sea PENDING
+        saveAuthData(authResponse);
         return authResponse;
       } else {
         throw new Error(response.data.error || 'Error en el registro');
