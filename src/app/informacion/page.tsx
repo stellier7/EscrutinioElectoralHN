@@ -35,7 +35,7 @@ export default function InformacionPage() {
   // YouTube video URLs
   const demoVideoUrl = 'https://www.youtube.com/watch?v=n1O4qAL7BVY';
   const newsVideoUrl = 'https://www.youtube.com/watch?v=L_imdBQ0A6c';
-  const relatedLinkUrl = ''; // Add a related link here if you have one
+  const relatedLinkUrl: string = ''; // Add a related link here if you have one
   const relatedLinkText = 'Artículo relacionado';
 
   const demoVideoId = getYouTubeVideoId(demoVideoUrl);

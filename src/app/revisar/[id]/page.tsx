@@ -67,6 +67,9 @@ interface EscrutinioData {
     totalPapeletas: number;
     papeletasCerradas: number;
     papeletasAnuladas: number;
+    papeletasAbiertas: number;
+    blankVotes: number;
+    nullVotes: number;
     totalDigitalPapeletas?: number;
     escrutinioCorregido: boolean;
     vecesCorregido: number;
