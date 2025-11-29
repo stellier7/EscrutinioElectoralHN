@@ -5,16 +5,13 @@ import { Share2, Check } from 'lucide-react';
 
 interface ShareButtonProps {
   videoType: 'demo' | 'news';
+  videoUrl: string;
 }
 
-export default function ShareButton({ videoType }: ShareButtonProps) {
+export default function ShareButton({ videoType, videoUrl }: ShareButtonProps) {
   const [copied, setCopied] = useState(false);
 
   const handleShare = async () => {
-    const shareUrl = typeof window !== 'undefined' 
-      ? `${window.location.origin}/informacion`
-      : '';
-    
     const videoTitle = videoType === 'demo'
       ? 'Demo de Escrutinio Transparente'
       : 'Escrutinio Transparente en las Noticias';
@@ -22,7 +19,7 @@ export default function ShareButton({ videoType }: ShareButtonProps) {
     const shareData = {
       title: videoTitle,
       text: `Mira este video: ${videoTitle}`,
-      url: shareUrl,
+      url: videoUrl,
     };
 
     try {
@@ -31,7 +28,7 @@ export default function ShareButton({ videoType }: ShareButtonProps) {
         await navigator.share(shareData);
       } else {
         // Fallback: copiar al portapapeles
-        await navigator.clipboard.writeText(shareUrl);
+        await navigator.clipboard.writeText(videoUrl);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
       }
@@ -39,7 +36,7 @@ export default function ShareButton({ videoType }: ShareButtonProps) {
       // Si el usuario cancela o hay error, intentar copiar
       if (err instanceof Error && err.name !== 'AbortError') {
         try {
-          await navigator.clipboard.writeText(shareUrl);
+          await navigator.clipboard.writeText(videoUrl);
           setCopied(true);
           setTimeout(() => setCopied(false), 2000);
         } catch (clipboardErr) {

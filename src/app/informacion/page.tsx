@@ -213,7 +213,7 @@ export default function InformacionPage() {
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
                   />
-                  <ShareButton videoType="demo" />
+                  <ShareButton videoType="demo" videoUrl={demoVideoUrl} />
                 </div>
               </div>
             ) : (
@@ -238,7 +238,7 @@ export default function InformacionPage() {
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
                   />
-                  <ShareButton videoType="news" />
+                  <ShareButton videoType="news" videoUrl={newsVideoUrl} />
                 </div>
               </div>
             ) : (
