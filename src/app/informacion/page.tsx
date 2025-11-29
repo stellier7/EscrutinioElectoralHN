@@ -3,7 +3,7 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import Button from '../../components/ui/Button';
-import { ArrowLeft, Vote, Users, Heart, Info, Shield, MapPin, CheckCircle, Mail, Phone, CreditCard, Wallet } from 'lucide-react';
+import { ArrowLeft, Vote, Users, Heart, Info, Shield, MapPin, CheckCircle, Mail, Phone, CreditCard, Wallet, Play, ExternalLink } from 'lucide-react';
 
 export default function InformacionPage() {
   const router = useRouter();
@@ -14,6 +14,23 @@ export default function InformacionPage() {
       donationsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };
+
+  // Helper function to extract YouTube video ID from URL
+  const getYouTubeVideoId = (url: string): string | null => {
+    if (!url) return null;
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+  };
+
+  // YouTube video URLs
+  const demoVideoUrl = 'https://www.youtube.com/watch?v=n1O4qAL7BVY';
+  const newsVideoUrl = 'https://www.youtube.com/watch?v=L_imdBQ0A6c';
+  const relatedLinkUrl = ''; // Add a related link here if you have one
+  const relatedLinkText = 'Artículo relacionado';
+
+  const demoVideoId = getYouTubeVideoId(demoVideoUrl);
+  const newsVideoId = getYouTubeVideoId(newsVideoUrl);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 py-8 px-4 safe-top safe-bottom">
@@ -161,7 +178,92 @@ export default function InformacionPage() {
           </div>
         </div>
 
-        {/* Sección 3: Voluntariado */}
+        {/* Sección 3: Videos y Medios */}
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 md:p-8">
+          <div className="flex items-center mb-4">
+            <div className="h-10 w-10 bg-purple-100 rounded-full flex items-center justify-center mr-3">
+              <Play className="h-6 w-6 text-purple-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900">
+              Videos y Medios
+            </h2>
+          </div>
+          <div className="space-y-6">
+            {/* Demo Video */}
+            {demoVideoId ? (
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Demo del Sistema</h3>
+                <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                  <iframe
+                    className="absolute top-0 left-0 w-full h-full rounded-lg"
+                    src={`https://www.youtube.com/embed/${demoVideoId}`}
+                    title="Demo de Escrutinio Transparente"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                <Play className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                <p className="text-gray-600 font-medium mb-2">Demo del Sistema</p>
+                <p className="text-sm text-gray-500">
+                  Agrega la URL del video de demostración en el código
+                </p>
+              </div>
+            )}
+
+            {/* News Video */}
+            {newsVideoId ? (
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">En las Noticias</h3>
+                <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                  <iframe
+                    className="absolute top-0 left-0 w-full h-full rounded-lg"
+                    src={`https://www.youtube.com/embed/${newsVideoId}`}
+                    title="Escrutinio Transparente en las Noticias"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                <Play className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                <p className="text-gray-600 font-medium mb-2">En las Noticias</p>
+                <p className="text-sm text-gray-500">
+                  Agrega la URL del video de noticias en el código
+                </p>
+              </div>
+            )}
+
+            {/* Related Link - Only show if a link is provided */}
+            {relatedLinkUrl && relatedLinkUrl.trim() !== '' && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <ExternalLink className="h-5 w-5 text-blue-600" />
+                    <div>
+                      <h4 className="font-semibold text-gray-900">{relatedLinkText}</h4>
+                      <p className="text-sm text-gray-600">Más información sobre el proyecto</p>
+                    </div>
+                  </div>
+                  <a
+                    href={relatedLinkUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm flex items-center gap-2"
+                  >
+                    Ver más
+                    <ExternalLink className="h-4 w-4" />
+                  </a>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Sección 4: Voluntariado */}
         <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 md:p-8">
           <div className="flex items-center mb-4">
             <div className="h-10 w-10 bg-green-100 rounded-full flex items-center justify-center mr-3">
@@ -201,7 +303,7 @@ export default function InformacionPage() {
           </div>
         </div>
 
-        {/* Sección 4: Donaciones - Con Badge Destacado */}
+        {/* Sección 5: Donaciones - Con Badge Destacado */}
         <div id="donaciones" className="bg-white rounded-2xl shadow-lg border-2 border-primary-300 p-6 md:p-8 relative overflow-hidden scroll-mt-20">
           <div className="flex items-center mb-4">
             <div className="h-10 w-10 bg-red-100 rounded-full flex items-center justify-center mr-3">
