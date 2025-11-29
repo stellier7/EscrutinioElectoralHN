@@ -1,17 +1,26 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Button from '../../components/ui/Button';
-import { ArrowLeft, Vote, Users, Heart, Info, Shield, MapPin, CheckCircle, Mail, Phone, CreditCard, Wallet, Play, ExternalLink } from 'lucide-react';
+import ShareButton from '../../components/ShareButton';
+import { ArrowLeft, ArrowUp, Vote, Users, Heart, Info, Shield, MapPin, CheckCircle, Mail, Phone, CreditCard, Wallet, Play, ExternalLink, Copy, Check } from 'lucide-react';
 
 export default function InformacionPage() {
   const router = useRouter();
+  const [accountCopied, setAccountCopied] = useState(false);
 
-  const scrollToDonations = () => {
-    const donationsSection = document.getElementById('donaciones');
-    if (donationsSection) {
-      donationsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const copyAccountNumber = async () => {
+    try {
+      await navigator.clipboard.writeText('015990026572');
+      setAccountCopied(true);
+      setTimeout(() => setAccountCopied(false), 2000);
+    } catch (err) {
+      console.error('Error al copiar:', err);
     }
   };
 
@@ -36,25 +45,28 @@ export default function InformacionPage() {
     <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 py-8 px-4 safe-top safe-bottom">
       <div className="w-full max-w-4xl mx-auto space-y-6">
         {/* Header */}
-        <div className="text-center">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => router.push('/')}
-            className="mb-4"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Volver
-          </Button>
-          <div className="mx-auto h-16 w-16 bg-primary-600 rounded-full flex items-center justify-center mb-4">
-            <Info className="h-8 w-8 text-white" />
+        <div>
+          <div className="mb-4">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => router.push('/')}
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Volver
+            </Button>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Más Información
-          </h1>
-          <p className="text-gray-600">
-            Conoce más sobre Escrutinio Transparente
-          </p>
+          <div className="text-center">
+            <div className="mx-auto h-16 w-16 bg-primary-600 rounded-full flex items-center justify-center mb-4">
+              <Info className="h-8 w-8 text-white" />
+            </div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Más Información
+            </h1>
+            <p className="text-gray-600">
+              Conoce más sobre Escrutinio Transparente
+            </p>
+          </div>
         </div>
 
         {/* Sección 1: ¿Qué es Escrutinio Transparente? */}
@@ -191,7 +203,7 @@ export default function InformacionPage() {
           <div className="space-y-6">
             {/* Demo Video */}
             {demoVideoId ? (
-              <div>
+              <div id="demo-video">
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">Demo del Sistema</h3>
                 <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
                   <iframe
@@ -201,6 +213,7 @@ export default function InformacionPage() {
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
                   />
+                  <ShareButton videoType="demo" />
                 </div>
               </div>
             ) : (
@@ -215,7 +228,7 @@ export default function InformacionPage() {
 
             {/* News Video */}
             {newsVideoId ? (
-              <div>
+              <div id="news-video">
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">En las Noticias</h3>
                 <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
                   <iframe
@@ -225,6 +238,7 @@ export default function InformacionPage() {
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
                   />
+                  <ShareButton videoType="news" />
                 </div>
               </div>
             ) : (
@@ -289,7 +303,7 @@ export default function InformacionPage() {
                 <li>El sistema te guiará paso a paso durante todo el proceso</li>
               </ul>
             </div>
-            <div className="mt-6">
+            <div className="mt-6 text-center">
               <Button
                 onClick={() => router.push('/voluntarios')}
                 variant="primary"
@@ -330,22 +344,54 @@ export default function InformacionPage() {
                     Banco
                   </label>
                   <div className="bg-white border border-gray-300 rounded-lg p-4 text-center text-gray-900 font-semibold">
-                    Banpais
+                    BANPAÍS
                   </div>
-                  <p className="text-xs text-gray-600 mt-2 text-center">
-                    Aceptamos transferencias banco a banco y transferencias ACH
-                  </p>
                 </div>
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Número de Cuenta Bancaria
+                    Número de Cuenta
                   </label>
-                  <div className="bg-white border-2 border-dashed border-gray-400 rounded-lg p-4 text-center">
-                    <p className="text-gray-600 italic">Próximamente disponible</p>
-                    <p className="text-xs text-gray-500 mt-1">Estamos configurando la cuenta. Contáctanos para más información.</p>
+                  <div className="bg-white border border-gray-300 rounded-lg p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-gray-900 font-mono font-semibold text-lg flex-1 text-center">015990026572</p>
+                      <button
+                        onClick={copyAccountNumber}
+                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
+                        aria-label="Copiar número de cuenta"
+                        title="Copiar al portapapeles"
+                      >
+                        {accountCopied ? (
+                          <Check className="h-5 w-5 text-green-600" />
+                        ) : (
+                          <Copy className="h-5 w-5 text-gray-600" />
+                        )}
+                      </button>
+                    </div>
                   </div>
                 </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Nombre de la Cuenta
+                  </label>
+                  <div className="bg-white border border-gray-300 rounded-lg p-4 text-center">
+                    <p className="text-gray-900 font-semibold">ASOCIACIÓN BEQUER HONDURAS</p>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Tipo de Cuenta
+                  </label>
+                  <div className="bg-white border border-gray-300 rounded-lg p-4 text-center">
+                    <p className="text-gray-900 font-medium">Cuenta de cheques</p>
+                  </div>
+                </div>
+
+                <p className="text-xs text-gray-600 mt-4 text-center">
+                  Aceptamos transferencias banco a banco y transferencias ACH
+                </p>
               </div>
             </div>
 
@@ -355,47 +401,10 @@ export default function InformacionPage() {
                 <CreditCard className="h-5 w-5 mr-2 text-blue-600" />
                 Métodos de Pago Alternativos
               </h3>
-              <p className="text-gray-700 mb-4 text-sm">
-                También aceptamos donaciones a través de los siguientes métodos:
-              </p>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* Stripe */}
-                <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="flex items-center justify-center mb-2">
-                    <div className="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <CreditCard className="h-6 w-6 text-blue-600" />
-                    </div>
-                  </div>
-                  <h4 className="font-semibold text-gray-900 text-center mb-1">Stripe</h4>
-                  <p className="text-xs text-gray-600 text-center">Tarjetas de crédito y débito</p>
-                </div>
-
-                {/* PayPal */}
-                <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="flex items-center justify-center mb-2">
-                    <div className="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <Wallet className="h-6 w-6 text-blue-600" />
-                    </div>
-                  </div>
-                  <h4 className="font-semibold text-gray-900 text-center mb-1">PayPal</h4>
-                  <p className="text-xs text-gray-600 text-center">Pagos en línea seguros</p>
-                </div>
-
-                {/* Activos Digitales */}
-                <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="flex items-center justify-center mb-2">
-                    <div className="h-12 w-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                      <Wallet className="h-6 w-6 text-purple-600" />
-                    </div>
-                  </div>
-                  <h4 className="font-semibold text-gray-900 text-center mb-1">Activos Digitales</h4>
-                  <p className="text-xs text-gray-600 text-center">Digital assets</p>
-                </div>
-              </div>
-
-              <p className="text-xs text-gray-600 mt-4 text-center italic">
-                Para más información sobre cómo donar con estos métodos, contáctanos directamente.
+              <p className="text-gray-700 text-sm leading-relaxed">
+                Si necesitas utilizar otro método de pago como tarjetas de crédito, PayPal, activos digitales 
+                u otras opciones, por favor contáctanos. Estaremos encantados de ayudarte a encontrar la 
+                forma más conveniente para que puedas apoyar nuestro proyecto.
               </p>
             </div>
 
@@ -408,7 +417,7 @@ export default function InformacionPage() {
                 Contáctanos para obtener más detalles sobre los métodos de pago disponibles, incluyendo 
                 opciones tradicionales y alternativas modernas de transferencia.
               </p>
-              <div className="mt-4">
+              <div className="mt-4 text-center">
                 <a
                   href="mailto:admin@escrutiniohn.org?subject=Consulta sobre Donaciones"
                   className="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
@@ -430,32 +439,21 @@ export default function InformacionPage() {
           </div>
         </div>
 
-        {/* Footer con botón volver */}
+        {/* Footer con botón volver arriba */}
         <div className="text-center space-y-4">
-          <Button
-            variant="secondary"
-            size="lg"
-            onClick={() => router.push('/')}
-            className="w-full md:w-auto"
+          <button
+            onClick={scrollToTop}
+            className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors text-sm font-medium"
           >
-            <ArrowLeft className="h-5 w-5 mr-2" />
-            Volver a la Página Principal
-          </Button>
+            <ArrowUp className="h-5 w-5" />
+            Volver arriba
+          </button>
           <p className="text-xs text-gray-500">
             © 2024 Escrutinio Transparente. Todos los derechos reservados.
           </p>
         </div>
       </div>
 
-      {/* Badge flotante fijo */}
-      <button
-        onClick={scrollToDonations}
-        className="fixed top-6 right-6 bg-primary-600 text-white px-5 py-3 rounded-full flex items-center shadow-2xl hover:bg-primary-700 transition-all duration-300 z-50 hover:scale-105 active:scale-95"
-        aria-label="Ir a la sección de donaciones"
-      >
-        <Heart className="h-5 w-5 mr-2" />
-        <span className="text-sm font-semibold">¡Apoya el Proyecto!</span>
-      </button>
     </div>
   );
 }

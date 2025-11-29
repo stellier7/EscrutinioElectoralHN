@@ -5,6 +5,7 @@ import './mobile-fix.css';
 import { AuthProvider } from '../components/AuthProvider';
 import { GlobalToast } from '@/components/ui/Toast';
 import { OfflineStatus } from '@/components/OfflineStatus';
+import DonationBadge from '../components/DonationBadge';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -45,6 +46,7 @@ export default function RootLayout({
           <div id="modal-root" />
           <GlobalToast />
           <OfflineStatus />
+          <DonationBadge />
         </AuthProvider>
       </body>
     </html>
