@@ -121,9 +121,9 @@ export default function VoluntariosPage() {
       // Usuario queda autenticado automáticamente
       setIsSuccess(true);
       
-      // Redirigir al dashboard después de 2 segundos
+      // Redirigir al dashboard después de 2 segundos con parámetro de bienvenida
       setTimeout(() => {
-        router.push('/dashboard');
+        router.push('/dashboard?welcome=true');
       }, 2000);
     } catch (error: any) {
       const errorMessage = error.message || 'Error al crear la cuenta. Por favor intenta de nuevo.';

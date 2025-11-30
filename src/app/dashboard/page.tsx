@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../components/AuthProvider';
 import axios from 'axios';
 import Button from '../../components/ui/Button';
 import { InfoTooltip } from '../../components/ui/InfoTooltip';
+import WelcomeModal from '../../components/WelcomeModal';
 import { 
   Vote, 
   Shield, 
@@ -58,10 +59,12 @@ interface DashboardStats {
 export default function DashboardPage() {
   const { user, logout, isLoading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState('overview');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(true);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   
   // Estado para cambio de contraseña
   const [passwordForm, setPasswordForm] = useState({
@@ -78,6 +81,23 @@ export default function DashboardPage() {
       router.push('/');
     }
   }, [user, isLoading, router]);
+
+  // Detectar parámetro de bienvenida y mostrar modal
+  useEffect(() => {
+    if (!isLoading && user) {
+      const welcomeParam = searchParams.get('welcome');
+      if (welcomeParam === 'true') {
+        setShowWelcomeModal(true);
+        // Limpiar parámetro de la URL sin recargar la página
+        const newUrl = window.location.pathname;
+        router.replace(newUrl, { scroll: false });
+      }
+    }
+  }, [isLoading, user, searchParams, router]);
+
+  const handleCloseWelcomeModal = () => {
+    setShowWelcomeModal(false);
+  };
 
   // Función para cargar estadísticas del dashboard
   const loadStats = useCallback(async () => {
@@ -907,6 +927,9 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Welcome Modal */}
+      <WelcomeModal isOpen={showWelcomeModal} onClose={handleCloseWelcomeModal} />
+      
       {/* Mobile Header */}
       <header className="bg-white shadow-sm border-b lg:hidden">
         <div className="px-4 py-3">
