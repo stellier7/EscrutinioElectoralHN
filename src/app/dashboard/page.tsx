@@ -912,6 +912,17 @@ export default function DashboardPage() {
         <div className="px-4 py-3">
           <div className="flex justify-between items-center">
             <div className="flex items-center">
+              {/* Hamburger Menu - Movido a la izquierda */}
+              <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="p-2 rounded-lg hover:bg-gray-100 touch-target mr-2"
+              >
+                {isMobileMenuOpen ? (
+                  <X className="h-5 w-5 text-gray-600" />
+                ) : (
+                  <Menu className="h-5 w-5 text-gray-600" />
+                )}
+              </button>
               <Vote className="h-6 w-6 text-primary-600" />
               <h1 className="ml-2 text-lg font-semibold text-gray-900">
                 Escrutinio
@@ -935,16 +946,6 @@ export default function DashboardPage() {
                   Admin
                 </Button>
               )}
-              <button
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="p-2 rounded-lg hover:bg-gray-100 touch-target"
-              >
-                {isMobileMenuOpen ? (
-                  <X className="h-5 w-5 text-gray-600" />
-                ) : (
-                  <Menu className="h-5 w-5 text-gray-600" />
-                )}
-              </button>
             </div>
           </div>
         </div>
