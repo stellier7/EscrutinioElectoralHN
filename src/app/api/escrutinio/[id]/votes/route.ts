@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { AuthUtils } from '@/lib/auth';
+import { AuthUtils, JWTPayload } from '@/lib/auth';
 import { withDatabaseRetry, isDatabaseConnectionError, formatDatabaseError } from '@/lib/db-operations';
 
 export const dynamic = 'force-dynamic';
@@ -9,6 +9,8 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  let payload: JWTPayload | null = null; // Declarar payload fuera del try para que esté disponible en el catch
+  let userId: string | null = null; // Declarar userId fuera del try para que esté disponible en el catch
   try {
     // Check authentication
     const authHeader = request.headers.get('authorization') || undefined;
@@ -16,10 +18,13 @@ export async function GET(
     if (!token) {
       return NextResponse.json({ success: false, error: 'No autorizado' }, { status: 401 });
     }
-    const payload = AuthUtils.verifyToken(token);
+    payload = AuthUtils.verifyToken(token);
     if (!payload) {
       return NextResponse.json({ success: false, error: 'Token inválido' }, { status: 401 });
     }
+    
+    // Capturar userId inmediatamente después de verificar payload para uso seguro
+    userId = payload.userId;
 
     const escrutinioId = params.id;
 
@@ -89,7 +94,7 @@ export async function GET(
       name: error?.name,
       code: error?.code,
       escrutinioId: params?.id,
-      userId: payload?.userId,
+      userId: userId || 'unknown',
       timestamp: new Date().toISOString(),
     });
 
@@ -122,6 +127,8 @@ export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  let payload: JWTPayload | null = null; // Declarar payload fuera del try para que esté disponible en el catch
+  let userId: string | null = null; // Declarar userId fuera del try para que esté disponible en el catch
   try {
     // Check authentication
     const authHeader = request.headers.get('authorization') || undefined;
@@ -129,10 +136,13 @@ export async function POST(
     if (!token) {
       return NextResponse.json({ success: false, error: 'No autorizado' }, { status: 401 });
     }
-    const payload = AuthUtils.verifyToken(token);
+    payload = AuthUtils.verifyToken(token);
     if (!payload) {
       return NextResponse.json({ success: false, error: 'Token inválido' }, { status: 401 });
     }
+    
+    // Capturar userId inmediatamente después de verificar payload para uso seguro
+    userId = payload.userId;
 
     const escrutinioId = params.id;
     const body = await request.json();
@@ -224,7 +234,7 @@ export async function POST(
             try {
               await prisma.auditLog.create({
                 data: {
-                  userId: payload.userId,
+                  userId: userId!,
                   action: 'CORRECTION',
                   description: `Carga electoral alcanzada - bloqueo hard: ${projectedTotal} >= ${cargaElectoral} (JRV ${escrutinio.mesa.number})`,
                   metadata: JSON.stringify({
@@ -354,7 +364,7 @@ export async function POST(
                       data: {
                         clientBatchId: vote.clientBatchId,
                         escrutinioId: escrutinioId,
-                        userId: payload.userId,
+                        userId: userId!,
                         processedVotes: 1
                       }
                     });
@@ -396,7 +406,7 @@ export async function POST(
                       data: {
                         clientBatchId: vote.clientBatchId,
                         escrutinioId: escrutinioId,
-                        userId: payload.userId,
+                        userId: userId!,
                         processedVotes: 1
             }
                     });
@@ -471,7 +481,7 @@ export async function POST(
       name: error?.name,
       code: error?.code,
       escrutinioId: params?.id,
-      userId: payload?.userId,
+      userId: userId || 'unknown',
       timestamp: new Date().toISOString(),
     });
 

@@ -8,12 +8,16 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   let payload: JWTPayload | null = null; // Declarar payload fuera del try para que esté disponible en el catch
+  let userId: string | null = null; // Declarar userId fuera del try para que esté disponible en el catch
   try {
     const authHeader = request.headers.get('authorization') || undefined;
     const token = AuthUtils.extractTokenFromHeader(authHeader);
     if (!token) return NextResponse.json({ success: false, error: 'No autorizado' }, { status: 401 });
     payload = AuthUtils.verifyToken(token);
     if (!payload) return NextResponse.json({ success: false, error: 'Token inválido' }, { status: 401 });
+    
+    // Capturar userId inmediatamente después de verificar payload para uso seguro
+    userId = payload.userId;
 
     const escrutinioId = params.id;
     
@@ -260,40 +264,42 @@ export async function POST(request: Request, { params }: { params: { id: string 
     );
 
     // Crear log de auditoría (no crítico si falla, solo loguear)
-    try {
-      await withDatabaseRetry(
-        () => prisma.auditLog.create({
-          data: {
-            userId: payload.userId,
-            action: 'CLOSE_ESCRUTINIO',
-            description: `Escrutinio cerrado para JRV ${existing.mesa.number}`,
-            metadata: {
-              escrutinioId,
-              mesaNumber: existing.mesa.number,
-              electionLevel: existing.electionLevel,
-              timestamp: new Date().toISOString(),
+    if (userId) {
+      try {
+        await withDatabaseRetry(
+          () => prisma.auditLog.create({
+            data: {
+              userId: userId,
+              action: 'CLOSE_ESCRUTINIO',
+              description: `Escrutinio cerrado para JRV ${existing.mesa.number}`,
+              metadata: {
+                escrutinioId,
+                mesaNumber: existing.mesa.number,
+                electionLevel: existing.electionLevel,
+                timestamp: new Date().toISOString(),
+              },
+              ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+              userAgent: request.headers.get('user-agent') || 'unknown',
             },
-            ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
-            userAgent: request.headers.get('user-agent') || 'unknown',
-          },
-        }),
-        {
-          maxRetries: 2, // Menos reintentos para auditoría (no crítico)
-          onRetry: (error, attempt, maxRetries) => {
-            console.warn(`⚠️ [CLOSE API] Error creando log de auditoría (intento ${attempt}/${maxRetries}):`, error.message);
+          }),
+          {
+            maxRetries: 2, // Menos reintentos para auditoría (no crítico)
+            onRetry: (error, attempt, maxRetries) => {
+              console.warn(`⚠️ [CLOSE API] Error creando log de auditoría (intento ${attempt}/${maxRetries}):`, error.message);
+            }
           }
-        }
-      );
-    } catch (auditError) {
-      // No fallar si el log de auditoría falla, solo loguear
-      console.warn('⚠️ [CLOSE API] No se pudo crear log de auditoría (continuando):', auditError);
+        );
+      } catch (auditError) {
+        // No fallar si el log de auditoría falla, solo loguear
+        console.warn('⚠️ [CLOSE API] No se pudo crear log de auditoría (continuando):', auditError);
+      }
     }
 
     console.log('✅ [CLOSE API] Escrutinio cerrado exitosamente:', {
       escrutinioId,
       mesaNumber: existing.mesa.number,
       electionLevel: existing.electionLevel,
-      userId: payload.userId
+      userId: userId || 'unknown'
     });
 
     return NextResponse.json({ success: true });
@@ -305,7 +311,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       name: error?.name,
       code: error?.code,
       escrutinioId: params?.id,
-      userId: payload?.userId,
+      userId: userId || 'unknown',
       timestamp: new Date().toISOString(),
     });
 

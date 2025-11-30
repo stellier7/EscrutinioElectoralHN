@@ -55,8 +55,8 @@ export async function GET(request: NextRequest) {
           select: {
             id: true,
             name: true,
-            startDate: true,
-            endDate: true,
+            startedAt: true,
+            closedAt: true,
             isActive: true,
           },
         }),
@@ -74,8 +74,8 @@ export async function GET(request: NextRequest) {
           session: {
             id: activeSession.id,
             name: activeSession.name,
-            startDate: activeSession.startDate.toISOString(),
-            endDate: activeSession.endDate?.toISOString() || null,
+            startDate: activeSession.startedAt.toISOString(),
+            endDate: activeSession.closedAt?.toISOString() || null,
           },
         };
         console.log('✅ [ESCRUTINIO HEALTH] Sesión activa encontrada:', activeSession.id);

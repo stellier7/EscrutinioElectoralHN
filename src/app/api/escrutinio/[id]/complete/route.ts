@@ -1,18 +1,23 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { AuthUtils } from '@/lib/auth';
+import { AuthUtils, JWTPayload } from '@/lib/auth';
 import { withDatabaseRetry, isDatabaseConnectionError, formatDatabaseError } from '@/lib/db-operations';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
+  let payload: JWTPayload | null = null; // Declarar payload fuera del try para que esté disponible en el catch
+  let userId: string | null = null; // Declarar userId fuera del try para que esté disponible en el catch
   try {
     const authHeader = request.headers.get('authorization') || undefined;
     const token = AuthUtils.extractTokenFromHeader(authHeader);
     if (!token) return NextResponse.json({ success: false, error: 'No autorizado' }, { status: 401 });
-    const payload = AuthUtils.verifyToken(token);
+    payload = AuthUtils.verifyToken(token);
     if (!payload) return NextResponse.json({ success: false, error: 'Token inválido' }, { status: 401 });
+    
+    // Capturar userId inmediatamente después de verificar payload para uso seguro
+    userId = payload.userId;
 
     const escrutinioId = params.id;
     
@@ -63,7 +68,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     console.log('✅ [COMPLETE API] Escrutinio completado exitosamente:', {
       escrutinioId,
       hasOriginalData: !!originalData,
-      userId: payload.userId
+      userId: userId || 'unknown'
     });
     return NextResponse.json({ success: true });
   } catch (error: any) {
@@ -74,7 +79,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
       name: error?.name,
       code: error?.code,
       escrutinioId: params?.id,
-      userId: payload?.userId,
+      userId: userId || 'unknown',
       timestamp: new Date().toISOString(),
     });
 

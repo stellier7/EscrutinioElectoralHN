@@ -394,20 +394,22 @@ export async function GET(
       const totalDigitalPapeletas = papeletasCerradas + papeletasAnuladas + blankVotes + nullVotes;
       
       // Comparación con conteo físico (solo si existe)
+      // NOTA: physicalBallotCount está temporalmente comentado en el schema
+      // TODO: Descomentar cuando la migración se complete
       let integrityComparison = null;
-      const escrutinioWithPhysical = escrutinio as any; // Type assertion para campos opcionales
-      if (escrutinioWithPhysical.physicalBallotCount !== null && escrutinioWithPhysical.physicalBallotCount !== undefined) {
-        const diferencia = escrutinioWithPhysical.physicalBallotCount - totalDigitalPapeletas;
-        const integrityVerified = diferencia === 0;
-        
-        integrityComparison = {
-          physicalBallotCount: escrutinioWithPhysical.physicalBallotCount,
-          totalDigitalPapeletas,
-          diferencia,
-          integrityVerified,
-          physicalBallotCountTimestamp: escrutinioWithPhysical.physicalBallotCountTimestamp?.toISOString() || null
-        };
-      }
+      // const escrutinioWithPhysical = escrutinio as any; // Type assertion para campos opcionales
+      // if (escrutinioWithPhysical.physicalBallotCount !== null && escrutinioWithPhysical.physicalBallotCount !== undefined) {
+      //   const diferencia = escrutinioWithPhysical.physicalBallotCount - totalDigitalPapeletas;
+      //   const integrityVerified = diferencia === 0;
+      //   
+      //   integrityComparison = {
+      //     physicalBallotCount: escrutinioWithPhysical.physicalBallotCount,
+      //     totalDigitalPapeletas,
+      //     diferencia,
+      //     integrityVerified,
+      //     physicalBallotCountTimestamp: escrutinioWithPhysical.physicalBallotCountTimestamp?.toISOString() || null
+      //   };
+      // }
       
       // Asegurar que todos los valores son números válidos
       papeletasStats = {
@@ -515,11 +517,13 @@ export async function POST(
     }
 
     // Actualizar conteo físico
+    // NOTA: physicalBallotCount está temporalmente comentado en el schema
+    // TODO: Descomentar cuando la migración se complete
     const updatedEscrutinio = await prisma.escrutinio.update({
       where: { id: escrutinioId },
       data: {
-        physicalBallotCount: physicalBallotCount !== null && physicalBallotCount !== undefined ? physicalBallotCount : null,
-        physicalBallotCountTimestamp: physicalBallotCount !== null && physicalBallotCount !== undefined ? new Date() : null
+        // physicalBallotCount: physicalBallotCount !== null && physicalBallotCount !== undefined ? physicalBallotCount : null,
+        // physicalBallotCountTimestamp: physicalBallotCount !== null && physicalBallotCount !== undefined ? new Date() : null
       },
       include: {
         papeletas: true
@@ -540,15 +544,18 @@ export async function POST(
         totalDigitalPapeletas,
         diferencia,
         integrityVerified,
-        physicalBallotCountTimestamp: updatedEscrutinio.physicalBallotCountTimestamp?.toISOString() || null
+        // physicalBallotCountTimestamp: updatedEscrutinio.physicalBallotCountTimestamp?.toISOString() || null
+        physicalBallotCountTimestamp: null // Temporalmente deshabilitado hasta que la migración se complete
       };
     }
 
     return NextResponse.json({
       success: true,
       data: {
-        physicalBallotCount: updatedEscrutinio.physicalBallotCount,
-        physicalBallotCountTimestamp: updatedEscrutinio.physicalBallotCountTimestamp?.toISOString() || null,
+        // physicalBallotCount: updatedEscrutinio.physicalBallotCount,
+        // physicalBallotCountTimestamp: updatedEscrutinio.physicalBallotCountTimestamp?.toISOString() || null,
+        physicalBallotCount: physicalBallotCount !== null && physicalBallotCount !== undefined ? physicalBallotCount : null,
+        physicalBallotCountTimestamp: null, // Temporalmente deshabilitado hasta que la migración se complete
         integrityComparison
       }
     });

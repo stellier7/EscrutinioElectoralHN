@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
-import { AuthUtils } from '@/lib/auth';
+import { AuthUtils, JWTPayload } from '@/lib/auth';
 import { SimpleRateLimiter } from '@/lib/rate-limiter';
 import { withDatabaseRetry, isDatabaseConnectionError, isUniqueConstraintError, formatDatabaseError } from '@/lib/db-operations';
 
@@ -15,16 +15,23 @@ const BodySchema = z.object({
 });
 
 export async function POST(request: Request) {
+  let payload: JWTPayload | null = null; // Declarar payload fuera del try para que esté disponible en el catch
+  let userId: string | null = null; // Declarar userId fuera del try para que esté disponible en el catch
+  let mesaNumber: string | undefined; // Para uso en catch
+  let electionLevel: string | undefined; // Para uso en catch
   try {
     const authHeader = request.headers.get('authorization') || undefined;
     const token = AuthUtils.extractTokenFromHeader(authHeader);
     if (!token) {
       return NextResponse.json({ success: false, error: 'No autorizado' }, { status: 401 });
     }
-    const payload = AuthUtils.verifyToken(token);
+    payload = AuthUtils.verifyToken(token);
     if (!payload) {
       return NextResponse.json({ success: false, error: 'Token inválido' }, { status: 401 });
     }
+    
+    // Capturar userId inmediatamente después de verificar payload para uso seguro
+    userId = payload.userId;
 
     // Rate limiting por rol de usuario
     const rateLimitResult = SimpleRateLimiter.checkLimit(payload.userId, payload.role);
@@ -52,7 +59,9 @@ export async function POST(request: Request) {
         details: parsed.error.errors 
       }, { status: 400 });
     }
-    const { mesaNumber, electionLevel, gps } = parsed.data;
+    const { mesaNumber: parsedMesaNumber, electionLevel: parsedElectionLevel, gps } = parsed.data;
+    mesaNumber = parsedMesaNumber;
+    electionLevel = parsedElectionLevel;
 
     // Debug GPS values
     console.log('📍 [START API] GPS values received:', {
@@ -75,7 +84,7 @@ export async function POST(request: Request) {
     );
 
     if (!activeSession) {
-      console.warn('⚠️ [START API] No hay sesión activa para el usuario:', payload.userId);
+      console.warn('⚠️ [START API] No hay sesión activa para el usuario:', userId || 'unknown');
       return NextResponse.json({ 
         success: false, 
         error: 'No hay una sesión de escrutinio activa. Contacte al administrador para activar una sesión.' 
@@ -183,13 +192,14 @@ export async function POST(request: Request) {
       }
       
       // Crear placeholder solo si no existe
-      console.log(`ℹ️ [START API] Creando placeholder para mesa ${mesaNumber}`);
+      const mesaNumberForCreate = mesaNumber!; // Ya validado arriba
+      console.log(`ℹ️ [START API] Creando placeholder para mesa ${mesaNumberForCreate}`);
       try {
         mesa = await withDatabaseRetry(
           () => prisma.mesa.create({ 
             data: { 
-              number: mesaNumber, 
-              location: `JRV ${mesaNumber} - Ubicación por definir`,
+              number: mesaNumberForCreate, 
+              location: `JRV ${mesaNumberForCreate} - Ubicación por definir`,
               department: 'Departamento por definir',
               isActive: true
             } 
@@ -233,10 +243,10 @@ export async function POST(request: Request) {
     const existing = await withDatabaseRetry(
       () => prisma.escrutinio.findFirst({
         where: {
-          userId: payload.userId,
+          userId: payload!.userId,
           sessionId: activeSession.id,
           mesaId: mesa.id,
-          electionLevel: electionLevel as any,
+          electionLevel: electionLevel! as 'PRESIDENTIAL' | 'LEGISLATIVE' | 'MUNICIPAL',
           status: { in: ['PENDING', 'IN_PROGRESS'] }, // ← SOLO activos
         },
       }),
@@ -280,7 +290,7 @@ export async function POST(request: Request) {
       const created = await withDatabaseRetry(
         () => prisma.escrutinio.create({
           data: {
-            userId: payload.userId,
+            userId: userId!,
             electionId: election.id,
             sessionId: activeSession.id,
             mesaId: mesa.id,
@@ -311,7 +321,7 @@ export async function POST(request: Request) {
       name: error?.name,
       code: error?.code,
       meta: error?.meta,
-      userId: payload?.userId,
+      userId: userId || 'unknown',
       mesaNumber,
       electionLevel,
       timestamp: new Date().toISOString(),
@@ -338,7 +348,7 @@ export async function POST(request: Request) {
       }
 
       // Validation errors from Prisma - return 400 Bad Request
-      if (error.message.includes('Invalid') || error.message.includes('invalid') || error.code?.startsWith('P2')) {
+      if (error.message.includes('Invalid') || error.message.includes('invalid') || (error as any).code?.startsWith('P2')) {
         return NextResponse.json({ 
           success: false, 
           error: 'Error en los datos proporcionados. Verifica que todos los campos sean válidos.',
