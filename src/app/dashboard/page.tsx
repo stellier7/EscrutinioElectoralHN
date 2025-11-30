@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../components/AuthProvider';
 import axios from 'axios';
@@ -56,7 +56,7 @@ interface DashboardStats {
   }>;
 }
 
-export default function DashboardPage() {
+function DashboardPageContent() {
   const { user, logout, isLoading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -1162,5 +1162,20 @@ export default function DashboardPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Cargando...</p>
+        </div>
+      </div>
+    }>
+      <DashboardPageContent />
+    </Suspense>
   );
 } 
