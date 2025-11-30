@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AuthUtils } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { withDatabaseRetry, isDatabaseConnectionError, formatDatabaseError } from '@/lib/db-operations';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,38 +26,50 @@ export async function GET(
     const mesaNumber = params.id;
 
     // Buscar escrutinios activos para esta JRV
-    const activeEscrutinios = await prisma.escrutinio.findMany({
-      where: {
-        mesa: {
-          number: mesaNumber
+    // Los escrutinios activos son los que están en progreso (PENDING o IN_PROGRESS)
+    // y que NO están completados (completedAt es null)
+    const activeEscrutinios = await withDatabaseRetry(
+      () => prisma.escrutinio.findMany({
+        where: {
+          mesa: {
+            number: mesaNumber
+          },
+          status: {
+            in: ['PENDING', 'IN_PROGRESS'] // Solo escrutinios en progreso
+          },
+          completedAt: null, // No completados
+          isCompleted: false, // También verificar el flag isCompleted
         },
-        status: 'COMPLETED', // En progreso (no cerrado ni finalizado)
-        completedAt: null, // No finalizado
-      },
-      include: {
-        mesa: {
-          select: {
-            id: true,
-            number: true,
-            location: true,
-            department: true,
-            // No incluir cargaElectoral para evitar errores si la migración no se ha ejecutado
+        include: {
+          mesa: {
+            select: {
+              id: true,
+              number: true,
+              location: true,
+              department: true,
+              // No incluir cargaElectoral para evitar errores si la migración no se ha ejecutado
+            }
+          },
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true
+            }
           }
         },
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
+        orderBy: {
+          createdAt: 'desc'
         }
-      },
-      orderBy: {
-        createdAt: 'desc'
+      }),
+      {
+        onRetry: (error, attempt, maxRetries) => {
+          console.error(`❌ [CHECK-ACTIVE API] Error buscando escrutinios activos (intento ${attempt}/${maxRetries}):`, error.message);
+        }
       }
-    });
+    );
 
-    console.log('📊 Escrutinios activos encontrados:', activeEscrutinios.length);
+    console.log('📊 [CHECK-ACTIVE API] Escrutinios activos encontrados:', activeEscrutinios.length);
 
     if (activeEscrutinios.length > 0) {
       const latestEscrutinio = activeEscrutinios[0];
@@ -79,11 +92,32 @@ export async function GET(
       hasActive: false
     });
 
-  } catch (error) {
-    console.error('Error checking active escrutinio:', error);
+  } catch (error: any) {
+    // Log detailed error information
+    console.error('❌ [CHECK-ACTIVE API] Error crítico verificando escrutinio activo:', {
+      message: error?.message,
+      stack: error?.stack,
+      name: error?.name,
+      code: error?.code,
+      mesaNumber: params?.id,
+      timestamp: new Date().toISOString(),
+    });
+
+    // Handle specific error types
+    if (error instanceof Error) {
+      if (isDatabaseConnectionError(error)) {
+        return NextResponse.json({
+          success: false,
+          error: 'Error de conexión con la base de datos. Por favor, intenta de nuevo en unos momentos.',
+          details: formatDatabaseError(error, 'verificar escrutinio activo')
+        }, { status: 503 });
+      }
+    }
+
     return NextResponse.json({
       success: false,
-      error: 'Error interno del servidor',
+      error: error?.message || 'Error interno del servidor',
+      details: process.env.NODE_ENV === 'development' ? formatDatabaseError(error, 'error genérico') : undefined
     }, { status: 500 });
   }
 }

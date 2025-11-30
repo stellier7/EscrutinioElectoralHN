@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { AuthUtils } from '@/lib/auth';
+import { withDatabaseRetry, isDatabaseConnectionError, formatDatabaseError } from '@/lib/db-operations';
 
 export const dynamic = 'force-dynamic';
 
@@ -80,13 +81,37 @@ export async function GET(
       data: escrutinio.votes
     });
 
-  } catch (error) {
-    console.error('Error fetching votes for escrutinio:', error);
+  } catch (error: any) {
+    // Log detailed error information
+    console.error('❌ [VOTES API] Error obteniendo votos:', {
+      message: error?.message,
+      stack: error?.stack,
+      name: error?.name,
+      code: error?.code,
+      escrutinioId: params?.id,
+      userId: payload?.userId,
+      timestamp: new Date().toISOString(),
+    });
+
+    // Handle specific error types
+    if (error instanceof Error) {
+      if (isDatabaseConnectionError(error)) {
+        return NextResponse.json(
+          { 
+            success: false, 
+            error: 'Error de conexión con la base de datos. Por favor, intenta de nuevo en unos momentos.',
+            details: formatDatabaseError(error, 'obtener votos')
+          },
+          { status: 503 }
+        );
+      }
+    }
+
     return NextResponse.json(
       { 
         success: false, 
         error: 'Error interno del servidor',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        details: error instanceof Error ? formatDatabaseError(error, 'error genérico') : 'Unknown error'
       },
       { status: 500 }
     );
@@ -438,13 +463,50 @@ export async function POST(
       message: 'Votos guardados exitosamente'
     });
 
-  } catch (error) {
-    console.error('Error saving votes for escrutinio:', error);
+  } catch (error: any) {
+    // Log detailed error information
+    console.error('❌ [VOTES API] Error crítico guardando votos:', {
+      message: error?.message,
+      stack: error?.stack,
+      name: error?.name,
+      code: error?.code,
+      escrutinioId: params?.id,
+      userId: payload?.userId,
+      timestamp: new Date().toISOString(),
+    });
+
+    // Handle specific error types
+    if (error instanceof Error) {
+      // Database connection errors - return 503 Service Unavailable
+      if (isDatabaseConnectionError(error)) {
+        return NextResponse.json(
+          { 
+            success: false, 
+            error: 'Error de conexión con la base de datos. Por favor, intenta de nuevo en unos momentos.',
+            details: formatDatabaseError(error, 'guardar votos')
+          },
+          { status: 503 }
+        );
+      }
+
+      // Transaction errors - provide more context
+      if (error.message.includes('transaction') || error.message.includes('deadlock')) {
+        return NextResponse.json(
+          { 
+            success: false, 
+            error: 'Error al procesar la transacción. Por favor, intenta de nuevo.',
+            details: formatDatabaseError(error, 'transacción de votos')
+          },
+          { status: 500 }
+        );
+      }
+    }
+
     return NextResponse.json(
       { 
         success: false, 
         error: 'Error interno del servidor',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        details: error instanceof Error ? formatDatabaseError(error, 'error genérico') : 'Unknown error'
       },
       { status: 500 }
     );

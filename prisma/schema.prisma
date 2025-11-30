@@ -254,8 +254,10 @@ model Escrutinio {
   queuePosition Int? // Posición en cola si hay congestión
 
   // Conteo físico de papeletas
-  physicalBallotCount         Int?     // Conteo físico de papeletas (opcional)
-  physicalBallotCountTimestamp DateTime? // Timestamp del conteo físico
+  // TEMPORALMENTE COMENTADO - Estas columnas no existen en la BD actual
+  // Se pueden agregar después con una migración
+  // physicalBallotCount          Int? // Conteo físico de papeletas (opcional)
+  // physicalBallotCountTimestamp DateTime? // Timestamp del conteo físico
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
